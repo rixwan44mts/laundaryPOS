@@ -457,7 +457,7 @@
         </div>
       </div>
       <table>
-        <thead><tr><th>Code</th><th>Phone</th><th>Name</th><th>Items</th><th>Total</th><th>Advance</th><th>Balance Due</th><th>Change Given</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th>Phone</th><th>Name</th><th>Items</th><th>Total</th><th>Advance</th><th>Balance Due</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead>
         <tbody id="openOrdersBody"></tbody>
       </table>
     </div>
@@ -878,7 +878,6 @@ function renderOpenOrdersRows(list){
       <td>Rs ${o.total}</td>
       <td>Rs ${advancePaid}</td>
       <td class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</td>
-      <td>${changeGiven > 0 ? 'Rs ' + changeGiven : '<span class="small">—</span>'}</td>
       <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span></td>
       <td>${new Date(o.created_at).toLocaleString()}</td>
       <td>${actions}</td>
