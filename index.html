@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laundry POS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2b2d; --ink-soft:#3c4d4a;
+    --paper:#f4efe2; --paper-2:#ece4d0; --panel:#fffdf7;
+    --line:#d8cdb2; --line-strong:#c2b494;
+    --accent:#0e5c50; --accent-dim:#0e5c5022; --accent-soft:#e2efe9;
+    --accent-2:#9c3a20; --accent-2-soft:#f3e2da;
+    --amber:#b5811a; --amber-soft:#f3e9d2;
+    --muted:#847c6c; --hover:#ece2c9;
+    --good:#0e5c50; --warn:#9c3a20;
+    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+    --font-mono:'Space Mono','Courier New',Courier,monospace;
+    --shadow-sm:0 1px 2px rgba(28,43,45,0.07);
+    --shadow-md:0 4px 14px rgba(28,43,45,0.10);
+    --shadow-lg:0 14px 40px rgba(28,43,45,0.20);
+    --receipt-width:280px; /* ~80mm thermal roll safe print width; use ~180px for 58mm rolls */
+  }
+  *{box-sizing:border-box;}
+  ::selection{background:var(--accent);color:#fff;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;font-family:var(--font-mono);background:var(--paper);color:var(--ink);
+    background-image:
+      radial-gradient(var(--line) .6px, transparent .6px);
+    background-size:22px 22px;
+    background-attachment:fixed;
+  }
+
+  /* signature: laundromat awning stripe, pinned to the very top of the app */
+  body::before{
+    content:"";
+    display:block;
+    height:7px;
+    width:100%;
+    background:repeating-linear-gradient(90deg,
+      var(--accent) 0 26px,
+      var(--paper) 26px 34px,
+      var(--accent-2) 34px 60px,
+      var(--paper) 60px 68px);
+    box-shadow:var(--shadow-sm);
+  }
+
+  a{color:var(--accent);}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px;}
+
+  .app{max-width:1120px;margin:0 auto;padding:22px 20px 60px;}
+
+  header{
+    display:flex;justify-content:space-between;align-items:center;
+    padding-bottom:14px;margin-bottom:20px;flex-wrap:wrap;gap:12px;
+    position:relative;border-bottom:2px solid var(--ink);
+  }
+  /* perforated ticket edge under the header, echoed on panels/modals */
+  header::after{
+    content:"";position:absolute;left:0;right:0;bottom:-5px;height:9px;
+    background-image:radial-gradient(circle at 10px 4px, var(--paper) 3.5px, transparent 3.6px);
+    background-size:20px 9px;background-repeat:repeat-x;
+  }
+  .brandmark{display:flex;align-items:center;gap:10px;}
+  .brandmark svg{flex:none;}
+  header h1{font-family:var(--font-display);font-weight:700;font-size:23px;margin:0;letter-spacing:.2px;}
+  header .tagline{font-size:10.5px;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;margin-top:1px;}
+  .headerRight{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .badge{font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:20px;}
+
+  .status-tag{
+    display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;line-height:1.5;
+  }
+  .status-tag.live, .status-tag.printed{color:var(--accent-2);background:var(--accent-2-soft);}
+  .status-tag.ready{color:var(--accent);background:var(--accent-soft);}
+  .status-tag.archived, .status-tag.closed, .status-tag.dispatched{color:var(--muted);background:var(--paper-2);}
+
+  nav{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:0;}
+  nav button{
+    background:transparent;border:1px solid transparent;border-bottom:none;
+    padding:9px 16px;font-family:var(--font-mono);font-weight:700;font-size:12px;
+    letter-spacing:.3px;text-transform:uppercase;cursor:pointer;border-radius:6px 6px 0 0;
+    color:var(--ink-soft);transition:background .12s ease,color .12s ease,transform .12s ease;
+    position:relative;top:1px;
+  }
+  nav button:hover{background:var(--hover);color:var(--ink);}
+  nav button.active{
+    background:var(--panel);color:var(--accent);border-color:var(--line);
+    box-shadow:0 -2px 0 var(--accent) inset;
+  }
+  nav button.active:hover{background:var(--panel);}
+
+  .panel{
+    background:var(--panel);border:1px solid var(--line);padding:20px 22px;
+    border-radius:8px;margin-bottom:18px;box-shadow:var(--shadow-sm);
+    transition:box-shadow .15s ease;
+  }
+  .panel:hover{box-shadow:var(--shadow-md);}
+
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;}
+  .field{margin-bottom:10px;}
+  label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:5px;font-weight:700;}
+
+  input,select{
+    font-family:var(--font-mono);padding:8px 10px;border:1px solid var(--line);
+    border-radius:5px;font-size:14px;background:#fffefb;color:var(--ink);
+    transition:border-color .12s ease,box-shadow .12s ease;
+  }
+  input:hover,select:hover{border-color:var(--line-strong);}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+
+  .btn-main{
+    padding:11px 18px;background:var(--accent);color:#fff;border:none;
+    font-family:var(--font-mono);font-weight:700;font-size:13px;letter-spacing:.3px;
+    cursor:pointer;border-radius:6px;box-shadow:var(--shadow-sm);
+    transition:filter .12s ease,transform .08s ease,box-shadow .12s ease;
+  }
+  .btn-main:hover{filter:brightness(1.1);box-shadow:var(--shadow-md);}
+  .btn-main:active{transform:translateY(1px);}
+
+  .btn-secondary{
+    background:var(--panel);color:var(--ink);border:1px solid var(--line-strong);
+    padding:8px 14px;font-family:var(--font-mono);font-weight:700;cursor:pointer;
+    border-radius:6px;font-size:11.5px;letter-spacing:.2px;
+    transition:background .12s ease,border-color .12s ease,transform .08s ease;
+  }
+  .btn-secondary:hover{background:var(--hover);border-color:var(--ink);}
+  .btn-secondary:active{transform:translateY(1px);}
+  .btn-secondary:disabled{opacity:0.4;cursor:default;}
+  .btn-secondary:disabled:hover{background:var(--panel);border-color:var(--line-strong);}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;margin-top:12px;}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);}
+  th{
+    background:var(--paper-2);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--ink-soft);font-weight:700;position:sticky;top:0;
+  }
+  th:first-child{border-top-left-radius:6px;}
+  th:last-child{border-top-right-radius:6px;}
+  tbody tr:nth-child(even){background:rgba(28,43,45,0.02);}
+  tbody tr:hover{background:var(--hover);}
+  tr.audit-row{cursor:pointer;}
+
+  .small{font-size:11px;color:var(--muted);}
+  .branch-heading{
+    font-family:var(--font-display);font-weight:600;font-size:19px;
+    padding:10px 16px;margin:30px 0 14px;border-radius:8px;
+    display:flex;align-items:baseline;gap:8px;color:#fff;
+  }
+  .branch-block:first-child .branch-heading{margin-top:0;}
+  /* Per-branch color scheme so the two branches' dashboard sections are
+     unmistakable at a glance when shown one after another. Get Smart =
+     dark blue, White Rays = dark brown. Any additional branch beyond
+     these two falls back to alternating between the same two themes
+     (see branchThemeClass()). */
+  .branch-theme-blue{background:#e7edf6;border-radius:12px;padding:2px 14px 16px;margin-bottom:20px;}
+  .branch-theme-blue .branch-heading{background:#13294b;}
+  .branch-theme-blue .panel{border-left:4px solid #13294b;}
+  .branch-theme-brown{background:#f2e9e0;border-radius:12px;padding:2px 14px 16px;margin-bottom:20px;}
+  .branch-theme-brown .branch-heading{background:#4e2f1c;}
+  .branch-theme-brown .panel{border-left:4px solid #4e2f1c;}
+
+  .ledger-line{
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line);
+  }
+  .ledger-line span:first-child{color:var(--ink-soft);}
+  .ledger-line span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
+  .ledger-total{
+    display:flex;justify-content:space-between;font-size:18px;font-weight:700;
+    padding-top:10px;margin-top:8px;border-top:2px solid var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .hist-line{font-size:12px;padding:3px 0;}
+  .error{color:var(--accent-2);font-size:12.5px;margin-top:6px;font-weight:700;}
+  .amt-owed{color:var(--warn);font-weight:700;}
+  .amt-good{color:var(--good);font-weight:700;}
+  .tab{display:none;}
+  .admin-only{display:none;}
+
+  #loginScreen{max-width:360px;margin:110px auto;position:relative;}
+  #loginScreen h2{font-family:var(--font-display);font-size:21px;margin:0 0 4px;}
+  #loginScreen .login-sub{font-size:11px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:18px;display:block;}
+
+  #receipt{display:none;}
+  @media print{
+    /* height:auto tells the browser to size the printed page to exactly
+       fit the receipt content instead of a fixed sheet — this is what
+       stops a continuous thermal roll from feeding extra blank paper
+       after the receipt ends. Real thermal/roll printer drivers respect
+       this; generic "print to PDF"/office printer drivers sometimes
+       force a fixed page size (A4/Letter) regardless, which is a
+       Windows driver setting, not something this page can control — on
+       the print dialog, pick the actual thermal printer (not "Microsoft
+       Print to PDF") and, under the printer's own Windows settings, set
+       its paper size to the roll width (e.g. "80mm Receipt" / "Roll
+       Paper 80mm continuous"), not A4/Letter. */
+    @page{ size:80mm auto; margin:0; }
+    html, body{ margin:0; padding:0; height:auto; background:none; }
+    body::before{ display:none; }
+    /* display:none (not visibility:hidden) — visibility:hidden keeps the
+       element's box taking up layout space even though it's invisible,
+       which made the printed page as tall as the whole app dashboard
+       behind the receipt and produced a blank second page. display:none
+       removes the element from layout entirely, so the page height
+       collapses to just the receipt's actual height. */
+    body > *:not(#receipt){display:none !important;}
+    #receipt{
+      display:block !important;position:static;width:100%;
+      padding:4px 3px;margin:0;
+    }
+    /* Make sure the ID/highlight boxes' borders actually come out on
+       printers that respect background/border print settings; harmless
+       on monochrome thermal heads which print the border either way. */
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+  /* 80mm is the common thermal roll width. If your printer uses 58mm rolls,
+     change --receipt-width to ~180px and @page size above to 58mm auto. */
+  .receipt-box{font-family:var(--font-mono);width:var(--receipt-width,280px);max-width:100%;margin:0 auto;color:#000;}
+  .receipt-box hr{border:none;border-top:1px dashed #000;margin:6px 0;}
+  .receipt-box .center{text-align:center;}
+  .receipt-row{display:flex;justify-content:space-between;font-size:12px;}
+  .receipt-item{font-size:12px;margin:2px 0;}
+  .receipt-item .item-name{display:block;}
+  .receipt-item .item-calc{display:flex;justify-content:space-between;font-size:11px;color:#333;}
+  .receipt-terms{font-size:10px;line-height:1.35;margin:6px 0;text-align:left;}
+
+  /* ---- DAILY AUDIT MODAL ---- */
+  #dailyTableBody tr.audit-row{cursor:pointer;}
+  #dailyTableBody tr.audit-row:hover{background:var(--hover);}
+  .modal-overlay{
+    display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(20,30,31,0.6);backdrop-filter:blur(1px);z-index:100;
+    align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  @keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
+  .modal-box{
+    background:var(--paper);border:1px solid var(--ink);max-width:980px;width:100%;
+    padding:0;border-radius:10px;box-shadow:var(--shadow-lg);
+    animation:modalIn .16s ease-out;overflow:hidden;
+  }
+  .modal-header{
+    display:flex;justify-content:space-between;align-items:center;
+    border-bottom:3px double var(--ink);padding:18px 22px;background:var(--panel);
+  }
+  .modal-header h2{font-family:var(--font-display);font-weight:600;font-size:19px;margin:0;}
+  /* Matches the audited branch's color from the dashboard (dark blue for
+     Get Smart, dark brown for White Rays) so the audit report modal is
+     immediately identifiable as belonging to that branch. */
+  .modal-header.theme-blue{background:#13294b;border-bottom-color:#13294b;}
+  .modal-header.theme-blue h2{color:#fff;}
+  .modal-header.theme-blue .modal-close-btn{background:transparent;color:#fff;border-color:#fff;}
+  .modal-header.theme-blue .modal-close-btn:hover{background:rgba(255,255,255,.15);}
+  .modal-header.theme-brown{background:#4e2f1c;border-bottom-color:#4e2f1c;}
+  .modal-header.theme-brown h2{color:#fff;}
+  .modal-header.theme-brown .modal-close-btn{background:transparent;color:#fff;border-color:#fff;}
+  .modal-header.theme-brown .modal-close-btn:hover{background:rgba(255,255,255,.15);}
+  .modal-body{padding:22px;}
+  .audit-section{margin-bottom:22px;}
+  .audit-section h3{
+    font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
+    border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:10px;font-weight:700;
+  }
+  .audit-empty{font-size:12px;color:var(--muted);font-style:italic;}
+  .audit-summary{background:var(--panel);border:1px solid var(--line);padding:16px 18px;border-radius:8px;}
+  .audit-summary .ledger-line{font-size:14px;}
+  .audit-summary .ledger-total{font-size:19px;}
+  .modal-close-btn{
+    background:var(--panel);color:var(--ink);border:1px solid var(--ink);padding:7px 15px;
+    font-family:var(--font-mono);font-weight:700;cursor:pointer;border-radius:6px;font-size:12.5px;
+    transition:background .12s ease;
+  }
+  .modal-close-btn:hover{background:var(--hover);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  @media (max-width:640px){
+    .app{padding:14px 12px 40px;}
+    header h1{font-size:19px;}
+    .panel{padding:16px;}
+    .row{gap:10px;}
+    nav button{padding:8px 12px;font-size:11px;}
+    .modal-body{padding:16px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginScreen" class="panel">
+  <svg width="40" height="40" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;margin-bottom:12px;">
+    <circle cx="17" cy="17" r="16" stroke="var(--ink)" stroke-width="1.5" fill="var(--paper)"/>
+    <circle cx="17" cy="17" r="9" stroke="var(--accent)" stroke-width="1.6" fill="none"/>
+    <circle cx="17" cy="17" r="4.5" stroke="var(--accent-2)" stroke-width="1.4" fill="none"/>
+    <path d="M17 8 V4.5 M17 30 V25.5 M8 17 H4.5 M30 17 H25.5" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>
+  <h2>Laundry POS</h2>
+  <span class="login-sub">Counter sign-in</span>
+  <form id="loginForm">
+    <div class="field">
+      <label>Email</label>
+      <input type="text" id="loginEmail" style="width:100%;" required>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" style="width:100%;" required>
+    </div>
+    <button class="btn-main" type="submit" style="width:100%;">Log In</button>
+    <div id="loginError" class="error"></div>
+  </form>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="appScreen" class="app" style="display:none;">
+  <header>
+    <div class="brandmark">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="17" cy="17" r="16" stroke="var(--ink)" stroke-width="1.5" fill="var(--panel)"/>
+        <circle cx="17" cy="17" r="9" stroke="var(--accent)" stroke-width="1.6" fill="none"/>
+        <circle cx="17" cy="17" r="4.5" stroke="var(--accent-2)" stroke-width="1.4" fill="none"/>
+        <path d="M17 8 V4.5 M17 30 V25.5 M8 17 H4.5 M30 17 H25.5" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Laundry POS</h1>
+        <div class="tagline">Wash &middot; Press &middot; Dispatch</div>
+      </div>
+    </div>
+    <div class="headerRight">
+      <span class="badge" id="userBadge"></span>
+      <select id="branchSelect" style="display:none;"></select>
+      <span class="badge" id="branchNameFixed"></span>
+      <button class="btn-secondary" onclick="logout()">Log Out</button>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tabbtn worker-only active" data-tab="neworder">New Order</button>
+    <button class="tabbtn worker-only" data-tab="openorders">Open Orders</button>
+    <button class="tabbtn worker-only" data-tab="expenses">Expenses</button>
+    <button class="tabbtn admin-only" data-tab="dashboard">Admin Dashboard</button>
+    <button class="tabbtn admin-only" data-tab="monthlyregister">Monthly Register</button>
+    <button class="tabbtn admin-only" data-tab="services">Manage Services</button>
+  </nav>
+
+  <!-- NEW ORDER -->
+  <div id="tab-neworder" class="tab" style="display:block;">
+    <div class="panel">
+      <div class="row">
+        <div class="field">
+          <label>Customer Phone</label>
+          <input type="tel" id="phoneInput" placeholder="03XXXXXXXXX" maxlength="11">
+          <div id="phoneError" class="small error"></div>
+        </div>
+        <div class="field">
+          <label>Customer Name</label>
+          <input type="text" id="nameInput" placeholder="Name">
+        </div>
+        <div class="field">
+          <label>Order Code (auto, editable)</label>
+          <input type="text" id="codeInput" placeholder="last 4 digits" maxlength="8" style="width:110px;">
+        </div>
+      </div>
+      <div id="codeStatus" class="small"></div>
+      <div id="priceHistoryBox" class="small"></div>
+    </div>
+
+    <div class="panel">
+      <label>Add Item</label>
+      <div class="row">
+        <div class="field">
+          <label>Type</label>
+          <input list="categoryDatalist" id="categorySelect" placeholder="Type or select type" style="width:160px;">
+          <datalist id="categoryDatalist">
+            <option value="Wash + Dry Clean">
+            <option value="Press Only">
+            <option value="Steam Press">
+            <option value="Wash Only">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Item (pick or type your own)</label>
+          <input list="itemsDatalist" id="itemSelect" placeholder="Type or select item" style="width:220px;">
+          <datalist id="itemsDatalist"></datalist>
+        </div>
+        <div class="field">
+          <label>Qty</label>
+          <input type="number" id="itemQty" value="1" min="1" style="width:70px;">
+        </div>
+        <div class="field">
+          <label>Price to Charge</label>
+          <input type="number" id="itemPrice" placeholder="Rs" style="width:100px;">
+        </div>
+        <div class="field">
+          <button class="btn-main" onclick="addItemToOrder()">+ Add to Order</button>
+        </div>
+      </div>
+
+      <label style="margin-top:16px;">Items in this order</label>
+      <table id="itemsTable">
+        <thead><tr><th>Service</th><th>Qty</th><th>Price</th><th>Line Total</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <div class="field">
+          <label>Discount (optional)</label>
+          <input type="number" id="discountInput" style="width:100px;" oninput="renderItemsList()" value="0">
+        </div>
+        <div class="field">
+          <label>Advance Paid (Rs) — required</label>
+          <input type="number" id="advanceInput" style="width:120px;" oninput="renderItemsList()" placeholder="0" min="0">
+        </div>
+        <div class="field">
+          <label>Cash Tendered (Optional)</label>
+          <input type="number" id="tenderedInput" style="width:120px;" oninput="renderItemsList()" placeholder="Leave blank if exact" min="0">
+        </div>
+      </div>
+      <div class="ledger-line"><span>Subtotal</span><span id="subtotalDisplay">Rs 0</span></div>
+      <div class="ledger-total"><span>TOTAL</span><span id="grandTotalDisplay">Rs 0</span></div>
+      <div class="ledger-line" style="margin-top:6px;"><span>Advance Paid</span><span id="advanceDisplay">Rs 0</span></div>
+      <div class="ledger-line"><span>Balance Due</span><span id="balanceDisplay">Rs 0</span></div>
+      <div class="ledger-line" id="tenderedChangeLine" style="display:none;"><span>Change to Give</span><span id="tenderedChangeDisplay">Rs 0</span></div>
+      <button id="saveOrderBtn" class="btn-main" style="width:100%;margin-top:10px;" onclick="saveAndPrint()">Save Order &amp; Print Receipt</button>
+    </div>
+  </div>
+
+  <!-- OPEN ORDERS -->
+  <div id="tab-openorders" class="tab">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;">
+        <label style="margin:0;">Open orders at this branch (not yet dispatched)</label>
+        <button class="btn-secondary" onclick="loadOpenOrders()">Refresh</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <div class="field">
+          <label>Search by Phone</label>
+          <input type="text" id="searchPhoneInput" placeholder="03XXXXXXXXX" style="width:160px;" oninput="filterOpenOrders()">
+        </div>
+        <div class="field">
+          <label>Search by Code</label>
+          <input type="text" id="searchCodeInput" placeholder="e.g. 1234" style="width:120px;" oninput="filterOpenOrders()">
+        </div>
+        <div class="field">
+          <button class="btn-secondary" onclick="clearOpenOrdersSearch()">Clear</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Code</th><th>Phone</th><th>Name</th><th>Items</th><th>Total</th><th>Advance</th><th>Balance Due</th><th>Change Given</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead>
+        <tbody id="openOrdersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EXPENSES -->
+  <div id="tab-expenses" class="tab">
+    <div class="panel">
+      <div class="row">
+        <div class="field">
+          <label>Amount</label>
+          <input type="number" id="expenseAmount" style="width:120px;">
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input type="text" id="expenseCategory" placeholder="e.g. Detergent" style="width:160px;">
+        </div>
+        <div class="field">
+          <label>Note</label>
+          <input type="text" id="expenseNote" style="width:220px;">
+        </div>
+        <div class="field">
+          <button class="btn-secondary" onclick="addExpense()">+ Add Expense</button>
+        </div>
+      </div>
+      <label style="margin-top:14px;">Logged this session</label>
+      <div id="expenseLogList"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="tab-dashboard" class="tab admin-only">
+    <div class="panel">
+      <label>Viewing Month</label>
+      <div class="row">
+        <div class="field">
+          <select id="dashMonthSelect" onchange="onDashMonthChange()" style="width:200px;"></select>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashboardBranchPanels"></div>
+
+    <div class="small" style="margin:-8px 0 16px 4px;">Click any row in a Daily Register above to open its full audit report.</div>
+  </div>
+
+  <!-- MONTHLY REGISTER -->
+  <div id="tab-monthlyregister" class="tab admin-only">
+
+    <div class="panel">
+      <label>This Month — Live (<span id="mrCurrentBranchLabel"></span>)</label>
+      <div class="row" style="gap:24px;">
+        <div class="field"><label>Orders Booked</label><div style="font-size:20px;font-weight:bold;" id="mrLiveOrders">0</div></div>
+        <div class="field"><label>Value Booked</label><div style="font-size:20px;font-weight:bold;" id="mrLiveValue">Rs 0</div></div>
+        <div class="field"><label>Cash Collected</label><div style="font-size:20px;font-weight:bold;" id="mrLiveCash">Rs 0</div></div>
+        <div class="field"><label>Expenses</label><div style="font-size:20px;font-weight:bold;" id="mrLiveExpenses">Rs 0</div></div>
+        <div class="field"><label>Salaries</label><div style="font-size:20px;font-weight:bold;" id="mrLiveSalaries">Rs 0</div></div>
+        <div class="field"><label>Net Cash</label><div style="font-size:20px;font-weight:bold;color:var(--accent);" id="mrLiveNet">Rs 0</div></div>
+        <div class="field"><label>Pending (uncollected)</label><div style="font-size:20px;font-weight:bold;color:var(--accent-2);" id="mrLivePending">Rs 0</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <label>Monthly Register — <span id="mrBranchLabel2"></span></label>
+      <table>
+        <thead><tr><th>Month</th><th>Orders</th><th>Value Booked</th><th>Advance</th><th>Balance Recovered</th><th>Total Cash</th><th>Expenses</th><th>Salaries</th><th>Net Cash</th><th>Status</th><th></th></tr></thead>
+        <tbody id="monthlyRegisterBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <label>Record Salary Payment</label>
+      <div class="row">
+        <div class="field"><label>Worker Name</label><input type="text" id="salaryWorkerName" style="width:160px;"></div>
+        <div class="field"><label>Amount</label><input type="number" id="salaryAmount" style="width:120px;"></div>
+        <div class="field">
+          <label>Type</label>
+          <select id="salaryType" style="width:120px;">
+            <option value="salary">Salary</option>
+            <option value="advance">Advance</option>
+          </select>
+        </div>
+        <div class="field"><label>Month</label><input type="month" id="salaryMonth" style="width:150px;"></div>
+        <div class="field"><label>Note (optional)</label><input type="text" id="salaryNote" style="width:200px;"></div>
+        <div class="field"><button class="btn-secondary" onclick="addSalaryPayment()">+ Add</button></div>
+      </div>
+      <table style="margin-top:10px;">
+        <thead><tr><th>Month</th><th>Worker</th><th>Type</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+        <tbody id="salaryLogBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <label>Add Expense (this branch)</label>
+      <div class="row">
+        <button class="btn-secondary" onclick="quickExpense('Electricity')">Electricity</button>
+        <button class="btn-secondary" onclick="quickExpense('Gas')">Gas</button>
+        <button class="btn-secondary" onclick="quickExpense('Chemicals')">Chemicals</button>
+        <button class="btn-secondary" onclick="quickExpense('Rent')">Rent</button>
+        <button class="btn-secondary" onclick="quickExpense('')">Other / Custom</button>
+      </div>
+      <div class="row" id="mrExpenseForm" style="display:none;margin-top:10px;">
+        <div class="field"><label>Category</label><input type="text" id="mrExpenseCategory" style="width:160px;"></div>
+        <div class="field"><label>Amount</label><input type="number" id="mrExpenseAmount" style="width:120px;"></div>
+        <div class="field"><label>Note</label><input type="text" id="mrExpenseNote" style="width:200px;"></div>
+        <div class="field"><button class="btn-main" onclick="submitMrExpense()">Save Expense</button></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DAILY AUDIT MODAL -->
+  <div id="auditModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header" id="auditModalHeader">
+        <h2 id="auditModalTitle">Audit Report</h2>
+        <button class="modal-close-btn" onclick="closeAuditModal()">Close</button>
+      </div>
+      <div class="modal-body">
+
+        <div class="audit-section">
+          <h3>Booked / Processing (Live &amp; Printed)</h3>
+          <table>
+            <thead><tr><th>Time</th><th>Code</th><th>Customer</th><th>Phone</th><th>Items</th><th>Discount</th><th>Total</th><th>Advance</th><th>Balance</th><th>Worker</th></tr></thead>
+            <tbody id="auditBookedBody"></tbody>
+          </table>
+        </div>
+
+        <div class="audit-section">
+          <h3>Ready</h3>
+          <table>
+            <thead><tr><th>Time</th><th>Code</th><th>Customer</th><th>Phone</th><th>Items</th><th>Discount</th><th>Total</th><th>Advance</th><th>Balance</th><th>Worker</th></tr></thead>
+            <tbody id="auditReadyBody"></tbody>
+          </table>
+        </div>
+
+        <div class="audit-section">
+          <h3>Dispatched / Closed</h3>
+          <table>
+            <thead><tr><th>Time</th><th>Code</th><th>Customer</th><th>Phone</th><th>Items</th><th>Discount</th><th>Total</th><th>Advance</th><th>Balance Recovered</th><th>Worker</th></tr></thead>
+            <tbody id="auditDispatchedBody"></tbody>
+          </table>
+        </div>
+
+        <div class="audit-section">
+          <h3>Expenses</h3>
+          <table>
+            <thead><tr><th>Time</th><th>Category</th><th>Note</th><th>Amount</th><th>Worker</th><th></th></tr></thead>
+            <tbody id="auditExpensesBody"></tbody>
+          </table>
+        </div>
+
+        <div class="audit-section audit-summary">
+          <h3 style="border:none;padding:0;margin-bottom:10px;">Financial Summary</h3>
+          <div class="ledger-line"><span>Gross Value Booked (before discounts)</span><span id="auditGross">Rs 0</span></div>
+          <div class="ledger-line"><span>Total Discounts Given</span><span id="auditDiscounts">Rs 0</span></div>
+          <div class="ledger-line"><span>Advance Received (new bookings, today)</span><span id="auditAdvanceToday">Rs 0</span></div>
+          <div class="ledger-line"><span>Balance Recovered (on dispatch, today)</span><span id="auditBalanceRecoveredToday">Rs 0</span></div>
+          <div class="ledger-line"><span>Total Cash Received Today</span><span id="auditCollected">Rs 0</span></div>
+          <div class="ledger-line"><span>Total Balance Outstanding (not yet collected, all open orders)</span><span id="auditOutstanding">Rs 0</span></div>
+          <div class="ledger-line"><span>Total Expenses</span><span id="auditExpenseTotal">Rs 0</span></div>
+          <div class="ledger-total"><span>Net Cash in Hand</span><span id="auditNet">Rs 0</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CONFIRMATION (password re-entry) -->
+  <div id="deleteConfirmModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:420px;">
+      <div class="modal-header">
+        <h2>Confirm Deletion</h2>
+        <button class="modal-close-btn" onclick="closeDeleteConfirmModal()">Close</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteConfirmLabel" class="small" style="margin-top:0;"></p>
+        <div class="field">
+          <label>Re-enter your admin password to confirm</label>
+          <input type="password" id="deleteConfirmPassword" style="width:100%;" autocomplete="current-password">
+        </div>
+        <div id="deleteConfirmError" class="error"></div>
+        <div class="row" style="margin-top:14px;justify-content:flex-end;">
+          <button class="btn-secondary" onclick="closeDeleteConfirmModal()">Cancel</button>
+          <button class="btn-main" style="background:var(--accent-2);" onclick="submitDeleteConfirm()">Delete Permanently</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICES MANAGEMENT -->
+  <div id="tab-services" class="tab admin-only">
+    <div class="panel">
+      <label>Add Service</label>
+      <div class="row">
+        <input type="text" id="newServiceName" placeholder="Service name">
+        <input type="number" id="newServicePrice" placeholder="Default price" style="width:120px;">
+        <select id="newServiceCategory" style="width:160px;">
+          <option value="wash_dryclean">Wash + Dry Clean</option>
+          <option value="press_only">Press Only</option>
+        </select>
+        <button class="btn-secondary" onclick="addService()">+ Add</button>
+      </div>
+      <table style="margin-top:14px;">
+        <thead><tr><th>Service Name</th><th>Category</th><th>Default Price</th><th></th></tr></thead>
+        <tbody id="servicesTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT-ONLY RECEIPT -->
+<div id="receipt"></div>
+
+<script>
+// ======= FILL THESE IN FROM SUPABASE > PROJECT SETTINGS > API KEYS =======
+const SUPABASE_URL = "https://adkbnwfweidrzmnvtkfn.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFka2Jud2Z3ZWlkcnptbnZ0a2ZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0OTM4OTgsImV4cCI6MjA5OTA2OTg5OH0.fHT6MosWQ13fM0kV0rESMmruVZPSX3dNCoxY97Ek4pc";
+// ==========================================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let profile = null;
+let currentUserEmail = null; // needed to re-verify password before a destructive delete
+let branches = [];
+let services = [];
+let currentItems = [];
+let customerPriceMap = {}; // service name (lowercase) -> last price charged to the customer currently in phoneInput
+let currentBranchId = null;
+
+// ---------- LOGIN ----------
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ document.getElementById('loginError').textContent = error.message; return; }
+  await afterLogin();
+});
+
+async function afterLogin(){
+  const { data:{ user } } = await sb.auth.getUser();
+  const { data: prof, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if(error || !prof){
+    document.getElementById('loginError').textContent = 'No profile set up for this login. Ask admin to add you.';
+    await sb.auth.signOut();
+    return;
+  }
+  profile = prof;
+  currentUserEmail = user.email;
+  currentBranchId = profile.branch_id;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  await loadBranches();
+  await loadServices();
+  setupRoleView();
+  renderServiceOptions();
+  renderItemsList();
+}
+
+async function logout(){ await sb.auth.signOut(); location.reload(); }
+
+// ---------- SETUP ----------
+async function loadBranches(){
+  const { data } = await sb.from('branches').select('*').order('id');
+  branches = data || [];
+}
+async function loadServices(){
+  const { data } = await sb.from('services').select('*').order('name');
+  services = data || [];
+}
+
+function setupRoleView(){
+  const isAdmin = profile.role === 'admin';
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  document.querySelectorAll('.worker-only').forEach(el => el.style.display = isAdmin ? 'none' : '');
+  document.getElementById('userBadge').textContent = `${profile.name || profile.role} (${profile.role})`;
+
+  if(isAdmin){
+    const sel = document.getElementById('branchSelect');
+    sel.innerHTML = branches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    sel.style.display = '';
+    sel.onchange = () => { currentBranchId = parseInt(sel.value); loadAdminDashboard(); loadMonthlyRegister(); };
+    currentBranchId = branches[0] ? branches[0].id : null;
+    // Admin lands on the dashboard, not the booking screen
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.style.display='none');
+    document.querySelector('.tabbtn[data-tab="dashboard"]').classList.add('active');
+    document.getElementById('tab-dashboard').style.display='block';
+    loadAdminDashboard();
+    loadMonthlyRegister();
+  } else {
+    const b = branches.find(b => b.id === profile.branch_id);
+    document.getElementById('branchNameFixed').textContent = b ? b.name : '';
+  }
+}
+
+// ---------- TAB SWITCHING ----------
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t=>t.style.display='none');
+    document.getElementById('tab-'+btn.dataset.tab).style.display='block';
+    if(btn.dataset.tab === 'dashboard') loadAdminDashboard();
+    if(btn.dataset.tab === 'monthlyregister') loadMonthlyRegister();
+    if(btn.dataset.tab === 'services') renderServicesTable();
+    if(btn.dataset.tab === 'openorders') loadOpenOrders();
+  };
+});
+
+// ---------- OPEN ORDERS ----------
+let allOpenOrders = [];
+
+// Statuses after which an order is finished and no further action applies.
+const TERMINAL_STATUSES = ['archived', 'closed', 'dispatched'];
+
+// Escapes a value for safe interpolation inside a single-quoted HTML
+// attribute (e.g. onclick="fn('...')"). customer_phone and code are
+// worker-entered/editable free text, so without this a value containing
+// a single quote could break out of the attribute and inject arbitrary
+// onclick JS that runs when anyone clicks the button. (items already had
+// this same protection via encodeURIComponent — this extends the same
+// idea to phone/code.)
+function escAttr(v){
+  return String(v == null ? '' : v).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+// Escapes a value for safe insertion as HTML TEXT CONTENT (table cells,
+// labels, etc.) — different from escAttr above, which is only for values
+// going inside a quoted onclick="" attribute. Anywhere a worker-entered
+// or customer-entered string (name, note, category) gets rendered via
+// innerHTML as visible text, it needs to go through this first, or a
+// value like "<img src=x onerror=...>" would execute in the viewer's
+// browser instead of just displaying as text.
+function escHtml(v){
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Receipt-only date formatting: "1 June 2026" (no leading zero on the
+// day, full month name). Used for printed receipts/bills so the date
+// reads unambiguously regardless of the till machine's locale settings.
+function formatReceiptDate(d){
+  d = (d instanceof Date) ? d : new Date(d);
+  const day = d.getDate();
+  const month = d.toLocaleDateString('en-GB', { month: 'long' });
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+function formatReceiptDateTime(d){
+  d = (d instanceof Date) ? d : new Date(d);
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${formatReceiptDate(d)}, ${time}`;
+}
+
+async function loadOpenOrders(){
+  if(!currentBranchId) return;
+  const { data, error } = await sb.rpc('get_open_orders', { p_branch_id: currentBranchId });
+  const body = document.getElementById('openOrdersBody');
+  if(error){ allOpenOrders = []; body.innerHTML = `<tr><td colspan="11" class="error">${error.message}</td></tr>`; return; }
+  allOpenOrders = data || [];
+  filterOpenOrders();
+}
+
+function renderOpenOrdersRows(list){
+  const body = document.getElementById('openOrdersBody');
+  if(!list.length){ body.innerHTML = '<tr><td colspan="11" class="small">No matching orders.</td></tr>'; return; }
+  const branchNameKey = document.getElementById('branchNameFixed').textContent;
+  body.innerHTML = list.map(o => {
+    const itemsSummary = (o.items || []).map(it => `${escHtml(it.service)} x${it.qty}`).join(', ');
+    const status = o.status || 'live';
+    const isTerminal = TERMINAL_STATUSES.includes(status);
+    const isReady = status === 'ready';
+    // Items travel through the onclick attribute as a URI-encoded JSON
+    // string so quotes/apostrophes inside service names can never break
+    // the HTML attribute or the single-quoted JS argument around it.
+    const itemsArg = encodeURIComponent(JSON.stringify(o.items || []));
+    const advancePaid = Number(o.advance_paid || 0);
+    const balanceDue = Number(o.balance_due || 0);
+    const changeGiven = Number(o.change_given || 0);
+    const dispatchChangeGiven = Number(o.dispatch_change_given || 0);
+    const readyArgs = `${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}', '${itemsArg}', ${o.total}, '${escAttr(branchNameKey)}', ${advancePaid}, ${balanceDue}`;
+
+    // Whichever timestamp matches the order's current status is what
+    // shows up in the hover tooltip on the status badge.
+    const statusTimestampMap = {
+      live: o.created_at,
+      printed: o.printed_at,
+      ready: o.ready_at,
+      dispatched: o.dispatched_at,
+      archived: o.dispatched_at,
+      closed: o.dispatched_at
+    };
+    const actionTime = statusTimestampMap[status] || o.created_at;
+    const formattedActionTime = actionTime ? new Date(actionTime).toLocaleString() : 'Unknown';
+
+    const balanceRecovered = Number(o.total) - advancePaid;
+    // The closing bill only ever shows dispatch-time change (never the
+    // booking-time change, which already had its own line on the
+    // original booking receipt) — so dispatchChangeGiven is what gets
+    // passed through here, not changeGiven.
+    const printBillArgs = `${o.id}, '${escAttr(o.code || '')}', '${escAttr(o.customer_phone)}', '${escAttr(o.customer_name || '')}', '${itemsArg}', ${o.total}, ${advancePaid}, ${balanceRecovered}, ${dispatchChangeGiven}, ${o.dispatched_at ? `'${o.dispatched_at}'` : 'null'}`;
+
+    let actions = '';
+    if(isTerminal){
+      actions = `<button class="btn-secondary" disabled>Ready</button> <button class="btn-secondary" disabled>Close / Dispatched</button> <button class="btn-secondary" onclick="printFinalBill(${printBillArgs})">Print Bill</button>`;
+    } else if(isReady){
+      actions = `<button class="btn-secondary" onclick="markReady(${readyArgs})">Notify Again</button> <button class="btn-secondary" onclick="closeOrder(${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}')">Close / Dispatched</button>`;
+    } else {
+      actions = `<button class="btn-secondary" onclick="markReady(${readyArgs})">Ready</button> <button class="btn-secondary" onclick="closeOrder(${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}')">Close / Dispatched</button>`;
+    }
+
+    return `<tr>
+      <td>${o.code || ''}</td>
+      <td>${o.customer_phone}</td>
+      <td>${escHtml(o.customer_name || '')}</td>
+      <td>${itemsSummary}</td>
+      <td>Rs ${o.total}</td>
+      <td>Rs ${advancePaid}</td>
+      <td class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</td>
+      <td>${changeGiven > 0 ? 'Rs ' + changeGiven : '<span class="small">—</span>'}</td>
+      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span></td>
+      <td>${new Date(o.created_at).toLocaleString()}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Filters by phone and/or code. Either box can be left empty — whichever
+// box has text in it is used to narrow the list; if both have text, an
+// order must match both to show up.
+function filterOpenOrders(){
+  const phoneQuery = document.getElementById('searchPhoneInput').value.replace(/\D/g,'').trim();
+  const codeQuery = document.getElementById('searchCodeInput').value.trim().toLowerCase();
+
+  if(!phoneQuery && !codeQuery){ renderOpenOrdersRows(allOpenOrders); return; }
+
+  const filtered = allOpenOrders.filter(o => {
+    const phoneMatches = phoneQuery ? (o.customer_phone || '').replace(/\D/g,'').includes(phoneQuery) : true;
+    const codeMatches = codeQuery ? (o.code || '').toString().toLowerCase().includes(codeQuery) : true;
+    return phoneMatches && codeMatches;
+  });
+  renderOpenOrdersRows(filtered);
+}
+
+function clearOpenOrdersSearch(){
+  document.getElementById('searchPhoneInput').value = '';
+  document.getElementById('searchCodeInput').value = '';
+  filterOpenOrders();
+}
+
+// ---------- CUSTOMER NOTIFICATIONS (Urdu, WhatsApp or SMS) ----------
+
+// Builds the Urdu notification text for a given order event.
+function buildUrduMessage(status, code){
+  const branchName = document.getElementById('branchNameFixed').textContent;
+  if(status === 'dispatched'){
+    return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchName + ' سے وصول/ڈسپیچ کر دیا گیا ہے۔ شکریہ!';
+  }
+  // default: ready for pickup
+  return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchName + ' پر تیار ہے۔ براہ کرم اپنی سہولت کے مطابق اسے وصول کر لیں۔';
+}
+
+// Formats a Pakistani local number (03XXXXXXXXX) into international
+// format without symbols (923XXXXXXXXX), then opens WhatsApp or SMS
+// with the Urdu message pre-filled.
+function notifyCustomer(phone, code, status){
+  const formattedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^0/, '92');
+  const msg = buildUrduMessage(status, code);
+
+  if(confirm('Send via WhatsApp? (Cancel for standard SMS)')){
+    window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
+  } else {
+    window.open('sms:+' + formattedPhone + '?body=' + encodeURIComponent(msg), '_blank');
+  }
+}
+
+// Full, customer-facing branch names + signatures used only in the ready
+// notification — keeps the short internal name (from branchNameFixed)
+// separate from the polished identity shown to customers.
+const BRANCH_INFO = {
+  'White Rays': {
+    full: 'White Rays Dry Clean & Steam Press Laundry (G-11 Branch)',
+    signature: 'White Rays Dry Clean & Steam Press Laundry'
+  },
+  'Get Smart': {
+    full: 'Get Smart Dry Clean & Steam Press Laundry (F-10 Branch)',
+    signature: 'Get Smart Dry Clean & Steam Press Laundry'
+  }
+};
+function getBranchInfo(branchNameKey){
+  return BRANCH_INFO[branchNameKey] || BRANCH_INFO['Get Smart'];
+}
+
+// Builds the full "order ready" message: English header, Urdu greeting,
+// itemized order details in English, total, Urdu closing + signature,
+// and the shop's own contact footer. Advance/balance lines mirror the
+// logic on the printed receipt so the WhatsApp message never disagrees
+// with the paper receipt the customer already has in hand.
+function buildReadyMessage(code, branchInfo, items, total, advancePaid, balanceDue){
+  const itemsText = (items || [])
+    .map(it => `• ${escHtml(it.service)} x${it.qty} - Rs ${it.line_total ?? (it.qty * it.price)}`)
+    .join('\n');
+
+  const paymentLines = balanceDue > 0
+    ? `Advance Paid: Rs ${advancePaid}\nBalance Due: Rs ${balanceDue}\n\n`
+    : `PAID IN FULL\n\n`;
+
+  return `Order Ready for Pickup\n\n` +
+    `محترم کسٹمر،\n` +
+    `آپ کا آرڈر (Code: ${code}) ہماری برانچ ${branchInfo.full} پر تیار ہے اور وصولی کے لیے دستیاب ہے۔\n\n` +
+    `Order Details\n${itemsText}\n\n` +
+    `Total Bill: Rs ${total}\n` +
+    paymentLines +
+    `براہِ کرم اپنی سہولت کے مطابق تشریف لا کر آرڈر وصول کر لیں۔\n` +
+    `آپ کے اعتماد کا شکریہ۔\n` +
+    `${branchInfo.signature}\n\n` +
+    `اپنے کاروبار کے لیے جدید POS سسٹم بنوانے کے لیے رابطہ کریں:\n` +
+    `📞 0319-2335276`;
+}
+
+async function markReady(orderId, phone, code, itemsJson, total, branchNameKey, advancePaid, balanceDue){
+  const { error } = await sb.rpc('mark_order_ready', { p_order_id: orderId });
+  if(error){ alert('Failed: ' + error.message); return; }
+
+  let items = [];
+  try{ items = JSON.parse(decodeURIComponent(itemsJson)); } catch(e){ items = []; }
+
+  const branchInfo = getBranchInfo(branchNameKey);
+  const msg = buildReadyMessage(code, branchInfo, items, total, Number(advancePaid || 0), Number(balanceDue || 0));
+  const formattedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^0/, '92');
+
+  if(confirm('Send via WhatsApp? (Cancel for standard SMS)')){
+    window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
+  } else {
+    window.open('sms:+' + formattedPhone + '?body=' + encodeURIComponent(msg), '_blank');
+  }
+
+  loadOpenOrders();
+}
+
+
+async function closeOrder(orderId, phone, code){
+  // Confirm FIRST, immediately, with no await before it — same as the
+  // original flow. Delaying this behind a network call (checking the
+  // balance) before showing it stretches the gap between the click and
+  // the later WhatsApp window.open(), which makes browsers more likely
+  // to silently block that popup.
+  if(!confirm('Mark this order as dispatched and close it?')) return;
+
+  const { data: balanceRows, error: balanceError } = await sb.rpc('get_order_balance', { p_order_id: orderId });
+  if(balanceError){ alert('Failed to check order balance: ' + balanceError.message); return; }
+
+  const balanceInfo = (balanceRows && balanceRows[0]) || null;
+  const balanceDue = balanceInfo ? Number(balanceInfo.balance_due) : 0;
+
+  if(balanceDue > 0){
+    const input = prompt(
+      `This order has a balance of Rs ${balanceDue} due.\n\nThe full amount must be collected before this order can be dispatched. Enter the amount received (you may enter more than Rs ${balanceDue} if the customer is paying with a larger note — change owed will be calculated automatically):`,
+      balanceDue
+    );
+    if(input === null) return; // worker cancelled — order stays open, nothing changes
+
+    const collected = parseFloat(input);
+    if(isNaN(collected) || collected < 0){ alert('Enter a valid, non-negative amount.'); return; }
+
+    // Dispatch is not allowed until the full balance is in hand — no
+    // partial collection, no "close it now and get the rest later."
+    if(collected < balanceDue){
+      alert(`Rs ${collected} is Rs ${(balanceDue - collected).toFixed(2)} short of the Rs ${balanceDue} balance due. The order cannot be dispatched until the full amount is collected.`);
+      return;
+    }
+
+    // The full amount actually tendered is sent here — collect_balance_payment
+    // sets balance_due to 0 and banks anything above the balance owed as
+    // dispatch_change_given (the change to hand back). Sending only the
+    // capped balanceDue here was the earlier bug: it always made dispatch
+    // change compute as Rs 0, no matter what the customer actually paid.
+    const { error: collectError } = await sb.rpc('collect_balance_payment', {
+      p_order_id: orderId, p_amount_collected: collected
+    });
+    if(collectError){ alert('Failed to record balance payment: ' + collectError.message); return; }
+
+    const change = collected - balanceDue;
+    if(change > 0){
+      alert(`Balance of Rs ${balanceDue} collected.\n\nChange to give back to customer: Rs ${change.toFixed(2)}`);
+    }
+  }
+
+  const { error } = await sb.rpc('close_order', { p_order_id: orderId });
+  if(error){ alert('Failed: ' + error.message); return; }
+  if(phone){
+    notifyCustomer(phone, code, 'dispatched');
+  }
+  loadOpenOrders();
+}
+
+
+// ---------- NEW ORDER ----------
+function renderServiceOptions(){
+  populateItemSelect();
+}
+
+// Maps the predefined typed labels to the backend's internal service categories.
+// Any category the worker types that isn't in here (e.g. "Steam Press") is treated as custom.
+const CATEGORY_MAP = {
+  'wash + dry clean': 'wash_dryclean',
+  'press only': 'press_only'
+};
+
+function populateItemSelect(){
+  const cat = document.getElementById('categorySelect').value.trim();
+  const key = CATEGORY_MAP[cat.toLowerCase()];
+  if(!key){
+    document.getElementById('itemsDatalist').innerHTML = '';
+    return;
+  }
+  const list = services.filter(s => (s.category || 'wash_dryclean') === key).sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('itemsDatalist').innerHTML = list.map(s => `<option value="${escAttr(s.name)}">`).join('');
+}
+
+function fillPriceFromSelection(){
+  const cat = document.getElementById('categorySelect').value.trim();
+  const typed = document.getElementById('itemSelect').value.trim().toLowerCase();
+  const searchKey = typed + ' [' + cat.toLowerCase() + ']';
+
+  // 1. This specific customer's own past rate for this service (bracketed by category) always wins.
+  if(typed && Object.prototype.hasOwnProperty.call(customerPriceMap, searchKey)){
+    document.getElementById('itemPrice').value = customerPriceMap[searchKey];
+    return;
+  }
+
+  // 2. Otherwise fall back to the shop's default price for the service, only for known categories.
+  const key = CATEGORY_MAP[cat.toLowerCase()];
+  if(!key) return; // custom/unmapped category — leave price alone for manual entry
+
+  const match = services.find(s => (s.category || 'wash_dryclean') === key && s.name.trim().toLowerCase() === typed);
+  if(match){ document.getElementById('itemPrice').value = match.default_price || 0; }
+  // if no match (a custom item, and no customer history), leave whatever price the worker has typed alone
+}
+
+document.getElementById('categorySelect').addEventListener('change', populateItemSelect);
+document.getElementById('itemSelect').addEventListener('input', fillPriceFromSelection);
+
+function addItemToOrder(){
+  const categoryLabel = document.getElementById('categorySelect').value.trim();
+  const baseService = document.getElementById('itemSelect').value.trim();
+  const service = baseService ? `${baseService} [${categoryLabel}]` : '';
+  const qty = parseFloat(document.getElementById('itemQty').value) || 0;
+  const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+  if(!categoryLabel){ alert('Enter a type/category.'); return; }
+  if(!baseService){ alert('Type or select an item.'); return; }
+  if(qty <= 0 || price <= 0){ alert('Set a valid quantity and price.'); return; }
+  currentItems.push({ service, qty, price, line_total: qty*price });
+  document.getElementById('itemSelect').value = '';
+  document.getElementById('itemPrice').value = '';
+  document.getElementById('itemQty').value = 1;
+  renderItemsList();
+}
+
+// ---------- ORDER CODE (last 4 digits of phone, editable, deduped against open orders) ----------
+let codeManuallyEdited = false;
+let codeHasConflict = false;
+
+// ---------- PHONE VALIDATION ----------
+// Pakistani mobile format: exactly 11 digits, starting with 0
+// (e.g. 03001234567). Validated live at input time here, AND
+// re-checked in saveAndPrint() before the order is saved — catching
+// it only at WhatsApp-link-build time (notifyCustomer) was too late:
+// the order was already saved with a bad number by then, silently.
+function isValidPakPhone(v){
+  const digits = String(v || '').replace(/\D/g, '');
+  return /^0\d{10}$/.test(digits);
+}
+
+function validatePhoneField(){
+  const raw = document.getElementById('phoneInput').value.trim();
+  const errBox = document.getElementById('phoneError');
+  if(!raw){ errBox.textContent = ''; return true; }
+  if(!isValidPakPhone(raw)){
+    errBox.textContent = 'Enter an 11-digit number starting with 0 (e.g. 03001234567).';
+    return false;
+  }
+  errBox.textContent = '';
+  return true;
+}
+
+document.getElementById('phoneInput').addEventListener('input', ()=>{
+  if(!codeManuallyEdited){
+    const digits = document.getElementById('phoneInput').value.replace(/\D/g,'');
+    document.getElementById('codeInput').value = digits.slice(-4);
+    checkOrderCode();
+  }
+  validatePhoneField();
+});
+document.getElementById('phoneInput').addEventListener('blur', validatePhoneField);
+document.getElementById('codeInput').addEventListener('input', ()=>{
+  codeManuallyEdited = true;
+  checkOrderCode();
+});
+
+async function checkOrderCode(){
+  const code = document.getElementById('codeInput').value.trim();
+  const statusBox = document.getElementById('codeStatus');
+  codeHasConflict = false;
+  if(!code){ statusBox.innerHTML = ''; return; }
+  if(!currentBranchId){ return; }
+  const { data, error } = await sb.rpc('check_order_code', { p_branch_id: currentBranchId, p_code: code });
+  if(error){ statusBox.innerHTML = ''; return; }
+  if(data && data.length){
+    codeHasConflict = true;
+    const conflict = data[0];
+    statusBox.innerHTML = `<span class="error">Code "${escHtml(code)}" is already in use by an open order (${escHtml(conflict.customer_name || 'unknown')}, ${escHtml(conflict.phone)}). Choose a different code.</span>`;
+  } else {
+    statusBox.innerHTML = `<span>Code "${code}" is available.</span>`;
+  }
+}
+
+let priceHistoryLoadedForPhone = null;
+document.getElementById('phoneInput').addEventListener('input', ()=>{
+  // A new/changed phone number invalidates whatever customer's rates were loaded before.
+  const phone = document.getElementById('phoneInput').value.trim();
+  if(phone !== priceHistoryLoadedForPhone){ customerPriceMap = {}; }
+});
+document.getElementById('phoneInput').addEventListener('blur', checkPriceHistory);
+
+async function checkPriceHistory(){
+  const phone = document.getElementById('phoneInput').value.trim();
+  const box = document.getElementById('priceHistoryBox');
+  customerPriceMap = {};
+  priceHistoryLoadedForPhone = phone;
+  if(!phone){ box.innerHTML=''; return; }
+  const { data, error } = await sb.rpc('get_price_history', { p_phone: phone });
+  if(error || !data || !data.length){
+    box.innerHTML = '<span>No previous pricing on record for this number.</span>';
+    return;
+  }
+  // Keep the most recent price this customer was charged for each service.
+  const sorted = [...data].sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at));
+  sorted.forEach(r=>{
+    const key = (r.service || '').trim().toLowerCase();
+    if(key && !(key in customerPriceMap)) customerPriceMap[key] = r.price;
+  });
+  box.innerHTML = `<div class="small" style="margin-bottom:4px;"><b>This customer's usual rates (auto-applied when the item matches):</b></div>` +
+    data.map(r =>
+      `<div class="hist-line">${r.branch_name} — ${r.service}: Rs ${r.price} (${new Date(r.updated_at).toLocaleDateString()})</div>`
+    ).join('');
+}
+
+function removeLineItem(idx){ currentItems.splice(idx,1); renderItemsList(); }
+
+function renderItemsList(){
+  document.querySelector('#itemsTable tbody').innerHTML = currentItems.map((it,idx)=>
+    `<tr><td>${escHtml(it.service)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
+     <td><button class="btn-secondary" onclick="removeLineItem(${idx})">x</button></td></tr>`
+  ).join('');
+  const subtotal = currentItems.reduce((s,it)=>s+it.line_total,0);
+  const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+  const total = subtotal - discount;
+  document.getElementById('subtotalDisplay').textContent = 'Rs ' + subtotal;
+  document.getElementById('grandTotalDisplay').textContent = 'Rs ' + total;
+
+  // Advance/Balance: left blank until the worker types something, rather
+  // than silently defaulting to 0, so an empty field is visibly empty —
+  // saveAndPrint() below refuses to save on a blank advance field.
+  const advanceRaw = document.getElementById('advanceInput').value;
+  const advance = parseFloat(advanceRaw);
+  const hasAdvance = advanceRaw.trim() !== '' && !isNaN(advance);
+  const balance = hasAdvance ? total - advance : total;
+  document.getElementById('advanceDisplay').textContent = hasAdvance ? ('Rs ' + advance) : '—';
+  document.getElementById('balanceDisplay').textContent = 'Rs ' + balance;
+
+  // Cash Tendered is optional: if the cashier fills it in and it's more
+  // than the advance being recorded, show the change owed live, before
+  // saving — same idea as the balance-collection prompt at dispatch.
+  const tenderedRaw = document.getElementById('tenderedInput').value;
+  const tendered = parseFloat(tenderedRaw);
+  const changeLine = document.getElementById('tenderedChangeLine');
+  if(tenderedRaw.trim() !== '' && !isNaN(tendered) && hasAdvance && tendered > advance){
+    changeLine.style.display = '';
+    document.getElementById('tenderedChangeDisplay').textContent = 'Rs ' + (tendered - advance).toFixed(2);
+  } else {
+    changeLine.style.display = 'none';
+  }
+}
+
+async function saveAndPrint(){
+  const phone = document.getElementById('phoneInput').value.trim();
+  const name = document.getElementById('nameInput').value.trim();
+  const code = document.getElementById('codeInput').value.trim();
+  if(!phone || !currentItems.length){ alert('Enter phone number and at least one item.'); return; }
+  if(!isValidPakPhone(phone)){
+    validatePhoneField();
+    alert('Enter a valid 11-digit phone number starting with 0 (e.g. 03001234567) before saving.');
+    return;
+  }
+  if(!code){ alert('Enter an order code.'); return; }
+  if(!currentBranchId){ alert('No branch selected.'); return; }
+
+  const subtotal = currentItems.reduce((s,it)=>s+it.line_total,0);
+  const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+  const total = subtotal - discount;
+
+  // Advance payment is mandatory — 0 is a valid, explicit answer, but a
+  // blank field is not, so the worker can't skip declaring it by accident.
+  const advanceRaw = document.getElementById('advanceInput').value.trim();
+  if(advanceRaw === ''){
+    alert('You must enter the advance amount received. Enter 0 if no cash was taken.');
+    return;
+  }
+  const advancePaid = parseFloat(advanceRaw);
+  if(isNaN(advancePaid) || advancePaid < 0){
+    alert('Enter a valid advance amount (0 or more).');
+    return;
+  }
+  if(advancePaid > total){
+    alert(`Advance (Rs ${advancePaid}) cannot be more than the total bill (Rs ${total}).`);
+    return;
+  }
+  const balanceDue = total - advancePaid;
+
+  // Cash Tendered is optional. If filled in, it must cover at least the
+  // advance being recorded — anything above that becomes change owed
+  // back to the customer right now, at booking.
+  const tenderedRaw = document.getElementById('tenderedInput').value.trim();
+  let changeGiven = 0;
+  if(tenderedRaw !== ''){
+    const tendered = parseFloat(tenderedRaw);
+    if(isNaN(tendered) || tendered < 0){ alert('Enter a valid, non-negative cash tendered amount, or leave it blank.'); return; }
+    if(tendered < advancePaid){ alert(`Cash tendered (Rs ${tendered}) cannot be less than the advance being recorded (Rs ${advancePaid}).`); return; }
+    changeGiven = tendered - advancePaid;
+  }
+
+  // Disable the button for the rest of this function — from here on it's
+  // all network round trips (code re-check, then the actual save), and a
+  // double-click during that gap would otherwise create two identical
+  // orders. try/finally guarantees it re-enables no matter which path
+  // (success, validation failure, or RPC error) the function exits through.
+  const saveBtn = document.getElementById('saveOrderBtn');
+  saveBtn.disabled = true;
+  try {
+    // Re-check for a conflict right before saving in case another worker just took this code
+    await checkOrderCode();
+    if(codeHasConflict){ alert('That order code is already in use by an open order. Choose a different code.'); return; }
+
+    const { data: orderId, error } = await sb.rpc('book_order', {
+      p_branch_id: currentBranchId, p_phone: phone, p_name: name, p_code: code,
+      p_items: currentItems, p_subtotal: subtotal, p_discount: discount, p_total: total,
+      p_advance_paid: advancePaid, p_change_given: changeGiven
+    });
+    if(error){ alert('Failed to save order: ' + error.message); return; }
+
+    printReceipt(orderId, phone, name, code, total, advancePaid, balanceDue, changeGiven);
+    await sb.rpc('mark_order_printed', { p_order_id: orderId });
+
+    currentItems = [];
+    document.getElementById('phoneInput').value = '';
+    document.getElementById('nameInput').value = '';
+    document.getElementById('codeInput').value = '';
+    document.getElementById('discountInput').value = '0';
+    document.getElementById('advanceInput').value = '';
+    document.getElementById('tenderedInput').value = '';
+    renderItemsList();
+    document.getElementById('priceHistoryBox').innerHTML = '';
+    document.getElementById('codeStatus').innerHTML = '';
+    codeManuallyEdited = false;
+    codeHasConflict = false;
+    customerPriceMap = {};
+    priceHistoryLoadedForPhone = null;
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePaid, balanceRecovered, dispatchChangeGiven, dispatchedAt){
+  const branch = branches.find(b => b.id === currentBranchId);
+  let items = [];
+  try{ items = JSON.parse(decodeURIComponent(itemsJson)); } catch(e){ items = []; }
+
+  // Only dispatch-time change belongs on the closing bill — booking-time
+  // change already has its own line on the original booking receipt and
+  // must never reappear here.
+  const changeLine = Number(dispatchChangeGiven) > 0
+    ? `<div class="receipt-row"><span>CHANGE GIVEN (DISPATCH)</span><span>Rs ${dispatchChangeGiven}</span></div>`
+    : '';
+  // Cash actually tendered at dispatch (balanceRecovered + change) — the
+  // amount the dispatch change was calculated from. Only shown when
+  // change was actually given; otherwise it's identical to Balance
+  // Recovered above.
+  const cashPaidLine = Number(dispatchChangeGiven) > 0
+    ? `<div class="receipt-row"><span>CASH PAID (DISPATCH)</span><span>Rs ${(Number(balanceRecovered) + Number(dispatchChangeGiven)).toFixed(2)}</span></div>`
+    : '';
+  const dispatchedLine = formatReceiptDateTime(dispatchedAt ? new Date(dispatchedAt) : new Date());
+
+  document.getElementById('receipt').innerHTML = `
+    <div class="receipt-box" style="position:relative;">
+      <div class="center"><b>${branch ? branch.name : 'Get Smart / White Rays'}</b></div>
+      <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
+      <div class="center small">CLOSING BILL — printed ${formatReceiptDateTime(new Date())}</div>
+      <hr>
+      <div>Order #${orderId} — Code: ${code}</div>
+      <div>${name || 'Walk-in'} — ${phone}</div>
+      <div class="small">Dispatched: ${dispatchedLine}</div>
+      <hr>
+      ${items.map(it => `
+        <div class="receipt-item">
+          <span class="item-name">${escHtml(it.service)} x${it.qty}</span>
+          <div class="item-calc"><span>Rs ${it.price} x ${it.qty}</span><span>Rs ${it.line_total}</span></div>
+        </div>`).join('')}
+      <hr>
+      <div class="receipt-row"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
+      <div style="background:#f2f2f2;border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
+        <div class="receipt-row"><b>ADVANCE PAID (AT BOOKING)</b><b>Rs ${advancePaid}</b></div>
+        <div class="receipt-row"><b>BALANCE RECOVERED (AT DISPATCH)</b><b>Rs ${balanceRecovered}</b></div>
+        <div style="border-top:1px dashed #000;margin:4px 0;"></div>
+        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${(Number(advancePaid) + Number(balanceRecovered)).toFixed(2)}</b></div>
+      </div>
+      ${cashPaidLine}
+      ${changeLine}
+      <hr>
+      <!-- Rubber-stamp style "CLEARED" mark — rotated, bordered, ink-like,
+           so a printed closing bill is unmistakably distinguishable from
+           the original booking receipt at a glance. -->
+      <div style="text-align:center;margin:14px 0;">
+        <span style="display:inline-block;border:3px solid #000;color:#000;
+          padding:4px 16px;font-weight:700;letter-spacing:2px;
+          transform:rotate(-8deg);font-size:15px;">
+          ✓ CLEARED — PAID IN FULL
+        </span>
+      </div>
+      <hr>
+      <div class="center">Thank you!</div>
+      <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
+    </div>`;
+  window.print();
+}
+
+function printReceipt(orderId, phone, name, code, total, advancePaid, balanceDue, changeGiven){
+  const branch = branches.find(b => b.id === currentBranchId);
+  const balanceLine = balanceDue > 0
+    ? `<div class="receipt-row"><b>CASH AWAITED ON DISPATCH</b><b>Rs ${balanceDue}</b></div>`
+    : `<div class="center"><b>PAID IN FULL</b></div>`;
+  // Cash actually handed over at the counter, tendered — this is the
+  // amount change was calculated from (advancePaid + changeGiven). Only
+  // shown when change was actually given; otherwise it's identical to
+  // Advance Paid and would just be a redundant line.
+  const cashPaidLine = Number(changeGiven) > 0
+    ? `<div class="receipt-row"><span>CASH PAID (ADVANCE)</span><span>Rs ${(Number(advancePaid) + Number(changeGiven)).toFixed(2)}</span></div>`
+    : '';
+  const changeLine = Number(changeGiven) > 0
+    ? `<div class="receipt-row"><span>CHANGE GIVEN (ADVANCE)</span><span>Rs ${changeGiven.toFixed(2)}</span></div>`
+    : '';
+  // Bill is valid for pickup for 30 days from the moment it's printed
+  // (booking time), matching the terms line printed below.
+  const bookingDate = new Date();
+  const expiryDate = new Date(bookingDate);
+  expiryDate.setDate(expiryDate.getDate() + 30);
+  const expiryLine = `
+    <div style="border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
+      <div class="receipt-row"><b>COLLECT BY (BILL EXPIRY)</b><b>${formatReceiptDate(expiryDate)}</b></div>
+    </div>`;
+  document.getElementById('receipt').innerHTML = `
+    <div class="receipt-box">
+      <div class="center"><b>${branch ? branch.name : 'Get Smart / White Rays'}</b></div>
+      <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
+      <div class="center">${formatReceiptDateTime(bookingDate)}</div>
+      <hr>
+      <div>Order #${orderId} — Code: ${code}</div>
+      <div>${name || 'Walk-in'} — ${phone}</div>
+      <hr>
+      ${currentItems.map(it => `
+        <div class="receipt-item">
+          <span class="item-name">${escHtml(it.service)} x${it.qty}</span>
+          <div class="item-calc"><span>Rs ${it.price} x ${it.qty}</span><span>Rs ${it.line_total}</span></div>
+        </div>`).join('')}
+      <hr>
+      <div class="receipt-row"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
+      <div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${advancePaid}</span></div>
+      ${cashPaidLine}
+      ${changeLine}
+      <div class="receipt-row"><span>BALANCE DUE</span><span>Rs ${balanceDue}</span></div>
+      <hr>
+      ${balanceLine}
+      ${expiryLine}
+      <hr>
+      <div class="receipt-terms">
+        1. Please take back your clothes within 30 days of booking date, after that we will not be responsible for any damages or losses.<br>
+        2. Prevention from fading or decoloring of low quality fabric or boski/karandi suits will not be the responsibility of the shop.
+      </div>
+      <hr>
+      <div class="center">Thank you!</div>
+      <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
+    </div>`;
+  window.print();
+}
+
+// ---------- EXPENSES ----------
+let sessionExpenseLog = [];
+async function addExpense(){
+  const amount = parseFloat(document.getElementById('expenseAmount').value) || 0;
+  const category = document.getElementById('expenseCategory').value.trim();
+  const note = document.getElementById('expenseNote').value.trim();
+  if(amount<=0){ alert('Enter a valid amount.'); return; }
+  const { error } = await sb.rpc('add_expense', {
+    p_branch_id: currentBranchId, p_amount: amount, p_category: category, p_note: note
+  });
+  if(error){ alert('Failed: ' + error.message); return; }
+  sessionExpenseLog.push({ amount, category, note, time: new Date().toLocaleTimeString() });
+  renderExpenseLog();
+  document.getElementById('expenseAmount').value = '';
+  document.getElementById('expenseNote').value = '';
+}
+function renderExpenseLog(){
+  document.getElementById('expenseLogList').innerHTML = sessionExpenseLog.map(e =>
+    `<div class="ledger-line"><span>${e.time} — ${escHtml(e.category)}: ${escHtml(e.note || '')}</span><span>Rs ${e.amount}</span></div>`
+  ).join('') || '<div class="small">Nothing logged yet this session.</div>';
+}
+
+// ---------- ADMIN DASHBOARD ----------
+function branchName(id){ return (branches.find(b => b.id === id) || {}).name || id; }
+
+// Cached full-history data + the currently selected month ('YYYY-MM').
+// Switching months just re-renders from these — no re-fetch needed.
+let dashDailyAll = [], dashMonthlyAll = [], dashMonthlyExpAll = [], dashPendingAll = [], dashExpenseAll = [];
+let selectedDashMonth = null;
+
+function currentRealMonthKey(){ return new Date().toISOString().slice(0,7); }
+function formatMonthLabel(monthKey){
+  if(!monthKey) return '';
+  const d = new Date(monthKey + '-01T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+async function loadAdminDashboard(){
+  // No .limit() on daily — we need full history so every past month is
+  // selectable, not just the most recent ~90 day-rows.
+  const { data: daily } = await sb.from('daily_cash_register').select('*').order('day', { ascending:false });
+  const { data: monthly } = await sb.from('monthly_summary').select('*').order('month', { ascending:false });
+  const { data: monthlyExp } = await sb.from('monthly_expenses').select('*').order('month', { ascending:false });
+  const { data: pending } = await sb.from('outstanding_balance_view').select('*');
+  const { data: expenseRows } = await sb.from('admin_expenses_view').select('*').order('created_at', { ascending:false });
+
+  dashDailyAll = daily || [];
+  dashMonthlyAll = monthly || [];
+  dashMonthlyExpAll = monthlyExp || [];
+  dashPendingAll = pending || [];
+  dashExpenseAll = expenseRows || [];
+
+  populateDashMonthOptions();
+  renderDashboardPanels();
+}
+
+// Builds the month dropdown from every month that has data (daily rows or
+// monthly_summary rows) plus always includes the real current month, even
+// with zero activity yet — same "always show current month" convention as
+// Monthly Register. New months appear automatically as data comes in; no
+// hardcoded end date, so it keeps working "from now onwards" indefinitely.
+function populateDashMonthOptions(){
+  const keys = new Set();
+  dashDailyAll.forEach(r => { if(r.day) keys.add(r.day.slice(0,7)); });
+  dashMonthlyAll.forEach(r => { if(r.month) keys.add(r.month.slice(0,7)); });
+  keys.add(currentRealMonthKey());
+
+  const sorted = Array.from(keys).sort().reverse(); // latest first
+  if(!selectedDashMonth || !keys.has(selectedDashMonth)){
+    selectedDashMonth = currentRealMonthKey();
+  }
+
+  const sel = document.getElementById('dashMonthSelect');
+  sel.innerHTML = sorted.map(k =>
+    `<option value="${k}" ${k === selectedDashMonth ? 'selected' : ''}>${formatMonthLabel(k)}</option>`
+  ).join('');
+}
+
+function onDashMonthChange(){
+  selectedDashMonth = document.getElementById('dashMonthSelect').value;
+  renderDashboardPanels();
+}
+
+function renderDashboardPanels(){
+  const monthLabel = formatMonthLabel(selectedDashMonth);
+  const daily = dashDailyAll.filter(r => r.day && r.day.slice(0,7) === selectedDashMonth);
+  const expenseRows = dashExpenseAll.filter(e => e.created_at && e.created_at.slice(0,7) === selectedDashMonth);
+
+  const container = document.getElementById('dashboardBranchPanels');
+  container.innerHTML = branches.map((b, idx) =>
+    renderBranchDashboard(b, idx, daily, dashMonthlyAll, dashMonthlyExpAll, dashPendingAll, expenseRows, selectedDashMonth, monthLabel)
+  ).join('');
+}
+
+// Get Smart = dark blue, White Rays = dark brown; any other/future branch
+// name alternates between the two themes by position so it's never left
+// unstyled.
+function branchThemeClass(branchName, idx){
+  if(branchName === 'Get Smart') return 'branch-theme-blue';
+  if(branchName === 'White Rays') return 'branch-theme-brown';
+  return idx % 2 === 0 ? 'branch-theme-blue' : 'branch-theme-brown';
+}
+
+function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending, expenseRows, selectedMonthKey, monthLabel){
+  const bId = branch.id;
+  // daily/expenseRows arrive already filtered to the selected month by
+  // renderDashboardPanels() — no more hardcoded 30-day / 100-row slice.
+  const bDaily = daily.filter(r => r.branch_id === bId).sort((a,b) => a.day < b.day ? -1 : 1);
+  const bMonthly = monthly.filter(r => r.branch_id === bId);
+  const bExpenses = expenseRows.filter(e => e.branch_id === bId);
+  const bPending = (pending.find(p => p.branch_id === bId) || {}).total_pending || 0;
+
+  // ---- Daily Cash Register ----
+  const dailyRows = bDaily.map(r => `
+    <tr class="audit-row" onclick="openDailyAudit('${r.day}', ${bId}, '${branch.name}')">
+      <td>${r.day}</td><td>${r.orders_booked}</td><td>Rs ${r.value_booked}</td>
+      <td>Rs ${r.advance_collected}</td><td>Rs ${r.balance_collected}</td><td>Rs ${r.total_cash_in}</td>
+      <td>Rs ${r.expenses_today}</td><td>Rs ${r.pending_from_bookings}</td>
+    </tr>`).join('') || '<tr><td colspan="8" class="small">No activity yet.</td></tr>';
+  const dSum = bDaily.reduce((s,r) => ({
+    orders: s.orders + Number(r.orders_booked), value: s.value + Number(r.value_booked),
+    advance: s.advance + Number(r.advance_collected), balance: s.balance + Number(r.balance_collected),
+    cash: s.cash + Number(r.total_cash_in), exp: s.exp + Number(r.expenses_today),
+    pendingBooked: s.pendingBooked + Number(r.pending_from_bookings)
+  }), { orders:0, value:0, advance:0, balance:0, cash:0, exp:0, pendingBooked:0 });
+
+  // ---- Expenses ----
+  const expRows = bExpenses.map(e => `
+    <tr><td>${new Date(e.created_at).toLocaleString()}</td><td>${escHtml(e.category||'')}</td>
+      <td>${escHtml(e.note||'')}</td><td>Rs ${e.amount}</td><td>${escHtml(e.worker_name||'—')}</td>
+      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${escAttr(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td></tr>`).join('')
+    || '<tr><td colspan="6" class="small">No expenses logged.</td></tr>';
+  const expTotal = bExpenses.reduce((s,e) => s + Number(e.amount), 0);
+
+  // ---- Monthly Summary ----
+  const monthlyRows = bMonthly.map(r => {
+    const exp = monthlyExp.find(e => e.branch_id===bId && e.month===r.month);
+    const expAmt = exp ? exp.total_expenses : 0;
+    const isSelected = r.month && r.month.slice(0,7) === selectedMonthKey;
+    return `<tr${isSelected ? ' style="background:#fff3c4;font-weight:bold;"' : ''}><td>${r.month}</td><td>${r.order_count}</td><td>Rs ${Math.round(r.total_sales)}</td>
+      <td>Rs ${Math.round(r.avg_order_value)}</td><td>Rs ${r.peak_order}</td><td>Rs ${r.min_order}</td>
+      <td>Rs ${expAmt}</td><td>Rs ${Math.round(r.total_sales - expAmt)}</td></tr>`;
+  }).join('') || '<tr><td colspan="8" class="small">No activity yet.</td></tr>';
+  const mSum = bMonthly.reduce((s,r) => {
+    const exp = monthlyExp.find(e => e.branch_id===bId && e.month===r.month);
+    const expAmt = exp ? Number(exp.total_expenses) : 0;
+    return { orders: s.orders + Number(r.order_count), sales: s.sales + Number(r.total_sales), expenses: s.expenses + expAmt };
+  }, { orders:0, sales:0, expenses:0 });
+
+  return `
+    <div class="branch-block ${branchThemeClass(branch.name, idx)}">
+    <div class="branch-heading">${branch.name}</div>
+
+    <div class="panel">
+      <label>Daily Cash Register — ${monthLabel} — ${branch.name}</label>
+      <table>
+        <thead><tr><th>Date</th><th>Orders Booked</th><th>Value Booked</th><th>Advance Collected</th><th>Balance Recovered</th><th>Total Cash In</th><th>Expenses</th><th>Cash to be Received</th></tr></thead>
+        <tbody>${dailyRows}</tbody>
+        <tfoot><tr style="font-weight:bold;"><td>MONTHLY TOTAL (${monthLabel})</td><td>${dSum.orders}</td><td>Rs ${dSum.value}</td>
+          <td>Rs ${dSum.advance}</td><td>Rs ${dSum.balance}</td><td>Rs ${dSum.cash}</td>
+          <td>Rs ${dSum.exp}</td><td>Rs ${dSum.pendingBooked}</td></tr></tfoot>
+      </table>
+      <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${branch.name}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${bPending}</b></div>
+    </div>
+
+    <div class="panel">
+      <label>Expenses — ${branch.name} (${monthLabel})</label>
+      <div class="row" style="margin-bottom:10px;">
+        <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Electricity')">Electricity</button>
+        <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Gas')">Gas</button>
+        <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Chemicals')">Chemicals</button>
+        <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Rent')">Rent</button>
+        <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Salary')">Salary</button>
+        <button class="btn-secondary" onclick="quickDashExpense(${bId}, '')">Other / Custom</button>
+      </div>
+      <div class="row" id="dashExpenseForm_${bId}" style="display:none;margin-bottom:14px;">
+        <div class="field"><label>Category</label><input type="text" id="dashExpenseCategory_${bId}" style="width:160px;"></div>
+        <div class="field"><label>Amount</label><input type="number" id="dashExpenseAmount_${bId}" style="width:120px;"></div>
+        <div class="field"><label>Note</label><input type="text" id="dashExpenseNote_${bId}" style="width:200px;"></div>
+        <div class="field"><button class="btn-main" onclick="submitDashExpense(${bId})">Save Expense</button></div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th><th>Worker</th><th></th></tr></thead>
+        <tbody>${expRows}</tbody>
+        <tfoot><tr style="font-weight:bold;"><td colspan="3">TOTAL</td><td>Rs ${expTotal}</td><td></td><td></td></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="panel">
+      <label>Monthly Summary — ${branch.name}</label>
+      <table>
+        <thead><tr><th>Month</th><th>Orders</th><th>Sales</th><th>Avg</th><th>Peak</th><th>Min</th><th>Expenses</th><th>Net</th></tr></thead>
+        <tbody>${monthlyRows}</tbody>
+        <tfoot><tr style="font-weight:bold;"><td>GRAND TOTAL</td><td>${mSum.orders}</td><td>Rs ${Math.round(mSum.sales)}</td>
+          <td colspan="3"></td><td>Rs ${Math.round(mSum.expenses)}</td><td>Rs ${Math.round(mSum.sales - mSum.expenses)}</td></tr></tfoot>
+      </table>
+    </div>
+    </div>
+  `;
+}
+
+// Quick-add expense form on the main Admin Dashboard (per-branch, since
+// renderBranchDashboard loops over every branch at once — IDs are suffixed
+// with branchId so multiple branches' forms don't collide in the DOM).
+// Uses the same add_expense RPC as the worker Expenses tab and the Monthly
+// Register quick-add, just with 'Salary' added as a category shortcut.
+// Note: this logs a generic branch expense with category "Salary" — it does
+// NOT write to the salary_payments table/log (worker name, salary vs advance,
+// month). Use "Record Salary Payment" in Monthly Register for that.
+function quickDashExpense(branchId, category){
+  const form = document.getElementById('dashExpenseForm_' + branchId);
+  form.style.display = 'flex';
+  document.getElementById('dashExpenseCategory_' + branchId).value = category;
+  document.getElementById('dashExpenseAmount_' + branchId).focus();
+}
+
+async function submitDashExpense(branchId){
+  const category = document.getElementById('dashExpenseCategory_' + branchId).value.trim();
+  const amount = parseFloat(document.getElementById('dashExpenseAmount_' + branchId).value) || 0;
+  const note = document.getElementById('dashExpenseNote_' + branchId).value.trim();
+  if(!category){ alert('Enter a category name.'); return; }
+  if(amount <= 0){ alert('Enter a valid amount.'); return; }
+  const { error } = await sb.rpc('add_expense', { p_branch_id: branchId, p_amount: amount, p_category: category, p_note: note });
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadAdminDashboard();
+}
+
+// ---------- MONTHLY REGISTER ----------
+async function loadMonthlyRegister(){
+  if(!currentBranchId) return;
+  const label = branchName(currentBranchId);
+  document.getElementById('mrBranchLabel2').textContent = label;
+  document.getElementById('mrCurrentBranchLabel').textContent = label;
+
+  const { data, error } = await sb.from('monthly_register').select('*').eq('branch_id', currentBranchId).order('month', { ascending:false });
+  if(error){ document.getElementById('monthlyRegisterBody').innerHTML = `<tr><td colspan="11" class="error">${error.message}</td></tr>`; return; }
+  const rows = data || [];
+
+  document.getElementById('monthlyRegisterBody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.month}</td>
+      <td>${r.orders_booked}</td>
+      <td>Rs ${r.value_booked}</td>
+      <td>Rs ${r.advance_collected}</td>
+      <td>Rs ${r.balance_collected}</td>
+      <td>Rs ${r.total_cash_collected}</td>
+      <td>Rs ${r.total_expenses}</td>
+      <td>Rs ${r.total_salaries}</td>
+      <td>Rs ${Math.round(r.net_cash)}</td>
+      <td>${r.is_closed ? 'Closed' : 'Open'}</td>
+      <td><button class="btn-secondary" onclick="toggleMonthClosed('${r.month}', ${r.is_closed})">${r.is_closed ? 'Reopen' : 'Mark Closed'}</button></td>
+    </tr>`).join('') || '<tr><td colspan="11" class="small">No activity yet.</td></tr>';
+
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  const currentRow = rows.find(r => r.month === currentMonthStr);
+  document.getElementById('mrLiveOrders').textContent = currentRow ? currentRow.orders_booked : 0;
+  document.getElementById('mrLiveValue').textContent = 'Rs ' + (currentRow ? currentRow.value_booked : 0);
+  document.getElementById('mrLiveCash').textContent = 'Rs ' + (currentRow ? currentRow.total_cash_collected : 0);
+  document.getElementById('mrLiveExpenses').textContent = 'Rs ' + (currentRow ? currentRow.total_expenses : 0);
+  document.getElementById('mrLiveSalaries').textContent = 'Rs ' + (currentRow ? currentRow.total_salaries : 0);
+  document.getElementById('mrLiveNet').textContent = 'Rs ' + Math.round(currentRow ? currentRow.net_cash : 0);
+
+  const { data: pending } = await sb.from('outstanding_balance_view').select('*').eq('branch_id', currentBranchId);
+  const pendingAmt = (pending && pending[0]) ? pending[0].total_pending : 0;
+  document.getElementById('mrLivePending').textContent = 'Rs ' + pendingAmt;
+
+  await loadSalaryLog();
+
+  const monthInput = document.getElementById('salaryMonth');
+  if(!monthInput.value) monthInput.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+
+async function toggleMonthClosed(monthStr, isClosed){
+  const newState = !isClosed;
+  if(newState){
+    const { data: pending } = await sb.from('outstanding_balance_view').select('*').eq('branch_id', currentBranchId);
+    const pendingAmt = (pending && pending[0]) ? pending[0].total_pending : 0;
+    const msg = pendingAmt > 0
+      ? `This branch still has Rs ${pendingAmt} pending/uncollected on open orders. Mark the month closed anyway?`
+      : 'Mark this month as closed?';
+    if(!confirm(msg)) return;
+  } else {
+    if(!confirm('Reopen this month for edits?')) return;
+  }
+  const { error } = await sb.rpc('set_month_closed', { p_branch_id: currentBranchId, p_month: monthStr, p_closed: newState });
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadMonthlyRegister();
+}
+
+async function addSalaryPayment(){
+  const worker = document.getElementById('salaryWorkerName').value.trim();
+  const amount = parseFloat(document.getElementById('salaryAmount').value) || 0;
+  const type = document.getElementById('salaryType').value;
+  const monthVal = document.getElementById('salaryMonth').value; // 'YYYY-MM'
+  const note = document.getElementById('salaryNote').value.trim();
+  if(!worker){ alert('Enter worker name.'); return; }
+  if(amount <= 0){ alert('Enter a valid amount.'); return; }
+  if(!monthVal){ alert('Select a month.'); return; }
+  const { error } = await sb.rpc('add_salary_payment', {
+    p_branch_id: currentBranchId, p_worker_name: worker, p_amount: amount,
+    p_payment_type: type, p_month: monthVal + '-01', p_note: note
+  });
+  if(error){ alert('Failed: ' + error.message); return; }
+  document.getElementById('salaryWorkerName').value = '';
+  document.getElementById('salaryAmount').value = '';
+  document.getElementById('salaryNote').value = '';
+  loadMonthlyRegister();
+}
+
+async function loadSalaryLog(){
+  // .is('deleted_at', null) excludes soft-deleted records (see
+  // CRITICAL_and_followup_fixes.sql, item 6) — deletes no longer remove
+  // the row, just hide it here while preserving it for audit history.
+  const { data, error } = await sb.from('salary_payments').select('*').eq('branch_id', currentBranchId)
+    .is('deleted_at', null)
+    .order('month', { ascending:false }).order('created_at', { ascending:false }).limit(100);
+  if(error){ document.getElementById('salaryLogBody').innerHTML = `<tr><td colspan="6" class="error">${error.message}</td></tr>`; return; }
+  document.getElementById('salaryLogBody').innerHTML = (data||[]).map(s => `
+    <tr><td>${s.month}</td><td>${escHtml(s.worker_name)}</td><td>${escHtml(s.payment_type)}</td><td>Rs ${s.amount}</td><td>${escHtml(s.note||'')}</td>
+    <td><button class="btn-secondary" onclick="deleteSalaryPayment(${s.id})">Delete</button></td></tr>`
+  ).join('') || '<tr><td colspan="6" class="small">No salary payments logged.</td></tr>';
+}
+
+async function deleteSalaryPayment(id){
+  if(!confirm('Delete this salary payment record?')) return;
+  const { error } = await sb.rpc('delete_salary_payment', { p_id: id });
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadMonthlyRegister();
+}
+
+function quickExpense(category){
+  document.getElementById('mrExpenseForm').style.display = 'flex';
+  document.getElementById('mrExpenseCategory').value = category;
+  document.getElementById('mrExpenseAmount').focus();
+}
+
+async function submitMrExpense(){
+  const category = document.getElementById('mrExpenseCategory').value.trim();
+  const amount = parseFloat(document.getElementById('mrExpenseAmount').value) || 0;
+  const note = document.getElementById('mrExpenseNote').value.trim();
+  if(!category){ alert('Enter a category name.'); return; }
+  if(amount <= 0){ alert('Enter a valid amount.'); return; }
+  const { error } = await sb.rpc('add_expense', { p_branch_id: currentBranchId, p_amount: amount, p_category: category, p_note: note });
+  if(error){ alert('Failed: ' + error.message); return; }
+  document.getElementById('mrExpenseCategory').value = '';
+  document.getElementById('mrExpenseAmount').value = '';
+  document.getElementById('mrExpenseNote').value = '';
+  document.getElementById('mrExpenseForm').style.display = 'none';
+  loadMonthlyRegister();
+}
+
+// ---------- DAILY AUDIT MODAL (admin) ----------
+
+// Statuses shown in each audit bucket. Kept as arrays (not a single
+// status string) because your close_order history has used 'archived',
+// 'dispatched', and 'closed' at different points — showing all three
+// here means old orders don't silently disappear from the audit just
+// because the status label changed later.
+const AUDIT_BOOKED_STATUSES = ['live', 'printed'];
+const AUDIT_READY_STATUSES = ['ready'];
+const AUDIT_DISPATCHED_STATUSES = ['dispatched', 'closed', 'archived'];
+
+function auditItemsSummary(items){
+  return (items || []).map(it => `${escHtml(it.service)} x${it.qty}`).join(', ');
+}
+
+function renderAuditOrderRows(bodyId, list, balanceRecoveredMap){
+  const body = document.getElementById(bodyId);
+  const colCount = 10;
+  if(!list.length){
+    body.innerHTML = `<tr><td colspan="${colCount}" class="audit-empty">None</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(o => {
+    // For open orders (booked/ready), "Balance" means what's still owed.
+    // For dispatched/closed orders, balance_due is always 0 by definition —
+    // what's meaningful there is the balance that was actually collected
+    // at dispatch, which comes from the payments ledger instead.
+    const balanceValue = balanceRecoveredMap ? (balanceRecoveredMap[o.id] || 0) : (o.balance_due || 0);
+    return `
+    <tr>
+      <td>${new Date(o.created_at).toLocaleTimeString()}</td>
+      <td>${o.code || ''}</td>
+      <td>${escHtml(o.customer_name || '')}</td>
+      <td>${o.phone || o.customer_phone || ''}</td>
+      <td>${auditItemsSummary(o.items)}</td>
+      <td>Rs ${o.discount || 0}</td>
+      <td>Rs ${o.total}</td>
+      <td>Rs ${o.advance_paid || 0}</td>
+      <td>Rs ${balanceValue}</td>
+      <td>${escHtml(o.worker_name || '—')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAuditExpenseRows(list){
+  const body = document.getElementById('auditExpensesBody');
+  if(!list.length){
+    body.innerHTML = `<tr><td colspan="6" class="audit-empty">None</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(e => `
+    <tr>
+      <td>${new Date(e.created_at).toLocaleTimeString()}</td>
+      <td>${escHtml(e.category || '')}</td>
+      <td>${escHtml(e.note || '')}</td>
+      <td>Rs ${e.amount}</td>
+      <td>${escHtml(e.worker_name || '—')}</td>
+      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${escAttr(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td>
+    </tr>`).join('');
+}
+
+async function openDailyAudit(date, branchId, branchLabel){
+  lastAuditContext = { date, branchId, branchLabel };
+  document.getElementById('auditModalTitle').textContent = `Audit Report: ${date} — ${branchLabel}`;
+  const header = document.getElementById('auditModalHeader');
+  header.classList.remove('theme-blue', 'theme-brown');
+  header.classList.add(branchThemeClass(branchLabel, branches.findIndex(b => b.id === branchId)).replace('branch-', ''));
+  document.getElementById('auditModal').classList.add('open');
+
+  // Show a loading state in each section while both calls are in flight.
+  ['auditBookedBody','auditReadyBody','auditDispatchedBody'].forEach(id =>
+    document.getElementById(id).innerHTML = '<tr><td colspan="9" class="audit-empty">Loading…</td></tr>');
+  document.getElementById('auditExpensesBody').innerHTML = '<tr><td colspan="6" class="audit-empty">Loading…</td></tr>';
+
+  const [ordersRes, expensesRes, paymentsRes] = await Promise.all([
+    sb.rpc('get_audit_orders', { p_date: date, p_branch_id: branchId }),
+    sb.rpc('get_audit_expenses', { p_date: date, p_branch_id: branchId }),
+    sb.rpc('get_audit_payments', { p_date: date, p_branch_id: branchId })
+  ]);
+
+  if(ordersRes.error){
+    alert('Failed to load audit orders: ' + ordersRes.error.message);
+    return;
+  }
+  if(expensesRes.error){
+    alert('Failed to load audit expenses: ' + expensesRes.error.message);
+    return;
+  }
+  if(paymentsRes.error){
+    alert('Failed to load audit payments: ' + paymentsRes.error.message);
+    return;
+  }
+
+  const orders = ordersRes.data || [];
+  const expenses = expensesRes.data || [];
+  const payments = paymentsRes.data || [];
+
+  const booked = orders.filter(o => AUDIT_BOOKED_STATUSES.includes(o.status));
+  const ready = orders.filter(o => AUDIT_READY_STATUSES.includes(o.status));
+  const dispatched = orders.filter(o => AUDIT_DISPATCHED_STATUSES.includes(o.status));
+
+  // Sum today's balance-type payments per order, so the Dispatched/Closed
+  // table can show what was actually recovered at dispatch (balance_due
+  // on the order itself is 0 once closed, so it can't be used here).
+  const balanceRecoveredByOrder = {};
+  payments.filter(p => p.type === 'balance').forEach(p => {
+    balanceRecoveredByOrder[p.order_id] = (balanceRecoveredByOrder[p.order_id] || 0) + Number(p.amount);
+  });
+
+  renderAuditOrderRows('auditBookedBody', booked);
+  renderAuditOrderRows('auditReadyBody', ready);
+  renderAuditOrderRows('auditDispatchedBody', dispatched, balanceRecoveredByOrder);
+  renderAuditExpenseRows(expenses);
+
+  // Cash figures come from the payments ledger (dated by when the cash
+  // actually moved), not from each order's cumulative advance_paid —
+  // that column mixes booking-time and dispatch-time cash together once
+  // a balance gets collected, so it can't tell "today's advance" apart
+  // from "today's balance recovery" on its own.
+  const grossValue = orders.reduce((s,o) => s + Number(o.total) + Number(o.discount || 0), 0);
+  const totalDiscounts = orders.reduce((s,o) => s + Number(o.discount || 0), 0);
+  const advanceToday = payments.filter(p => p.type === 'advance').reduce((s,p) => s + Number(p.amount), 0);
+  const balanceRecoveredToday = payments.filter(p => p.type === 'balance').reduce((s,p) => s + Number(p.amount), 0);
+  const totalCollected = advanceToday + balanceRecoveredToday;
+  const totalOutstanding = orders.reduce((s,o) => s + Number(o.balance_due || 0), 0);
+  const totalExpenses = expenses.reduce((s,e) => s + Number(e.amount), 0);
+  const netCash = totalCollected - totalExpenses;
+
+  document.getElementById('auditGross').textContent = 'Rs ' + grossValue;
+  document.getElementById('auditDiscounts').textContent = 'Rs ' + totalDiscounts;
+  document.getElementById('auditAdvanceToday').textContent = 'Rs ' + advanceToday;
+  document.getElementById('auditBalanceRecoveredToday').textContent = 'Rs ' + balanceRecoveredToday;
+  document.getElementById('auditCollected').textContent = 'Rs ' + totalCollected;
+  document.getElementById('auditOutstanding').textContent = 'Rs ' + totalOutstanding;
+  document.getElementById('auditExpenseTotal').textContent = 'Rs ' + totalExpenses;
+  document.getElementById('auditNet').textContent = 'Rs ' + netCash;
+}
+
+function closeAuditModal(){
+  document.getElementById('auditModal').classList.remove('open');
+  lastAuditContext = null;
+}
+
+// Click on the dark overlay (outside the modal box) also closes it.
+document.getElementById('auditModal').addEventListener('click', (e) => {
+  if(e.target.id === 'auditModal') closeAuditModal();
+});
+
+// ---------- DELETE EXPENSE (admin, password re-entry required) ----------
+// This re-entry is a UX speed bump against accidental/mis-taps, not an
+// extra security boundary — the delete_expense RPC already checks
+// role = 'admin' server-side regardless of what happens here. What this
+// step actually does: re-runs signInWithPassword for the current admin's
+// own email, so a wrong password blocks the delete client-side before
+// the RPC is ever called, and a shared/unlocked device can't have
+// expenses deleted by someone who doesn't know the admin's password.
+let pendingDeleteExpenseId = null;
+// Set by openDailyAudit() so a delete from inside the audit modal can
+// refresh that same modal afterward instead of just closing it blank.
+let lastAuditContext = null;
+
+function openDeleteExpenseModal(expenseId, label){
+  if(!expenseId){ alert('This expense row is missing an id and cannot be deleted from here.'); return; }
+  pendingDeleteExpenseId = expenseId;
+  document.getElementById('deleteConfirmLabel').textContent = `Delete expense: ${label}? This cannot be undone from the app.`;
+  document.getElementById('deleteConfirmPassword').value = '';
+  document.getElementById('deleteConfirmError').textContent = '';
+  document.getElementById('deleteConfirmModal').classList.add('open');
+  document.getElementById('deleteConfirmPassword').focus();
+}
+
+function closeDeleteConfirmModal(){
+  pendingDeleteExpenseId = null;
+  document.getElementById('deleteConfirmModal').classList.remove('open');
+}
+
+document.getElementById('deleteConfirmModal').addEventListener('click', (e) => {
+  if(e.target.id === 'deleteConfirmModal') closeDeleteConfirmModal();
+});
+document.getElementById('deleteConfirmPassword').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') submitDeleteConfirm();
+});
+
+async function submitDeleteConfirm(){
+  const password = document.getElementById('deleteConfirmPassword').value;
+  const errBox = document.getElementById('deleteConfirmError');
+  if(!password){ errBox.textContent = 'Enter your password.'; return; }
+  if(!pendingDeleteExpenseId){ errBox.textContent = 'Nothing selected to delete.'; return; }
+
+  const { error: authError } = await sb.auth.signInWithPassword({ email: currentUserEmail, password });
+  if(authError){ errBox.textContent = 'Incorrect password.'; return; }
+
+  const { error: deleteError } = await sb.rpc('delete_expense', { p_id: pendingDeleteExpenseId });
+  if(deleteError){ errBox.textContent = 'Failed: ' + deleteError.message; return; }
+
+  closeDeleteConfirmModal();
+
+  // Refresh whichever view the delete was triggered from.
+  if(document.getElementById('tab-dashboard').style.display === 'block'){
+    await loadAdminDashboard();
+  }
+  if(lastAuditContext){
+    await openDailyAudit(lastAuditContext.date, lastAuditContext.branchId, lastAuditContext.branchLabel);
+  }
+}
+
+// ---------- SERVICES MANAGEMENT (admin) ----------
+async function addService(){
+  const name = document.getElementById('newServiceName').value.trim();
+  const default_price = parseFloat(document.getElementById('newServicePrice').value) || 0;
+  const category = document.getElementById('newServiceCategory').value;
+  if(!name) return;
+  const { error } = await sb.from('services').insert({ name, default_price, category });
+  if(error){ alert('Failed: ' + error.message); return; }
+  document.getElementById('newServiceName').value = '';
+  document.getElementById('newServicePrice').value = '';
+  await loadServices();
+  renderServiceOptions();
+  renderServicesTable();
+}
+async function deleteService(id){
+  if(!confirm('Delete this service? This cannot be undone from the app.')) return;
+  await sb.from('services').delete().eq('id', id);
+  await loadServices();
+  renderServiceOptions();
+  renderServicesTable();
+}
+function renderServicesTable(){
+  document.getElementById('servicesTableBody').innerHTML = services.map(s =>
+    `<tr><td>${escHtml(s.name)}</td><td>${s.category === 'press_only' ? 'Press Only' : 'Wash + Dry Clean'}</td><td>Rs ${s.default_price || 0}</td><td><button class="btn-secondary" onclick="deleteService(${s.id})">Delete</button></td></tr>`
+  ).join('');
+}
+
+// ---------- INIT ----------
+(async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) await afterLogin();
+})();
+</script>
+</body>
+</html>
