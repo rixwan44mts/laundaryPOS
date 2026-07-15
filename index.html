@@ -1044,17 +1044,15 @@ function notifyCustomer(phone, code, status){
   }
 }
 
-// Full, customer-facing branch names + signatures used only in the ready
-// notification — keeps the short internal name (from branchNameFixed)
+// Full, customer-facing branch names used only in the ready notification —
+// keeps the short internal name (from branchNameFixed)
 // separate from the polished identity shown to customers.
 const BRANCH_INFO = {
   'Brite Star': {
-    full: 'Brite star dry clean & steam press laundry (G11 Branch)',
-    signature: 'Brite star dry clean & steam press laundry (G11 Branch)'
+    full: 'Brite star dry clean & steam press laundry (G11 Branch)'
   },
   'Get Smart': {
-    full: 'Get smart dry clean and steam press laundry (F10 Branch)',
-    signature: 'Get smart dry clean and steam press laundry (F10 Branch)'
+    full: 'Get smart dry clean and steam press laundry (F10 Branch)'
   }
 };
 function getBranchInfo(branchNameKey){
@@ -1062,7 +1060,7 @@ function getBranchInfo(branchNameKey){
 }
 
 // Builds the full "order ready" message: English header, Urdu greeting,
-// itemized order details in English, total, Urdu closing + signature,
+// itemized order details in English, total, Urdu closing,
 // and the shop's own contact footer. Advance/balance lines mirror the
 // logic on the printed receipt so the WhatsApp message never disagrees
 // with the paper receipt the customer already has in hand.
@@ -1083,7 +1081,7 @@ function buildReadyMessage(code, branchInfo, items, total, advancePaid, balanceD
     paymentLines +
     `براہِ کرم اپنی سہولت کے مطابق تشریف لا کر آرڈر وصول کر لیں۔\n` +
     `آپ کے اعتماد کا شکریہ۔\n` +
-    `${branchInfo.signature}\n\n` +
+    `\n` +
     `اپنے کاروبار کے لیے جدید POS سسٹم بنوانے کے لیے رابطہ کریں:\n` +
     `📞 0319-2335276`;
 }
