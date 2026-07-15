@@ -731,30 +731,92 @@ let currentItems = [];
 let customerPriceMap = {}; // service name (lowercase) -> last price charged to the customer currently in phoneInput
 let currentBranchId = null;
 
+const LOGIN_PROFILE_OVERRIDES = {
+  'admin@gmail.com': { role: 'admin', name: 'Admin', branchKeys: [] },
+  'getsmart@gmail.com': { role: 'worker', name: 'Get Smart Worker', branchKeys: ['getsmart'] },
+  'britestar@gmail.com': { role: 'worker', name: 'Brite Star Worker', branchKeys: ['britestar', 'britestarbranch'] }
+};
+
+function normalizeRole(role){
+  const v = String(role || '').trim().toLowerCase();
+  if(v === 'admin') return 'admin';
+  if(v === 'worker' || v === 'staff' || v === 'counter') return 'worker';
+  return v;
+}
+
+function normalizeBranchKey(name){
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function inferBranchId(branchKeys){
+  if(!Array.isArray(branchKeys) || !branchKeys.length) return null;
+  const keys = branchKeys.map(normalizeBranchKey);
+  const match = branches.find(b => keys.includes(normalizeBranchKey(b.name)));
+  return match ? match.id : null;
+}
+
+async function resolveUserProfile(user){
+  const { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  const email = String(user.email || '').trim().toLowerCase();
+  const override = LOGIN_PROFILE_OVERRIDES[email];
+  const resolved = prof ? { ...prof } : {};
+
+  if(!resolved.name && override?.name) resolved.name = override.name;
+  resolved.role = normalizeRole(resolved.role || override?.role || '');
+
+  if(resolved.role !== 'admin'){
+    const branchExists = branches.some(b => String(b.id) === String(resolved.branch_id));
+    if(!branchExists && override){
+      resolved.branch_id = inferBranchId(override.branchKeys);
+    }
+  }
+
+  return resolved.role ? resolved : null;
+}
+
 // ---------- LOGIN ----------
 document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const email = document.getElementById('loginEmail').value.trim();
+  const loginErrorEl = document.getElementById('loginError');
+  loginErrorEl.textContent = '';
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   const password = document.getElementById('loginPassword').value;
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){ document.getElementById('loginError').textContent = error.message; return; }
+  if(error){
+    loginErrorEl.textContent = /invalid login credentials/i.test(error.message)
+      ? 'Invalid email or password.'
+      : error.message;
+    return;
+  }
   await afterLogin();
 });
 
 async function afterLogin(){
-  const { data:{ user } } = await sb.auth.getUser();
-  const { data: prof, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
-  if(error || !prof){
-    document.getElementById('loginError').textContent = 'No profile set up for this login. Ask admin to add you.';
+  const loginErrorEl = document.getElementById('loginError');
+  loginErrorEl.textContent = '';
+  const { data:{ user }, error: userError } = await sb.auth.getUser();
+  if(userError || !user){
+    loginErrorEl.textContent = 'Unable to load login user. Please try again.';
     await sb.auth.signOut();
     return;
   }
-  profile = prof;
+  await loadBranches();
+  const resolvedProfile = await resolveUserProfile(user);
+  if(!resolvedProfile){
+    loginErrorEl.textContent = 'No profile set up for this login. Ask admin to add you.';
+    await sb.auth.signOut();
+    return;
+  }
+  if(resolvedProfile.role !== 'admin' && !resolvedProfile.branch_id){
+    loginErrorEl.textContent = 'Your worker account has no branch assigned.';
+    await sb.auth.signOut();
+    return;
+  }
+  profile = resolvedProfile;
   currentUserEmail = user.email;
-  currentBranchId = profile.branch_id;
+  currentBranchId = profile.role === 'admin' ? null : Number(profile.branch_id);
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'block';
-  await loadBranches();
   await loadServices();
   setupRoleView();
   renderServiceOptions();
@@ -774,10 +836,12 @@ async function loadServices(){
 }
 
 function setupRoleView(){
-  const isAdmin = profile.role === 'admin';
+  const role = normalizeRole(profile.role);
+  const isAdmin = role === 'admin';
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('.worker-only').forEach(el => el.style.display = isAdmin ? 'none' : '');
-  document.getElementById('userBadge').textContent = `${profile.name || profile.role} (${profile.role})`;
+  const labelRole = isAdmin ? 'admin' : 'worker';
+  document.getElementById('userBadge').textContent = `${profile.name || labelRole} (${labelRole})`;
 
   if(isAdmin){
     const sel = document.getElementById('branchSelect');
@@ -793,8 +857,9 @@ function setupRoleView(){
     loadAdminDashboard();
     loadMonthlyRegister();
   } else {
-    const b = branches.find(b => b.id === profile.branch_id);
+    const b = branches.find(b => String(b.id) === String(profile.branch_id));
     document.getElementById('branchNameFixed').textContent = b ? b.name : '';
+    currentBranchId = b ? b.id : Number(profile.branch_id);
   }
 }
 
