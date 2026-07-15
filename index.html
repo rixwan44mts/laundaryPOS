@@ -1023,10 +1023,10 @@ function clearOpenOrdersSearch(){
 function buildUrduMessage(status, code){
   const branchName = document.getElementById('branchNameFixed').textContent;
   if(status === 'dispatched'){
-    return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchName + ' سے وصول/ڈسپیچ کر دیا گیا ہے۔ شکریہ!';
+    return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchNameFixed + ' سے وصول/ڈسپیچ کر دیا گیا ہے۔ شکریہ!';
   }
   // default: ready for pickup
-  return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchName + ' پر تیار ہے۔ براہ کرم اپنی سہولت کے مطابق اسے وصول کر لیں۔';
+  return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchNameFixed + ' پر تیار ہے۔ براہ کرم اپنی سہولت کے مطابق اسے وصول کر لیں۔';
 }
 
 // Formats a Pakistani local number (03XXXXXXXXX) into international
