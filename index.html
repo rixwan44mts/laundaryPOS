@@ -1021,12 +1021,13 @@ function clearOpenOrdersSearch(){
 
 // Builds the Urdu notification text for a given order event.
 function buildUrduMessage(status, code){
-  const branchName = document.getElementById('branchNameFixed').textContent;
+  const branchNameKey = (document.getElementById('branchNameFixed').textContent || '').trim();
+  const branchName = getBranchInfo(branchNameKey).full;
   if(status === 'dispatched'){
-    return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchNameFixed + ' سے وصول/ڈسپیچ کر دیا گیا ہے۔ شکریہ!';
+    return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchName + ' سے وصول/ڈسپیچ کر دیا گیا ہے۔ شکریہ!';
   }
   // default: ready for pickup
-  return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchNameFixed + ' پر تیار ہے۔ براہ کرم اپنی سہولت کے مطابق اسے وصول کر لیں۔';
+  return 'آپ کا آرڈر (کوڈ: ' + code + ') ہماری برانچ ' + branchName + ' پر تیار ہے۔ براہ کرم اپنی سہولت کے مطابق اسے وصول کر لیں۔';
 }
 
 // Formats a Pakistani local number (03XXXXXXXXX) into international
@@ -1048,12 +1049,12 @@ function notifyCustomer(phone, code, status){
 // separate from the polished identity shown to customers.
 const BRANCH_INFO = {
   'Brite Star': {
-    full: 'Brite Star Dry Clean & Steam Press Laundry (G-11 Branch)',
-    signature: 'Brite Star Dry Clean & Steam Press Laundry'
+    full: 'Brite star dry clean & steam press laundry',
+    signature: 'Brite star dry clean & steam press laundry'
   },
   'Get Smart': {
-    full: 'Get Smart Dry Clean & Steam Press Laundry (F-10 Branch)',
-    signature: 'Get Smart Dry Clean & Steam Press Laundry'
+    full: 'Get smart dry clean and steam press laundry (F10 Branch)',
+    signature: 'Get smart dry clean and steam press laundry (F10 Branch)'
   }
 };
 function getBranchInfo(branchNameKey){
@@ -1492,9 +1493,16 @@ async function saveAndPrint(){
     codeHasConflict = false;
     customerPriceMap = {};
     priceHistoryLoadedForPhone = null;
+  } catch(err){
+    const msg = err && err.message ? err.message : String(err || 'Unknown error');
+    alert('Failed to save order: ' + msg);
   } finally {
     saveBtn.disabled = false;
   }
+}
+
+function triggerReceiptPrint(){
+  requestAnimationFrame(()=>window.print());
 }
 
 function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePaid, balanceRecovered, dispatchChangeGiven, dispatchedAt){
@@ -1557,7 +1565,7 @@ function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePai
       <div class="center">Thank you!</div>
       <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
     </div>`;
-  window.print();
+  triggerReceiptPrint();
 }
 
 function printReceipt(orderId, phone, name, code, total, advancePaid, balanceDue, changeGiven){
@@ -1616,7 +1624,7 @@ function printReceipt(orderId, phone, name, code, total, advancePaid, balanceDue
       <div class="center">Thank you!</div>
       <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
     </div>`;
-  window.print();
+  triggerReceiptPrint();
 }
 
 // ---------- EXPENSES ----------
