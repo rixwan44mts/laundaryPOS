@@ -317,6 +317,21 @@
   .toast.hide{opacity:0;transform:translateX(20px);}
   .toast b{color:var(--amber);}
   .toast .toast-time{display:block;margin-top:3px;font-size:10.5px;color:#c9c2ac;}
+  /* Rate-mismatch (worker charged low/high vs the actual rate-list price)
+     toasts get a hard red treatment instead of the normal dark toast, so
+     they read as "needs attention" at a glance rather than blending in
+     with routine order/expense activity. */
+  .toast.toast-alert{background:#5e1505;border-left-color:var(--accent-2);}
+  .toast.toast-alert b{color:#ffb4a0;}
+
+  /* Same red flag reused in the Notifications log table and the Daily
+     Audit Report's Rate Mismatches section. */
+  tr.notif-row-alert td, tr.audit-mismatch-row td{
+    background:#fbe0d4;color:#5e1505;font-weight:700;
+  }
+  .audit-stat-alert{background:#fbe0d4;border-color:#8a2a10;}
+  .audit-stat-alert .audit-stat-label{color:#8a2a10;}
+  .audit-stat-alert .audit-stat-value{color:#5e1505;}
 
   /* ---------- Admin Dashboard tile menu ---------- */
   .dash-tiles{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
@@ -681,6 +696,7 @@
   .audit-sec-dispatched .audit-section-head{background:var(--accent);}
   .audit-sec-dispatched thead th{background:var(--accent-soft);}
   .audit-sec-expenses .audit-section-head{background:var(--accent-2);}
+  .audit-sec-mismatch .audit-section-head{background:#8a2a10;}
   .audit-sec-expenses thead th{background:var(--accent-2-soft);}
 
   .audit-order-row{cursor:pointer;}
@@ -1364,6 +1380,22 @@
           </table>
         </div>
 
+        <div class="audit-section audit-sec-mismatch">
+          <div class="audit-section-head">
+            <h3>⚠️ Rate Mismatches (Charged ≠ Actual Rate)</h3>
+            <span class="audit-count" id="auditMismatchCount">0</span>
+          </div>
+          <div class="audit-table-scroll">
+          <table>
+            <thead><tr>
+              <th>Time</th><th>Order Code</th><th>Item</th><th>Charged Rate</th><th>Actual Rate</th><th>Difference</th><th>Worker</th>
+            </tr></thead>
+            <tbody id="auditMismatchBody"></tbody>
+          </table>
+          </div>
+          <div class="audit-hint">Rows here are red because the price charged for that line didn't match the shop's rate-list price — check whether the worker over- or under-charged the customer.</div>
+        </div>
+
         <div class="audit-section audit-summary" style="border:none;">
           <h3 style="border:none;padding:0;margin-bottom:12px;color:var(--ink);">📊 Financial Summary</h3>
           <div class="audit-stat-grid">
@@ -1398,6 +1430,10 @@
             <div class="audit-stat-card audit-stat-net">
               <div class="audit-stat-label">Net Cash in Hand</div>
               <div class="audit-stat-value" id="auditNet">Rs 0</div>
+            </div>
+            <div class="audit-stat-card audit-stat-alert">
+              <div class="audit-stat-label">⚠️ Rate Mismatch Amount</div>
+              <div class="audit-stat-value" id="auditMismatchAmount">Rs 0</div>
             </div>
           </div>
         </div>
@@ -1564,7 +1600,41 @@ const SUPABASE_URL = "https://adkbnwfweidrzmnvtkfn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFka2Jud2Z3ZWlkcnptbnZ0a2ZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0OTM4OTgsImV4cCI6MjA5OTA2OTg5OH0.fHT6MosWQ13fM0kV0rESMmruVZPSX3dNCoxY97Ek4pc";
 // ==========================================================================
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// storage: sessionStorage (not localStorage) so the login session is tied to
+// this browser tab/window only. Closing the browser (or the tab) clears
+// sessionStorage, so whoever opens the app next gets the login screen
+// instead of silently landing in the previous worker's still-open session.
+// A normal page refresh does NOT lose the session, since sessionStorage
+// survives reloads — only an actual tab/browser close clears it.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    storage: window.sessionStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  }
+});
+
+// ---------- IDLE AUTO-LOGOUT ----------
+// Belt-and-suspenders on top of the sessionStorage change above: if a
+// worker walks away from an unlocked device (screen left on, browser tab
+// never actually closed) the tab would otherwise stay logged in
+// indefinitely. After IDLE_LOGOUT_MINUTES of no clicks/taps/keystrokes,
+// automatically sign out so the next person at the terminal has to log in
+// with their own account.
+const IDLE_LOGOUT_MINUTES = 20;
+let idleLogoutTimer = null;
+function resetIdleLogoutTimer(){
+  if(!profile) return; // nobody logged in yet — nothing to time out
+  clearTimeout(idleLogoutTimer);
+  idleLogoutTimer = setTimeout(()=>{
+    alert(`You were logged out after ${IDLE_LOGOUT_MINUTES} minutes of inactivity. Please log in again.`);
+    logout();
+  }, IDLE_LOGOUT_MINUTES * 60 * 1000);
+}
+['click','keydown','touchstart'].forEach(evt =>
+  document.addEventListener(evt, resetIdleLogoutTimer, { passive:true })
+);
 
 let profile = null;
 let currentUserEmail = null; // needed to re-verify password before a destructive delete
@@ -1604,9 +1674,14 @@ async function afterLogin(){
   renderServiceOptions();
   renderItemsList();
   renderMenuPanel();
+  resetIdleLogoutTimer(); // start the idle-logout clock now that someone is logged in
 }
 
-async function logout(){ await sb.auth.signOut(); location.reload(); }
+async function logout(){
+  clearTimeout(idleLogoutTimer);
+  await sb.auth.signOut();
+  location.reload();
+}
 
 // ---------- SETUP ----------
 async function loadBranches(){
@@ -1782,14 +1857,18 @@ function showToast(row){
   const container = document.getElementById('toastContainer');
   if(!container) return;
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = `<b>${escHtml(activitySourceLabel(row))}</b> — ${escHtml(row.description || row.action_type)}<span class="toast-time">${escHtml(row.actor_name || '')} · ${formatAppDateTime(row.created_at)}</span>`;
+  el.className = 'toast' + (row.action_type === 'price_mismatch' ? ' toast-alert' : '');
+  const prefix = row.action_type === 'price_mismatch' ? '⚠ RATE MISMATCH — ' : '';
+  el.innerHTML = `<b>${escHtml(activitySourceLabel(row))}</b> — ${prefix}${escHtml(row.description || row.action_type)}<span class="toast-time">${escHtml(row.actor_name || '')} · ${formatAppDateTime(row.created_at)}</span>`;
   container.appendChild(el);
   requestAnimationFrame(()=> el.classList.add('show'));
+  // Rate-mismatch alerts stay up longer (20s vs the usual 10s) since they
+  // need a human decision, not just a glance.
+  const dismissAfter = row.action_type === 'price_mismatch' ? 20000 : 10000;
   setTimeout(()=>{
     el.classList.add('hide');
     setTimeout(()=> el.remove(), 300);
-  }, 10000); // auto-dismiss after 10 seconds
+  }, dismissAfter);
 }
 
 function populateNotifBranchFilter(){
@@ -1816,11 +1895,11 @@ async function loadNotifications(){
   if(error){ body.innerHTML = `<tr><td colspan="5">Failed to load: ${escHtml(error.message)}</td></tr>`; return; }
   if(!data || !data.length){ body.innerHTML = '<tr><td colspan="5">No activity logged for this date.</td></tr>'; return; }
   body.innerHTML = data.map(r => `
-    <tr>
+    <tr class="${r.action_type === 'price_mismatch' ? 'notif-row-alert' : ''}">
       <td>${formatAppDateTime(r.created_at)}</td>
       <td>${escHtml(activitySourceLabel(r))}</td>
       <td>${escHtml(r.actor_name || '')}${r.actor_role ? ` (${escHtml(r.actor_role)})` : ''}</td>
-      <td>${escHtml(r.action_type || '')}</td>
+      <td>${r.action_type === 'price_mismatch' ? '⚠ ' : ''}${escHtml(r.action_type || '')}</td>
       <td>${escHtml(r.description || '')}</td>
     </tr>`).join('');
 }
@@ -3190,6 +3269,42 @@ function renderItemsList(){
   }
 }
 
+// ---------- RATE MISMATCH DETECTION (charged price vs rate-list price) ----------
+// currentItems store each line as "<Service Name> [<Category Label>]" (see
+// menuAdjustQty), not a service id — so to find the real rate-list price for
+// a line we have to reverse that format back into a services[] row.
+function findServiceForLine(serviceLabel){
+  const m = /^(.*) \[(.*)\]$/.exec(serviceLabel || '');
+  const name = (m ? m[1] : serviceLabel || '').trim().toLowerCase();
+  const catLabel = m ? m[2] : null;
+  let candidates = services.filter(s => s.name.trim().toLowerCase() === name);
+  if(candidates.length > 1 && catLabel){
+    const narrowed = candidates.filter(s => (CATEGORY_LABELS[s.category] || 'Wash + Dry Clean') === catLabel);
+    if(narrowed.length) candidates = narrowed;
+  }
+  return candidates[0] || null;
+}
+
+// Compares every line in an about-to-be-saved order against the shop's
+// official rate-list price for that service. Any line where the price
+// actually charged doesn't match the rate list gets logged as a
+// 'price_mismatch' activity — flagged red in the live notifications feed
+// and in the Daily Audit Report, with a note on whether the customer was
+// over- or under-charged relative to the real rate.
+async function flagRateMismatches(code, items){
+  for(const it of items){
+    const svc = findServiceForLine(it.service);
+    if(!svc) continue; // custom/one-off item with no rate-list entry to compare against
+    const actual = Number(svc.default_price || 0);
+    const charged = Number(it.price || 0);
+    if(!actual || actual === charged) continue;
+    const diff = charged - actual;
+    const direction = diff > 0 ? 'Overcharged' : 'Undercharged';
+    const desc = `Order ${code} — "${it.service}": charged Rs ${charged} vs rate-list Rs ${actual} (${direction} by Rs ${Math.abs(diff)})`;
+    await logActivity('price_mismatch', desc);
+  }
+}
+
 async function saveAndPrint(){
   const phone = document.getElementById('phoneInput').value.trim();
   const name = document.getElementById('nameInput').value.trim();
@@ -3261,6 +3376,7 @@ async function saveAndPrint(){
     printReceipt(orderId, phone, name, code, subtotal, discountPct, discount, total, advancePaid, balanceDue, changeGiven);
     await sb.rpc('mark_order_printed', { p_order_id: orderId });
     await logActivity('order_booked', `New order booked — code ${code}, Rs ${total}${isUrgent ? ' (Urgent)' : ''}`);
+    await flagRateMismatches(code, currentItems);
 
     currentItems = [];
     document.getElementById('phoneInput').value = '';
@@ -4004,6 +4120,48 @@ async function fetchDispatchReceivers(date, branchId){
   return map;
 }
 
+// Parses "Order <code> — "<item>": charged Rs <x> vs rate-list Rs <y>
+// (Overcharged/Undercharged by Rs <z>)" entries out of the activity_log
+// (written by flagRateMismatches at booking time) into clean rows for the
+// audit report's Rate Mismatches table.
+async function fetchRateMismatches(date, branchId){
+  const dayStart = date + 'T00:00:00';
+  const dayEnd = date + 'T23:59:59';
+  const { data, error } = await sb.from('activity_log').select('description, created_at, actor_name')
+    .eq('branch_id', branchId).eq('action_type', 'price_mismatch')
+    .gte('created_at', dayStart).lte('created_at', dayEnd)
+    .order('created_at', { ascending:false });
+  if(error || !data) return [];
+  const pattern = /^Order (\S+) — "(.+)": charged Rs ([\d.]+) vs rate-list Rs ([\d.]+) \((Overcharged|Undercharged) by Rs ([\d.]+)\)$/;
+  return data.map(row => {
+    const m = pattern.exec(row.description || '');
+    if(!m) return { created_at: row.created_at, code:'—', item: row.description || '', charged:'—', actual:'—', direction:'', diff:0, worker: row.actor_name || '—' };
+    return {
+      created_at: row.created_at, code: m[1], item: m[2],
+      charged: Number(m[3]), actual: Number(m[4]), direction: m[5], diff: Number(m[6]),
+      worker: row.actor_name || '—'
+    };
+  });
+}
+
+function renderAuditMismatchRows(list){
+  const body = document.getElementById('auditMismatchBody');
+  if(!list.length){
+    body.innerHTML = `<tr><td colspan="7" class="audit-empty">None — every charged line matched the rate list today.</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(r => `
+    <tr class="audit-mismatch-row">
+      <td>${new Date(r.created_at).toLocaleTimeString()}</td>
+      <td class="audit-code-cell">${escHtml(r.code)}</td>
+      <td>${escHtml(r.item)}</td>
+      <td>Rs ${r.charged}</td>
+      <td>Rs ${r.actual}</td>
+      <td>${escHtml(r.direction)}${r.direction ? ' by Rs ' + r.diff : ''}</td>
+      <td>${escHtml(r.worker)}</td>
+    </tr>`).join('');
+}
+
 async function openDailyAudit(date, branchId, branchLabel){
   lastAuditContext = { date, branchId, branchLabel };
   document.getElementById('auditModalTitle').textContent = `Audit Report: ${date} — ${branchLabel}`;
@@ -4017,12 +4175,14 @@ async function openDailyAudit(date, branchId, branchLabel){
   document.getElementById('auditReadyBody').innerHTML = '<tr><td colspan="12" class="audit-empty">Loading…</td></tr>';
   document.getElementById('auditDispatchedBody').innerHTML = '<tr><td colspan="15" class="audit-empty">Loading…</td></tr>';
   document.getElementById('auditExpensesBody').innerHTML = '<tr><td colspan="6" class="audit-empty">Loading…</td></tr>';
+  document.getElementById('auditMismatchBody').innerHTML = '<tr><td colspan="7" class="audit-empty">Loading…</td></tr>';
 
-  const [ordersRes, expensesRes, paymentsRes, receiverMap] = await Promise.all([
+  const [ordersRes, expensesRes, paymentsRes, receiverMap, mismatches] = await Promise.all([
     sb.rpc('get_audit_orders', { p_date: date, p_branch_id: branchId }),
     sb.rpc('get_audit_expenses', { p_date: date, p_branch_id: branchId }),
     sb.rpc('get_audit_payments', { p_date: date, p_branch_id: branchId }),
-    fetchDispatchReceivers(date, branchId)
+    fetchDispatchReceivers(date, branchId),
+    fetchRateMismatches(date, branchId)
   ]);
 
   if(ordersRes.error){
@@ -4091,11 +4251,13 @@ async function openDailyAudit(date, branchId, branchLabel){
   renderAuditOrderRows('auditReadyBody', ready, { allowClear: true });
   renderAuditOrderRows('auditDispatchedBody', dispatched, { balanceRecoveredMap: balanceRecoveredByOrder, dispatchedMode: true });
   renderAuditExpenseRows(expenses);
+  renderAuditMismatchRows(mismatches);
 
   document.getElementById('auditBookedCount').textContent = booked.length;
   document.getElementById('auditReadyCount').textContent = ready.length;
   document.getElementById('auditDispatchedCount').textContent = dispatched.length;
   document.getElementById('auditExpensesCount').textContent = expenses.length;
+  document.getElementById('auditMismatchCount').textContent = mismatches.length;
 
   // Cash figures come from the payments ledger (dated by when the cash
   // actually moved), not from each order's cumulative advance_paid —
@@ -4110,6 +4272,7 @@ async function openDailyAudit(date, branchId, branchLabel){
   const totalOutstanding = orders.reduce((s,o) => s + Number(o.balance_due || 0), 0);
   const totalExpenses = expenses.reduce((s,e) => s + Number(e.amount), 0);
   const netCash = totalCollected - totalExpenses;
+  const totalMismatchAmount = mismatches.reduce((s,m) => s + (Number(m.diff) || 0), 0);
 
   document.getElementById('auditGross').textContent = 'Rs ' + grossValue;
   document.getElementById('auditDiscounts').textContent = 'Rs ' + totalDiscounts;
@@ -4119,6 +4282,7 @@ async function openDailyAudit(date, branchId, branchLabel){
   document.getElementById('auditOutstanding').textContent = 'Rs ' + totalOutstanding;
   document.getElementById('auditExpenseTotal').textContent = 'Rs ' + totalExpenses;
   document.getElementById('auditNet').textContent = 'Rs ' + netCash;
+  document.getElementById('auditMismatchAmount').textContent = 'Rs ' + totalMismatchAmount;
 }
 
 function closeAuditModal(){
