@@ -3297,10 +3297,12 @@ async function flagRateMismatches(code, items){
     if(!svc) continue; // custom/one-off item with no rate-list entry to compare against
     const actual = Number(svc.default_price || 0);
     const charged = Number(it.price || 0);
+    const qty = Math.max(1, Number(it.qty) || 1);
     if(!actual || actual === charged) continue;
-    const diff = charged - actual;
-    const direction = diff > 0 ? 'Overcharged' : 'Undercharged';
-    const desc = `Order ${code} — "${it.service}": charged Rs ${charged} vs rate-list Rs ${actual} (${direction} by Rs ${Math.abs(diff)})`;
+    const perUnitDiff = charged - actual;
+    const totalDiff = perUnitDiff * qty;
+    const direction = totalDiff > 0 ? 'Overcharged' : 'Undercharged';
+    const desc = `Order ${code} — "${it.service}": qty ${qty}, charged Rs ${charged} vs rate-list Rs ${actual} (${direction} by Rs ${Math.abs(totalDiff)})`;
     await logActivity('price_mismatch', desc);
   }
 }
@@ -4120,7 +4122,7 @@ async function fetchDispatchReceivers(date, branchId){
   return map;
 }
 
-// Parses "Order <code> — "<item>": charged Rs <x> vs rate-list Rs <y>
+// Parses "Order <code> — "<item>": qty <n>, charged Rs <x> vs rate-list Rs <y>
 // (Overcharged/Undercharged by Rs <z>)" entries out of the activity_log
 // (written by flagRateMismatches at booking time) into clean rows for the
 // audit report's Rate Mismatches table.
@@ -4132,13 +4134,22 @@ async function fetchRateMismatches(date, branchId){
     .gte('created_at', dayStart).lte('created_at', dayEnd)
     .order('created_at', { ascending:false });
   if(error || !data) return [];
-  const pattern = /^Order (\S+) — "(.+)": charged Rs ([\d.]+) vs rate-list Rs ([\d.]+) \((Overcharged|Undercharged) by Rs ([\d.]+)\)$/;
+  const patternV2 = /^Order (\S+) — "(.+)": qty (\d+), charged Rs ([\d.]+) vs rate-list Rs ([\d.]+) \((Overcharged|Undercharged) by Rs ([\d.]+)\)$/;
+  const patternV1 = /^Order (\S+) — "(.+)": charged Rs ([\d.]+) vs rate-list Rs ([\d.]+) \((Overcharged|Undercharged) by Rs ([\d.]+)\)$/;
   return data.map(row => {
-    const m = pattern.exec(row.description || '');
-    if(!m) return { created_at: row.created_at, code:'—', item: row.description || '', charged:'—', actual:'—', direction:'', diff:0, worker: row.actor_name || '—' };
+    const m2 = patternV2.exec(row.description || '');
+    if(m2){
+      return {
+        created_at: row.created_at, code: m2[1], item: m2[2],
+        qty: Number(m2[3]), charged: Number(m2[4]), actual: Number(m2[5]), direction: m2[6], diff: Number(m2[7]),
+        worker: row.actor_name || '—'
+      };
+    }
+    const m1 = patternV1.exec(row.description || '');
+    if(!m1) return { created_at: row.created_at, code:'—', item: row.description || '', charged:'—', actual:'—', direction:'', diff:0, worker: row.actor_name || '—' };
     return {
-      created_at: row.created_at, code: m[1], item: m[2],
-      charged: Number(m[3]), actual: Number(m[4]), direction: m[5], diff: Number(m[6]),
+      created_at: row.created_at, code: m1[1], item: m1[2],
+      qty: 1, charged: Number(m1[3]), actual: Number(m1[4]), direction: m1[5], diff: Number(m1[6]),
       worker: row.actor_name || '—'
     };
   });
@@ -4157,7 +4168,7 @@ function renderAuditMismatchRows(list){
       <td>${escHtml(r.item)}</td>
       <td>Rs ${r.charged}</td>
       <td>Rs ${r.actual}</td>
-      <td>${escHtml(r.direction)}${r.direction ? ' by Rs ' + r.diff : ''}</td>
+      <td>${escHtml(r.direction)}${r.direction ? ' by Rs ' + r.diff + ((Number(r.qty) || 1) > 1 ? ' (qty ' + r.qty + ')' : '') : ''}</td>
       <td>${escHtml(r.worker)}</td>
     </tr>`).join('');
 }
