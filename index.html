@@ -1586,6 +1586,46 @@
      the fixed payment bar never positions against a moving parent. */
   .tab{animation:fadeIn .25s ease-out;}
 
+  /* ---- Piece details popup (colour / cloth type / note) ---- */
+  #pieceDetailModal{align-items:center;}
+  .piece-box{max-width:560px;}
+  #pieceDetailSub{display:block;margin-top:2px;}
+  .piece-field{margin-bottom:16px;}
+  .piece-field input,.piece-field textarea{width:100%;}
+  .piece-field textarea{resize:vertical;min-height:56px;}
+  .piece-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .piece-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 var(--font-ui);color:var(--ink-soft);background:#fff;
+    border:1px solid var(--line-strong);border-radius:999px;padding:7px 12px;cursor:pointer;
+    transition:background-color .15s,border-color .15s,color .15s,transform .18s var(--spring),box-shadow .2s;
+  }
+  .piece-chip:hover{background:var(--hover);border-color:#b7c3c9;}
+  .piece-chip:active{transform:scale(.94);}
+  .piece-chip.active{background:var(--accent-soft);border-color:var(--accent);color:#08624b;box-shadow:0 0 0 3px var(--accent-dim);}
+  .piece-chip-note.active{background:var(--amber-soft);border-color:var(--amber);color:#6b4708;box-shadow:none;}
+  .piece-swatch{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(15,31,36,.18);}
+  .piece-swatch.is-multi{background:conic-gradient(#d23a2f,#f2c94c,#2e8b57,#3b6fd4,#7b5cd6,#d23a2f);}
+  /* pinned to the bottom of the scrolling body so Add is always reachable */
+  .piece-actions{
+    display:flex;justify-content:flex-end;gap:8px;
+    position:sticky;bottom:-22px;margin:4px -22px -22px;padding:12px 22px 16px;
+    background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+  }
+  /* tags under each line in "Items in this order" */
+  .piece-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
+  .piece-tag{
+    display:inline-flex;align-items:center;gap:5px;max-width:100%;
+    font:500 11.5px/1.3 var(--font-ui);color:var(--ink-soft);text-align:left;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:3px 8px;cursor:pointer;
+    transition:background-color .15s,border-color .15s;
+  }
+  .piece-tag:hover{background:var(--accent-soft);border-color:var(--accent);}
+  .piece-tag b{font-weight:700;color:var(--muted);}
+  .piece-tag.is-empty{color:var(--muted);border-style:dashed;background:transparent;}
+  .imt-details,.icr-details{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
+  .ri-details{font-size:9px;line-height:1.25;color:#000;}
+
   @media (max-width:640px){
     .panel{padding:16px;border-radius:16px;}
     nav button{font-size:12px;padding:8px 10px;}
@@ -2580,6 +2620,41 @@
   <!-- ====== END DISPATCH HISTORY MODAL ====== -->
 
   <!-- ORDER NOTES MODAL — internal notes per order, any stage, offline-first -->
+  <!-- ====== PIECE DETAILS MODAL (New Order: colour / cloth type / note
+       for each piece added from the rate list — see openPieceDetails) ====== -->
+  <div id="pieceDetailModal" class="modal-overlay">
+    <div class="modal-box piece-box" role="dialog" aria-modal="true" aria-labelledby="pieceDetailTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="pieceDetailTitle">Item details</h2>
+          <span id="pieceDetailSub" class="small"></span>
+        </div>
+        <button class="modal-close-btn" onclick="closePieceDetails()">Cancel</button>
+      </div>
+      <div class="modal-body">
+        <div class="piece-field">
+          <label for="pieceColorInput">Colour</label>
+          <div class="piece-chips" id="pieceColorChips"></div>
+          <input type="text" id="pieceColorInput" maxlength="40" placeholder="Or type a colour, e.g. Off-white" autocomplete="off">
+        </div>
+        <div class="piece-field">
+          <label for="pieceFabricInput">Cloth type</label>
+          <div class="piece-chips" id="pieceFabricChips"></div>
+          <input type="text" id="pieceFabricInput" maxlength="40" placeholder="Or type a cloth type, e.g. Karandi" autocomplete="off">
+        </div>
+        <div class="piece-field">
+          <label for="pieceNoteInput">Note <span class="small">(optional)</span></label>
+          <div class="piece-chips" id="pieceNoteChips"></div>
+          <textarea id="pieceNoteInput" maxlength="200" rows="2" placeholder="e.g. Stain on left sleeve"></textarea>
+        </div>
+        <div class="piece-actions">
+          <button type="button" class="btn-secondary" id="pieceSkipBtn" onclick="submitPieceDetails(true)">Skip details</button>
+          <button type="button" class="btn-main" id="pieceSaveBtn" onclick="submitPieceDetails(false)">Add item</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="orderNoteModal" class="modal-overlay">
     <div class="modal-box" style="max-width:540px;">
       <div class="modal-header">
@@ -3719,7 +3794,7 @@ function buildItemsCellHtml(items){
   items = items || [];
   if(!items.length) return '<span class="small" style="color:var(--muted);">—</span>';
   const rows = items.map(it =>
-    `<tr><td class="imt-qty">${escHtml(it.qty)}</td><td>${escHtml(it.service)}</td></tr>`
+    `<tr><td class="imt-qty">${escHtml(it.qty)}</td><td>${escHtml(it.service)}${pieceDetailsSummary(it) ? `<div class="imt-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td></tr>`
   ).join('');
   return `<table class="items-mini-table"><thead><tr><th class="imt-qty">Qty</th><th>Item</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -5341,6 +5416,7 @@ function renderItemCheckList(){
       <div class="icr-info">
         <div class="icr-name">${escHtml(it.service)}</div>
         <div class="icr-qty">Qty ${escHtml(it.qty)}${it.line_total != null ? ` · Rs ${escHtml(it.line_total)}` : ''}</div>
+        ${pieceDetailsSummary(it) ? `<div class="icr-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}
       </div>
       <button type="button" class="icr-toggle" onclick="toggleOrderItemChecked(${it.line_id}, ${!isChecked})">${isChecked ? '✓ OK' : 'Mark OK'}</button>
     </div>`;
@@ -7028,6 +7104,10 @@ function renderMenuPanel(){
 // to the customer's own previous rate if one is on record, otherwise the
 // shop's default price). "−" removes one unit, dropping the line
 // entirely once it reaches zero.
+// "+" on a rate card no longer adds straight away: it opens the piece
+// details popup (colour / cloth type / note) and the piece is added when
+// the worker confirms or skips. "−" removes the most recent piece along
+// with its details. See PIECE DETAILS below.
 function menuAdjustQty(serviceId, delta){
   const s = services.find(x => x.id === serviceId);
   if(!s) return;
@@ -7039,23 +7119,214 @@ function menuAdjustQty(serviceId, delta){
   const idx = currentItems.findIndex(it => it.service.toLowerCase() === service.toLowerCase());
   if(delta > 0){
     if(price <= 0){ alert('Set a valid price before adding this item.'); return; }
-    if(idx >= 0){
-      currentItems[idx].qty += 1;
-      currentItems[idx].price = price;
-      currentItems[idx].line_total = currentItems[idx].qty * price;
-    } else {
-      currentItems.push({ service, qty: 1, price, line_total: price });
-    }
+    const pieceNo = (idx >= 0 ? currentItems[idx].qty : 0) + 1;
+    openPieceDetails({ title: s.name, sub: `${catLabel} · piece ${pieceNo} · Rs ${price}` }, detail => {
+      // Re-find the line: the cart may have changed while the popup was open.
+      const i = currentItems.findIndex(it => it.service.toLowerCase() === service.toLowerCase());
+      if(i >= 0){
+        const line = currentItems[i];
+        line.details = padPieceDetails(line.details, line.qty);
+        line.qty += 1;
+        line.price = price;
+        line.line_total = line.qty * price;
+        line.details.push(detail);
+      } else {
+        currentItems.push({ service, qty: 1, price, line_total: price, details: [detail] });
+      }
+      renderItemsList();
+    });
+    return;
   } else if(idx >= 0){
-    currentItems[idx].qty -= 1;
-    if(currentItems[idx].qty <= 0){
+    const line = currentItems[idx];
+    line.qty -= 1;
+    if(line.qty <= 0){
       currentItems.splice(idx, 1);
     } else {
-      currentItems[idx].line_total = currentItems[idx].qty * currentItems[idx].price;
+      line.line_total = line.qty * line.price;
+      if(Array.isArray(line.details)) line.details = line.details.slice(0, line.qty);
     }
   }
   renderItemsList();
 }
+
+// ---------- PIECE DETAILS (colour / cloth type / note per piece) ----------
+// Each cart line keeps details: [{color, fabric, note}, ...], one entry per
+// piece (index 0 = piece 1), alongside the usual qty. It travels inside
+// p_items to book_order and is stored on the order's items JSON, so it
+// shows up again in Open Orders, the item-check list and on receipts.
+// Lines saved before this feature simply have no details array.
+const PIECE_PRESET_COLORS = [
+  ['White','#ffffff'],['Off-white','#f3eee2'],['Cream','#f6edd0'],['Beige','#d9c7a3'],['Black','#1b1b1b'],
+  ['Grey','#9aa3a8'],['Navy','#1f2f5c'],['Blue','#3b6fd4'],['Sky blue','#8cc3ef'],['Green','#2e8b57'],
+  ['Maroon','#7a1f2b'],['Red','#d23a2f'],['Pink','#f2a3bd'],['Yellow','#f2c94c'],['Orange','#ee8a2d'],
+  ['Brown','#7b5134'],['Purple','#7b5cd6'],['Multi','']
+];
+const PIECE_PRESET_FABRICS = ['Cotton','Lawn','Wash & Wear','Khaddar','Karandi','Linen','Silk','Chiffon','Georgette','Velvet','Wool','Denim','Polyester','Leather'];
+const PIECE_PRESET_NOTES = ['Stain','Delicate','Button missing','Torn / hole','Colour fading','Starch','No starch','On hanger','Fold'];
+const PIECE_RECENT_KEY = 'pos_piece_recent';
+
+let pieceDetailCallback = null;
+
+function cleanPieceText(v, max){
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
+}
+function emptyPieceDetail(){ return { color:'', fabric:'', note:'' }; }
+function pieceHasDetail(d){ return !!(d && (d.color || d.fabric || d.note)); }
+// Pads/trims a line's details to exactly qty entries (older lines, or
+// lines whose qty changed outside the popup, may be short).
+function padPieceDetails(details, qty){
+  const arr = Array.isArray(details) ? details.slice(0, qty) : [];
+  while(arr.length < qty) arr.push(emptyPieceDetail());
+  return arr;
+}
+// "White Cotton — stain on collar"
+function formatPieceDetail(d){
+  if(!pieceHasDetail(d)) return '';
+  const main = [d.color, d.fabric].filter(Boolean).join(' ');
+  return d.note ? (main ? `${main} — ${d.note}` : d.note) : main;
+}
+// Plain-text summary of every described piece on a line, for receipts and
+// compact lists: "1: White Cotton; 2: Blue Silk — stain".
+function pieceDetailsSummary(it){
+  const details = (it && Array.isArray(it.details)) ? it.details : [];
+  const many = details.length > 1;
+  return details.map((d, i) => {
+    const text = formatPieceDetail(d);
+    return text ? (many ? `${i + 1}: ${text}` : text) : '';
+  }).filter(Boolean).join('; ');
+}
+
+// Suggestions = the preset lists plus values already used in this system:
+// pieces on currently open orders, then this device's recent entries.
+function pieceSuggestions(field, presets){
+  const seen = new Set(presets.map(p => (Array.isArray(p) ? p[0] : p).toLowerCase()));
+  const extra = [];
+  const add = v => {
+    v = cleanPieceText(v, 40);
+    if(v && !seen.has(v.toLowerCase())){ seen.add(v.toLowerCase()); extra.push(v); }
+  };
+  let recent = {};
+  try { recent = JSON.parse(localStorage.getItem(PIECE_RECENT_KEY) || '{}') || {}; } catch(_){}
+  (recent[field] || []).forEach(add);
+  (typeof allOpenOrders !== 'undefined' ? allOpenOrders : []).forEach(o =>
+    (Array.isArray(o.items) ? o.items : []).forEach(it =>
+      (Array.isArray(it && it.details) ? it.details : []).forEach(d => add(d && d[field]))));
+  return extra.slice(0, 10);
+}
+function rememberPieceDetail(d){
+  try {
+    const recent = JSON.parse(localStorage.getItem(PIECE_RECENT_KEY) || '{}') || {};
+    ['color', 'fabric'].forEach(f => {
+      if(!d[f]) return;
+      const list = (recent[f] || []).filter(v => v.toLowerCase() !== d[f].toLowerCase());
+      recent[f] = [d[f], ...list].slice(0, 12);
+    });
+    localStorage.setItem(PIECE_RECENT_KEY, JSON.stringify(recent));
+  } catch(_){}
+}
+
+function renderPieceChips(containerId, inputId, options, withSwatch){
+  const input = document.getElementById(inputId);
+  const current = input.value.trim().toLowerCase();
+  document.getElementById(containerId).innerHTML = options.map(opt => {
+    const [label, hex] = Array.isArray(opt) ? opt : [opt, null];
+    const swatch = withSwatch
+      ? `<span class="piece-swatch${hex ? '' : ' is-multi'}"${hex ? ` style="background:${hex}"` : ''}></span>`
+      : '';
+    const active = label.toLowerCase() === current ? ' active' : '';
+    return `<button type="button" class="piece-chip${active}" data-value="${escHtml(label)}">${swatch}${escHtml(label)}</button>`;
+  }).join('');
+}
+function refreshPieceChips(){
+  renderPieceChips('pieceColorChips', 'pieceColorInput',
+    [...PIECE_PRESET_COLORS, ...pieceSuggestions('color', PIECE_PRESET_COLORS)], true);
+  renderPieceChips('pieceFabricChips', 'pieceFabricInput',
+    [...PIECE_PRESET_FABRICS, ...pieceSuggestions('fabric', PIECE_PRESET_FABRICS)], false);
+  const note = document.getElementById('pieceNoteInput').value.toLowerCase();
+  document.getElementById('pieceNoteChips').innerHTML = PIECE_PRESET_NOTES.map(n =>
+    `<button type="button" class="piece-chip piece-chip-note${note.includes(n.toLowerCase()) ? ' active' : ''}" data-value="${escHtml(n)}">${escHtml(n)}</button>`
+  ).join('');
+}
+
+// opts: {title, sub, detail?, editing?}; onDone(detail) runs on Add/Skip.
+function openPieceDetails(opts, onDone){
+  pieceDetailCallback = onDone;
+  const d = opts.detail || emptyPieceDetail();
+  document.getElementById('pieceDetailTitle').textContent = opts.title || 'Item details';
+  document.getElementById('pieceDetailSub').textContent = opts.sub || '';
+  document.getElementById('pieceColorInput').value = d.color || '';
+  document.getElementById('pieceFabricInput').value = d.fabric || '';
+  document.getElementById('pieceNoteInput').value = d.note || '';
+  document.getElementById('pieceSaveBtn').textContent = opts.editing ? 'Save details' : 'Add item';
+  document.getElementById('pieceSkipBtn').textContent = opts.editing ? 'Clear details' : 'Skip details';
+  refreshPieceChips();
+  document.getElementById('pieceDetailModal').classList.add('open');
+  setTimeout(() => document.getElementById('pieceColorInput').focus(), 50);
+}
+function closePieceDetails(){
+  pieceDetailCallback = null;
+  document.getElementById('pieceDetailModal').classList.remove('open');
+}
+function submitPieceDetails(skip){
+  const cb = pieceDetailCallback;
+  const detail = skip ? emptyPieceDetail() : {
+    color: cleanPieceText(document.getElementById('pieceColorInput').value, 40),
+    fabric: cleanPieceText(document.getElementById('pieceFabricInput').value, 40),
+    note: cleanPieceText(document.getElementById('pieceNoteInput').value, 200)
+  };
+  if(!skip) rememberPieceDetail(detail);
+  closePieceDetails();
+  if(cb) cb(detail);
+}
+// Copy of a cart line as sent to book_order: details padded to qty, or
+// left off entirely when no piece on the line was described.
+function lineForSave(it){
+  const { details, ...rest } = it;
+  const padded = padPieceDetails(details, it.qty);
+  return padded.some(pieceHasDetail) ? { ...rest, details: padded } : rest;
+}
+// Tapping a described piece in the "Items in this order" table re-opens it.
+function editPieceDetails(lineIdx, pieceIdx){
+  const line = currentItems[lineIdx];
+  if(!line) return;
+  line.details = padPieceDetails(line.details, line.qty);
+  const { name, category } = splitServiceLabel(line.service);
+  openPieceDetails({
+    title: name, sub: `${category} · piece ${pieceIdx + 1} of ${line.qty}`,
+    detail: line.details[pieceIdx], editing: true
+  }, detail => {
+    const l = currentItems[lineIdx];
+    if(!l || l !== line) return; // cart changed underneath the popup
+    l.details[pieceIdx] = detail;
+    renderItemsList();
+  });
+}
+
+(function wirePieceDetailModal(){
+  const modal = document.getElementById('pieceDetailModal');
+  modal.addEventListener('click', e => {
+    if(e.target === modal){ closePieceDetails(); return; }
+    const chip = e.target.closest('.piece-chip');
+    if(!chip) return;
+    const value = chip.dataset.value;
+    if(chip.closest('#pieceNoteChips')){
+      // Note chips append to whatever is typed, instead of replacing it.
+      const ta = document.getElementById('pieceNoteInput');
+      const has = ta.value.toLowerCase().includes(value.toLowerCase());
+      if(!has) ta.value = ta.value.trim() ? `${ta.value.trim()}, ${value}` : value;
+    } else {
+      const input = document.getElementById(chip.closest('#pieceColorChips') ? 'pieceColorInput' : 'pieceFabricInput');
+      input.value = input.value.trim().toLowerCase() === value.toLowerCase() ? '' : value;
+    }
+    refreshPieceChips();
+  });
+  ['pieceColorInput', 'pieceFabricInput', 'pieceNoteInput'].forEach(id =>
+    document.getElementById(id).addEventListener('input', refreshPieceChips));
+  modal.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ e.preventDefault(); closePieceDetails(); }
+    else if(e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'BUTTON'){ e.preventDefault(); submitPieceDetails(false); }
+  });
+})();
 
 // Lets the cashier edit a row's price after the item is already in the
 // order. Both admins and workers can set any price at or above zero —
@@ -7466,8 +7737,17 @@ function clampDiscountInput(el){
 }
 
 function renderItemsList(){
+  // One small tappable tag per piece under the item name — shows its
+  // colour/cloth/note, or "+ details" if none were entered yet.
+  const pieceTags = (it, idx) => {
+    const details = padPieceDetails(it.details, it.qty);
+    return `<div class="piece-tags">${details.map((d, p) => {
+      const text = formatPieceDetail(d);
+      return `<button type="button" class="piece-tag${text ? '' : ' is-empty'}" onclick="editPieceDetails(${idx},${p})" title="Edit piece ${p + 1}">${details.length > 1 ? `<b>${p + 1}</b>` : ''}${text ? escHtml(text) : '+ details'}</button>`;
+    }).join('')}</div>`;
+  };
   const itemRows = currentItems.map((it,idx)=>
-    `<tr><td>${escHtml(it.service)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
+    `<tr><td>${escHtml(it.service)}${pieceTags(it, idx)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
      <td><button class="btn-secondary" onclick="removeLineItem(${idx})">x</button></td></tr>`
   ).join('');
   const baseSubtotalForRow = currentItems.reduce((s,it)=>s+it.line_total,0);
@@ -7682,7 +7962,7 @@ async function saveAndPrint(){
 
     const bookPayload = {
       p_branch_id: currentBranchId, p_phone: phone, p_name: name, p_code: code,
-      p_items: currentItems, p_subtotal: subtotal, p_discount: discount, p_total: total,
+      p_items: currentItems.map(lineForSave), p_subtotal: subtotal, p_discount: discount, p_total: total,
       p_advance_paid: advancePaid, p_change_given: changeGiven,
       // NOTE: renamed from the old p_urgent_days — urgent turnaround is now
       // tracked in HOURS (min 3h Get Smart / 4h Brite Star). The book_order
@@ -8806,7 +9086,7 @@ function receiptItemsGrid(items){
   const rows = (items || []).map(it => {
     const { name, category } = splitServiceLabel(it.service);
     return `<tr>
-      <td class="ri-name">${escHtml(name)}</td>
+      <td class="ri-name">${escHtml(name)}${pieceDetailsSummary(it) ? `<div class="ri-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td>
       <td class="ri-cat">${escHtml(abbrevCategory(category))}</td>
       <td class="ri-qty">${it.qty}</td>
       <td class="ri-price">${it.price}</td>
