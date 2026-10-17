@@ -4,7 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Laundry POS</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- SECURITY: Content-Security-Policy. The app still relies on inline
+     onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
+     still means that even if some injected script DID run, it can only
+     talk to this project's Supabase (connect-src) and can't beacon data
+     out through images (img-src), load scripts from other hosts, or
+     submit forms anywhere. If the Supabase project URL ever changes,
+     update connect-src below to match SUPABASE_URL. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://adkbnwfweidrzmnvtkfn.supabase.co wss://adkbnwfweidrzmnvtkfn.supabase.co; frame-src http: https:; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<!-- Pinned to an exact version + Subresource Integrity hash: the old
+     "@2" tag silently pulled whatever the newest release was on every
+     load, so a compromised or broken upstream publish would run with
+     full access to every logged-in session. To upgrade, change the
+     version AND regenerate the integrity hash (see SECURITY.md). -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -12,7 +26,6 @@
      for large display text, Naskh for smaller/body text — Nastaliq gets
      hard to read at small sizes, Naskh is the more legible workhorse). -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400..700&family=Noto+Naskh+Arabic:wght@400..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/@tabler/icons-webfont/3.2.0/tabler-icons.min.css">
 <style>
   :root{
     --ink:#1c2b2d; --ink-soft:#3c4d4a;
@@ -1095,6 +1108,185 @@
   .note-add-area textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .note-add-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;}
   .note-char-count{font-size:11px;color:var(--muted);}
+
+  /* =====================================================================
+     V2 POLISH LAYER
+     Everything below refines the existing look rather than replacing it
+     (same paper/teal/rust palette, same Fraunces + Space Mono pairing),
+     and is kept in one block so it's easy to review or roll back.
+     ===================================================================== */
+  :root{
+    --radius-sm:8px; --radius-md:12px; --radius-lg:18px;
+    --ring:0 0 0 3px var(--accent-dim);
+    --ease-out:cubic-bezier(.2,.8,.2,1);
+  }
+
+  /* ---- Login ---- */
+  #loginScreen{
+    max-width:400px;margin:0 auto;padding:30px 30px 18px;
+    border-radius:var(--radius-lg);border:1px solid var(--line-strong);
+    box-shadow:0 1px 0 #fff inset, 0 24px 60px -18px rgba(28,43,45,.35);
+    overflow:hidden;
+    top:50vh;transform:translateY(-50%);
+    animation:loginIn .35s var(--ease-out) both;
+  }
+  @media (max-height:700px){ #loginScreen{top:auto;transform:none;margin:40px auto;} }
+  @keyframes loginIn{from{opacity:0;translate:0 12px;}to{opacity:1;translate:0 0;}}
+  #loginScreen::before{
+    /* the awning stripe, echoed as the card's top edge */
+    content:"";position:absolute;left:0;right:0;top:0;height:6px;
+    background:repeating-linear-gradient(90deg,var(--accent) 0 18px,var(--panel) 18px 24px,var(--accent-2) 24px 42px,var(--panel) 42px 48px);
+  }
+  #loginScreen h2{font-size:26px;font-weight:900;letter-spacing:.2px;}
+  #loginScreen .login-sub{margin-bottom:22px;}
+  #loginScreen input{padding:12px 13px;}
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:70px !important;}
+  .pw-toggle{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    background:transparent;border:1px solid transparent;border-radius:6px;
+    font-family:var(--font-mono);font-size:11.5px;font-weight:700;letter-spacing:.4px;
+    text-transform:uppercase;color:var(--muted);padding:6px 9px;cursor:pointer;
+  }
+  .pw-toggle:hover{color:var(--ink);background:var(--hover);}
+  .caps-hint{margin-top:6px;font-size:11.5px;font-weight:700;color:var(--amber);}
+  #loginSubmitBtn{margin-top:6px;padding:13px 20px;font-size:14.5px;position:relative;}
+  #loginSubmitBtn:disabled{cursor:progress;filter:saturate(.7);}
+  .btn-main.is-busy .btn-label::before{
+    content:"";display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;
+    border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loginError:not(:empty){
+    margin-top:12px;padding:9px 11px;border-radius:var(--radius-sm);
+    background:var(--accent-2-soft);border:1px solid #f2b9a6;line-height:1.45;
+  }
+  .login-secure-note{
+    margin-top:16px;text-align:center;font-size:11px;letter-spacing:.3px;color:var(--muted);
+  }
+  #loginScreen .app-footer{border-top:1px dashed var(--line);margin-top:14px;padding-top:14px;}
+
+  /* ---- Header ---- */
+  header h1{font-size:28px;}
+  .badge{font-weight:700;}
+  #userBadge{
+    display:inline-flex;align-items:center;gap:7px;color:var(--ink);background:var(--panel);
+  }
+  #userBadge::before{
+    content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  #branchNameFixed:empty{display:none;}
+  #branchNameFixed{color:#fff;background:var(--ink);border-color:var(--ink);}
+
+  /* ---- Navigation: one rail, centred labels, icon per tab ---- */
+  nav{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:6px;gap:4px;box-shadow:var(--shadow-sm);margin-bottom:8px;
+  }
+  nav button{
+    text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:11px 12px;border-radius:10px;white-space:nowrap;
+  }
+  nav button::before{font-size:15px;line-height:1;filter:saturate(.85);}
+  nav button[data-tab="neworder"]::before{content:"＋";font-weight:900;}
+  nav button[data-tab="openorders"]::before{content:"🧺";}
+  nav button[data-tab="overdue"]::before{content:"⏰";}
+  nav button[data-tab="expenses"]::before{content:"💸";}
+  nav button[data-tab="promo"]::before{content:"📣";}
+  nav button[data-tab="dashboard"]::before{content:"📊";}
+  nav button[data-tab="monthlyregister"]::before{content:"📒";}
+  nav button[data-tab="services"]::before{content:"🏷️";}
+  nav button[data-tab="staff"]::before{content:"👥";}
+  nav button.active{box-shadow:0 6px 16px -8px rgba(23,143,112,.8);}
+
+  /* ---- Tab content: gentle fade when switching ---- */
+  .tab{animation:tabIn .22s var(--ease-out);}
+  @keyframes tabIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  /* ---- Panels, inputs, buttons ---- */
+  .panel{border-radius:14px;}
+  input,select,textarea{border-radius:var(--radius-sm);}
+  input:focus-visible,select:focus-visible,textarea:focus-visible{box-shadow:var(--ring);}
+  .btn-main:disabled{opacity:.6;cursor:not-allowed;filter:none;box-shadow:none;}
+  .btn-main:focus-visible,.btn-secondary:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+
+  /* ---- Tables ---- */
+  tbody tr{transition:background-color .12s ease;}
+  td{vertical-align:middle;}
+
+  /* ---- Open Orders: 13 columns at 12px side-padding overflowed a
+     1440px screen, cutting the Actions buttons off at the right edge.
+     Tighter cell padding on this one table lets it fit. ---- */
+  table:has(#openOrdersBody) th,
+  #openOrdersBody td{padding-left:8px;padding-right:8px;}
+  #openOrdersBody td:first-child{padding-left:14px;} /* clear of the urgent stripe */
+  #openOrdersBody td.oo-items-cell{min-width:150px;}
+  #openOrdersBody td:last-child{min-width:150px;}
+  #openOrdersBody td:last-child .btn-secondary,
+  #openOrdersBody td:last-child .note-btn{width:100%;margin:2px 0;padding:7px 9px;font-size:12px;}
+
+  /* ---- Status tags: small leading dot for faster scanning ---- */
+  .status-tag{white-space:nowrap;}
+  .status-tag::before{
+    content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:currentColor;opacity:.85;margin-right:6px;vertical-align:1px;
+  }
+
+  /* ---- Toasts ---- */
+  .toast{border-radius:12px !important;backdrop-filter:blur(6px);}
+
+  /* ---- Scrollbars (Chromium/Brave) ---- */
+  ::-webkit-scrollbar{width:11px;height:11px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:10px;border:3px solid var(--paper);}
+  ::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+  /* ---- In-app dialog (replaces native alert boxes) ---- */
+  .app-dialog-overlay{
+    position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(20,30,31,.45);backdrop-filter:blur(3px);
+    animation:fadeIn .14s ease-out;
+  }
+  .app-dialog-overlay[hidden]{display:none;}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  .app-dialog{
+    --tone:var(--blue);--tone-soft:var(--blue-soft);
+    width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line-strong);
+    border-radius:16px;box-shadow:var(--shadow-lg);padding:22px 22px 18px;
+    display:grid;grid-template-columns:auto 1fr;gap:6px 16px;
+    animation:modalIn .18s var(--ease-out);
+    border-top:5px solid var(--tone);
+  }
+  .app-dialog-overlay[data-tone="success"] .app-dialog{--tone:var(--accent);--tone-soft:var(--accent-soft);}
+  .app-dialog-overlay[data-tone="warn"] .app-dialog{--tone:var(--amber);--tone-soft:var(--amber-soft);}
+  .app-dialog-overlay[data-tone="error"] .app-dialog{--tone:var(--accent-2);--tone-soft:var(--accent-2-soft);}
+  .app-dialog-icon{
+    width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--tone-soft);color:var(--tone);font-weight:900;font-size:18px;font-family:var(--font-display);
+  }
+  .app-dialog-body h3{margin:2px 0 6px;font-family:var(--font-display);font-size:19px;font-weight:700;}
+  .app-dialog-body p{margin:0;font-size:13.5px;line-height:1.6;white-space:pre-line;color:var(--ink-soft);word-break:break-word;}
+  .app-dialog-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .app-dialog-actions .btn-main{padding:10px 22px;min-width:96px;}
+  .app-dialog-actions .btn-secondary[hidden]{display:none;}
+
+  /* ---- Idle sign-out warning ---- */
+  .idle-warn-bar{
+    position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);
+    z-index:10040;max-width:min(640px, calc(100vw - 32px));
+    background:var(--ink);color:#fdf9ee;border-left:5px solid var(--amber);
+    padding:12px 16px;border-radius:12px;box-shadow:var(--shadow-lg);font-size:13px;line-height:1.5;
+  }
+  .idle-warn-bar[hidden]{display:none;}
+
+  @media (max-width:640px){
+    #loginScreen{padding:26px 20px 16px;margin:24px 16px;top:auto;transform:none;}
+    nav button::before{display:none;}
+    .app-dialog{grid-template-columns:1fr;}
+    .app-dialog-icon{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -1110,18 +1302,23 @@
   </svg>
   <h2>Laundry POS</h2>
   <span class="login-sub">Counter sign-in</span>
-  <form id="loginForm">
+  <form id="loginForm" novalidate>
     <div class="field">
-      <label>Email</label>
-      <input type="text" id="loginEmail" style="width:100%;" required>
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" style="width:100%;" required autocomplete="username" autocapitalize="off" spellcheck="false" inputmode="email">
     </div>
     <div class="field">
-      <label>Password</label>
-      <input type="password" id="loginPassword" style="width:100%;" required>
+      <label for="loginPassword">Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="loginPassword" style="width:100%;" required autocomplete="current-password">
+        <button type="button" class="pw-toggle" id="loginPwToggle" aria-label="Show password" aria-pressed="false">Show</button>
+      </div>
+      <div class="caps-hint" id="loginCapsHint" hidden>⇪ Caps Lock is on</div>
     </div>
-    <button class="btn-main" type="submit" style="width:100%;">Log In</button>
-    <div id="loginError" class="error"></div>
+    <button class="btn-main" type="submit" id="loginSubmitBtn" style="width:100%;"><span class="btn-label">Log In</span></button>
+    <div id="loginError" class="error" role="alert" aria-live="polite"></div>
   </form>
+  <div class="login-secure-note">🔒 Encrypted connection · session ends when this tab closes</div>
   <footer class="app-footer">
     <em>Developed by <strong>Precision Technologies</strong>. CEO: Rizwan Aslam &mdash; 0319-2335276.</em><br>
     <em>Licensed to Muhammad Azam &mdash; 0312-5859656.</em>
@@ -2280,6 +2477,128 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   }
 });
 
+// ---------- IN-APP DIALOGS ----------
+// Replaces the browser's native alert() box (grey, blocks the whole tab,
+// shows the site URL, looks like a phishing popup) with a styled dialog
+// that matches the app. alert() calls throughout this file are left as-is
+// and simply routed here — every one of them is the last thing its code
+// path does before returning, so not blocking is a drop-in change.
+// Dialogs queue: a second message waits until the first is dismissed.
+// confirm() is still native where it's used synchronously; new code uses
+// appConfirm(), which returns a Promise<boolean>.
+const appDialogQueue = [];
+let appDialogOpen = false;
+let appDialogRestoreFocus = null;
+
+function guessDialogTone(msg){
+  const m = String(msg || '').toLowerCase();
+  if(/^(failed|could not|couldn't|error)|rejected|conflict|incorrect|not authori[sz]ed|permission denied/.test(m)) return 'error';
+  if(/cannot|can't|must|select |enter |short of|too many|no customer|missing/.test(m)) return 'warn';
+  if(/saved|synced|success|done/.test(m)) return 'success';
+  return 'info';
+}
+
+function appDialog(opts){
+  return new Promise(resolve => {
+    appDialogQueue.push({ opts, resolve });
+    if(!appDialogOpen) showNextAppDialog();
+  });
+}
+function appConfirm(opts){ return appDialog(Object.assign({ cancelText: 'Cancel' }, opts)); }
+
+function ensureAppDialogEl(){
+  let overlay = document.getElementById('appDialogOverlay');
+  if(overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.id = 'appDialogOverlay';
+  overlay.className = 'app-dialog-overlay';
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="app-dialog" role="alertdialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMsg">
+      <div class="app-dialog-icon" aria-hidden="true"></div>
+      <div class="app-dialog-body">
+        <h3 id="appDialogTitle"></h3>
+        <p id="appDialogMsg"></p>
+      </div>
+      <div class="app-dialog-actions">
+        <button type="button" class="btn-secondary" id="appDialogCancel"></button>
+        <button type="button" class="btn-main" id="appDialogOk"></button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape'){ e.preventDefault(); closeAppDialog(false); }
+    if(e.key === 'Tab'){
+      // keep focus inside the dialog
+      const btns = [...overlay.querySelectorAll('button')].filter(b => !b.hidden);
+      const i = btns.indexOf(document.activeElement);
+      e.preventDefault();
+      btns[(i + (e.shiftKey ? -1 : 1) + btns.length) % btns.length].focus();
+    }
+  });
+  document.addEventListener('focusin', (e) => {
+    // Code that runs right after alert() sometimes focuses an input — let
+    // that input get focus back once the dialog closes, instead of now.
+    if(appDialogOpen && !overlay.contains(e.target)){
+      appDialogRestoreFocus = e.target;
+      document.getElementById('appDialogOk').focus();
+    }
+  });
+  return overlay;
+}
+
+const APP_DIALOG_TONES = {
+  info:    { icon: 'i', title: 'Notice' },
+  success: { icon: '✓', title: 'Done' },
+  warn:    { icon: '!', title: 'Check this' },
+  error:   { icon: '✕', title: 'Something went wrong' }
+};
+
+function showNextAppDialog(){
+  const next = appDialogQueue.shift();
+  if(!next) return;
+  const overlay = ensureAppDialogEl();
+  const { opts } = next;
+  const tone = APP_DIALOG_TONES[opts.tone] ? opts.tone : 'info';
+  appDialogOpen = true;
+  appDialogRestoreFocus = document.activeElement;
+  overlay.dataset.tone = tone;
+  overlay.querySelector('.app-dialog-icon').textContent = APP_DIALOG_TONES[tone].icon;
+  document.getElementById('appDialogTitle').textContent = opts.title || APP_DIALOG_TONES[tone].title;
+  document.getElementById('appDialogMsg').textContent = opts.message || '';
+  const ok = document.getElementById('appDialogOk');
+  const cancel = document.getElementById('appDialogCancel');
+  ok.textContent = opts.okText || 'OK';
+  cancel.textContent = opts.cancelText || '';
+  cancel.hidden = !opts.cancelText;
+  ok.onclick = () => closeAppDialog(true);
+  cancel.onclick = () => closeAppDialog(false);
+  overlay._resolve = next.resolve;
+  overlay.hidden = false;
+  ok.focus();
+}
+
+function closeAppDialog(result){
+  const overlay = document.getElementById('appDialogOverlay');
+  if(!overlay || overlay.hidden) return;
+  overlay.hidden = true;
+  appDialogOpen = false;
+  const resolve = overlay._resolve;
+  overlay._resolve = null;
+  const target = appDialogRestoreFocus;
+  appDialogRestoreFocus = null;
+  if(target && typeof target.focus === 'function' && document.contains(target)){
+    try{ target.focus(); }catch(e){}
+  }
+  if(resolve) resolve(result);
+  showNextAppDialog();
+}
+
+window.alert = function(msg){
+  const text = String(msg == null ? '' : msg);
+  appDialog({ message: text, tone: guessDialogTone(text) });
+};
+
 // ---------- REAL CONNECTIVITY PROBE ----------
 // navigator.onLine ONLY reflects whether the OS thinks *some* network
 // interface is up (e.g. connected to Wi-Fi) — it does NOT mean this device
@@ -2348,11 +2667,76 @@ let currentItems = [];
 let customerPriceMap = {}; // service name (lowercase) -> last price charged to the customer currently in phoneInput
 let currentBranchId = null;
 
+// ---------- PASSWORD ATTEMPT THROTTLE ----------
+// Client-side brake on password guessing, for both the login form and
+// the admin re-auth prompt (submitDeleteConfirm). After AUTH_FREE_TRIES
+// wrong passwords the form locks for 30s, doubling per further miss (max
+// 15 min). Kept in localStorage so a page refresh doesn't reset it.
+// Supabase Auth also rate-limits server-side — this just stops a person
+// standing at the counter from trying password after password.
+const AUTH_FREE_TRIES = 5;
+const AUTH_MAX_LOCK_MS = 15 * 60 * 1000;
+function authThrottleKey(scope){ return 'laundry_pos_auth_throttle_' + scope; }
+function authThrottleState(scope){
+  try{ return JSON.parse(localStorage.getItem(authThrottleKey(scope)) || 'null') || { fails: 0, until: 0 }; }
+  catch(e){ return { fails: 0, until: 0 }; }
+}
+// Seconds left on the current lock, or 0 when attempts are allowed.
+function authLockedFor(scope){
+  const s = authThrottleState(scope);
+  return Math.max(0, Math.ceil((s.until - Date.now()) / 1000));
+}
+function authRecordFailure(scope){
+  const s = authThrottleState(scope);
+  s.fails = (s.fails || 0) + 1;
+  if(s.fails >= AUTH_FREE_TRIES){
+    s.until = Date.now() + Math.min(AUTH_MAX_LOCK_MS, 30000 * Math.pow(2, s.fails - AUTH_FREE_TRIES));
+  }
+  try{ localStorage.setItem(authThrottleKey(scope), JSON.stringify(s)); }catch(e){}
+  return authLockedFor(scope);
+}
+function authRecordSuccess(scope){
+  try{ localStorage.removeItem(authThrottleKey(scope)); }catch(e){}
+}
+function formatLockWait(sec){
+  return sec >= 60 ? `${Math.ceil(sec / 60)} min` : `${sec}s`;
+}
+
 // ---------- LOGIN ----------
+function setLoginBusy(busy){
+  const btn = document.getElementById('loginSubmitBtn');
+  btn.disabled = busy;
+  btn.classList.toggle('is-busy', busy);
+  btn.querySelector('.btn-label').textContent = busy ? 'Signing in…' : 'Log In';
+}
+document.getElementById('loginPwToggle').addEventListener('click', () => {
+  const input = document.getElementById('loginPassword');
+  const btn = document.getElementById('loginPwToggle');
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.textContent = show ? 'Hide' : 'Show';
+  btn.setAttribute('aria-pressed', String(show));
+  btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  input.focus();
+});
+['keydown', 'keyup'].forEach(evt => {
+  document.getElementById('loginPassword').addEventListener(evt, (e) => {
+    if(typeof e.getModifierState === 'function'){
+      document.getElementById('loginCapsHint').hidden = !e.getModifierState('CapsLock');
+    }
+  });
+});
 document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('loginError');
+  if(!email || !password){ errBox.textContent = 'Enter your email and password.'; return; }
+  const lockedFor = authLockedFor('login');
+  if(lockedFor > 0){
+    errBox.textContent = `Too many failed attempts. Try again in ${formatLockWait(lockedFor)}.`;
+    return;
+  }
   // Signing in for the first time on a device always needs a real network
   // round-trip to verify the password against the server — there is no
   // way around that safely. Say so plainly instead of letting it fail
@@ -2363,9 +2747,31 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
     document.getElementById('loginError').textContent = "📡 You're offline — signing in needs an internet connection the first time. Connect and try again; after that this device stays signed in and the app works offline.";
     return;
   }
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){ document.getElementById('loginError').textContent = error.message; return; }
+  setLoginBusy(true);
+  errBox.textContent = '';
+  let data, error;
+  try{
+    ({ data, error } = await sb.auth.signInWithPassword({ email, password }));
+  }catch(networkErr){ error = networkErr; }
+  if(error){
+    setLoginBusy(false);
+    if(isNetworkError(error)){
+      errBox.textContent = "📡 Couldn't reach the server — check the connection and try again.";
+      return;
+    }
+    // One generic message for wrong email AND wrong password, so the form
+    // can't be used to discover which staff emails have accounts.
+    const wait = authRecordFailure('login');
+    errBox.textContent = wait > 0
+      ? `Incorrect email or password. Too many failed attempts — locked for ${formatLockWait(wait)}.`
+      : 'Incorrect email or password.';
+    document.getElementById('loginPassword').select();
+    return;
+  }
+  authRecordSuccess('login');
+  document.getElementById('loginPassword').value = '';
   await afterLogin(data.user);
+  setLoginBusy(false);
 });
 
 // user is passed in directly (from signInWithPassword's response, or from
@@ -2420,9 +2826,82 @@ async function afterLogin(user){
   syncPendingOrders(true); // silently push anything queued from a prior offline session
 }
 
-async function logout(){
-  await sb.auth.signOut();
+// Customer names/phones/items cached for offline use. Wiped on logout so
+// the next person at this machine can't read them out of browser storage.
+// Offline QUEUES (IndexedDB) are deliberately NOT touched — those are
+// unsynced bookings/dispatches/cash and must survive until they sync.
+function clearSensitiveCaches(){
+  try{
+    Object.keys(localStorage).forEach(k => {
+      if(k === 'laundry_pos_cached_profile' ||
+         k.startsWith('laundry_pos_cached_open_orders_') ||
+         k.startsWith('order_notes_cache_')) localStorage.removeItem(k);
+    });
+  }catch(e){}
+}
+
+async function logout(reason){
+  if(reason !== 'idle'){
+    let pending = 0;
+    try{ pending = await countAllPending(); }catch(e){}
+    if(pending > 0){
+      const ok = await appConfirm({
+        title: 'Unsynced work on this device',
+        message: `${pending} item${pending === 1 ? '' : 's'} (bookings, dispatches, expenses…) haven't reached the server yet.\n\nThey stay safely saved on THIS device and sync automatically the next time anyone logs in here while online.`,
+        okText: 'Log out anyway', cancelText: 'Stay logged in', tone: 'warn'
+      });
+      if(!ok) return;
+    }
+  }
+  clearSensitiveCaches();
+  try{ await sb.auth.signOut(); }catch(e){}
+  // signOut can fail while offline — make sure the local session is gone regardless.
+  try{ Object.keys(sessionStorage).forEach(k => { if(k.startsWith('sb-')) sessionStorage.removeItem(k); }); }catch(e){}
+  if(reason === 'idle'){ try{ sessionStorage.setItem('laundry_pos_logout_reason', 'idle'); }catch(e){} }
   location.reload();
+}
+
+// ---------- ADMIN IDLE AUTO-LOGOUT ----------
+// An admin session can delete records and see every branch's cash, so an
+// unattended admin screen signs itself out after ADMIN_IDLE_MINUTES of no
+// mouse/keyboard/touch activity (with a 60s on-screen warning first).
+// Worker sessions are NOT auto-logged-out: the counter must keep working
+// offline, and signing back in needs internet.
+const ADMIN_IDLE_MINUTES = 20;
+let idleLastActivity = Date.now();
+let idleTimer = null;
+let idleWarnShown = false;
+function noteUserActivity(){
+  idleLastActivity = Date.now();
+  if(idleWarnShown){
+    idleWarnShown = false;
+    const w = document.getElementById('idleWarnBar');
+    if(w) w.hidden = true;
+  }
+}
+function startAdminIdleWatch(){
+  if(idleTimer) return;
+  ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove'].forEach(evt =>
+    window.addEventListener(evt, noteUserActivity, { passive: true }));
+  idleTimer = setInterval(() => {
+    const idleMs = Date.now() - idleLastActivity;
+    const limitMs = ADMIN_IDLE_MINUTES * 60000;
+    const left = Math.ceil((limitMs - idleMs) / 1000);
+    if(left <= 0){ clearInterval(idleTimer); logout('idle'); return; }
+    if(left <= 60){
+      let w = document.getElementById('idleWarnBar');
+      if(!w){
+        w = document.createElement('div');
+        w.id = 'idleWarnBar';
+        w.className = 'idle-warn-bar';
+        w.setAttribute('role', 'alert');
+        document.body.appendChild(w);
+      }
+      w.hidden = false;
+      w.textContent = `🔒 No activity — signing out in ${left}s for security. Move the mouse or press any key to stay signed in.`;
+      idleWarnShown = true;
+    }
+  }, 1000);
 }
 
 // ---------- SETUP ----------
@@ -2480,6 +2959,7 @@ function setupRoleView(){
     populateNotifBranchFilter();
     renderCameraGrid();
     subscribeAdminRealtime();
+    startAdminIdleWatch();
   } else {
     const b = branches.find(b => b.id === profile.branch_id);
     document.getElementById('branchNameFixed').textContent = b ? b.name : '';
@@ -2662,16 +3142,21 @@ function populateNotifBranchFilter(){
   sel.innerHTML = '<option value="">All Branches</option>' + branches.map(b=>`<option value="${b.id}">${escHtml(b.name)}</option>`).join('');
   sel.value = current;
   const dateInput = document.getElementById('notifDateInput');
-  if(dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0,10);
+  if(dateInput && !dateInput.value) dateInput.value = localDateStr(new Date());
 }
 
 async function loadNotifications(){
   const dateInput = document.getElementById('notifDateInput');
-  if(!dateInput.value) dateInput.value = new Date().toISOString().slice(0,10);
+  if(!dateInput.value) dateInput.value = localDateStr(new Date());
   const date = dateInput.value;
   const branchFilter = document.getElementById('notifBranchFilter').value;
-  const dayStart = date + 'T00:00:00';
-  const dayEnd = date + 'T23:59:59';
+  // BUG FIX: these used to be sent as bare 'YYYY-MM-DDT00:00:00' strings,
+  // which Postgres reads as UTC — so in Pakistan (UTC+5) every activity
+  // between midnight and 5 AM showed up under the previous day. Convert
+  // the shop's local day boundaries to real instants first (same as the
+  // audit report already does).
+  const dayStart = new Date(date + 'T00:00:00').toISOString();
+  const dayEnd = new Date(date + 'T23:59:59.999').toISOString();
   let q = sb.from('activity_log').select('*').gte('created_at', dayStart).lte('created_at', dayEnd).order('created_at', { ascending:false });
   if(branchFilter) q = q.eq('branch_id', parseInt(branchFilter));
   const { data, error } = await q;
@@ -2698,7 +3183,7 @@ function renderCameraGrid(){
     <div class="camera-card">
       <h3>${escHtml(b.name)}</h3>
       <div class="camera-frame-wrap" id="cameraFrameWrap_${b.id}">
-        ${url ? `<iframe src="${escAttr(url)}" allow="autoplay" referrerpolicy="no-referrer"></iframe>` : '<div class="camera-frame-empty">No live feed link saved yet for this branch.</div>'}
+        ${safeHttpUrl(url) ? `<iframe src="${escAttr(safeHttpUrl(url))}" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>` : '<div class="camera-frame-empty">No live feed link saved yet for this branch.</div>'}
         <button type="button" class="camera-fullscreen-btn" title="Fullscreen this feed" onclick="toggleCameraFullscreen(${b.id})">⛶ Fullscreen</button>
       </div>
       <div class="camera-url-row">
@@ -2721,6 +3206,7 @@ function toggleCameraFullscreen(branchId){
 
 async function saveCameraUrl(branchId){
   const val = document.getElementById('cameraUrlInput_' + branchId).value.trim();
+  if(val && !safeHttpUrl(val)){ alert('Camera link must start with http:// or https://'); return; }
   const { error } = await sb.from('branches').update({ camera_url: val }).eq('id', branchId);
   if(error){ alert('Could not save camera link: ' + error.message + '\n\n(Make sure the branches table has a camera_url column — see the SQL setup file.)'); return; }
   const b = branches.find(x => x.id === branchId);
@@ -2742,7 +3228,7 @@ function renderEwpPanel(){
   const chipsEl = document.getElementById('ewpChips');
   const catKeys = getDistinctCategories();
   chipsEl.innerHTML = `<button type="button" class="chip-btn${ewpCategoryFilter===''?' active':''}" onclick="setEwpCategoryFilter('')">All</button>` +
-    catKeys.map(k => `<button type="button" class="chip-btn${ewpCategoryFilter===k?' active':''}" ${catStyleAttr(k)} onclick="setEwpCategoryFilter('${escAttr(k)}')">${escHtml(CATEGORY_LABELS[k]||k)}</button>`).join('');
+    catKeys.map(k => `<button type="button" class="chip-btn${ewpCategoryFilter===k?' active':''}" ${catStyleAttr(k)} onclick="setEwpCategoryFilter('${jsArg(k)}')">${escHtml(CATEGORY_LABELS[k]||k)}</button>`).join('');
 
   const container = document.getElementById('ewpListContainer');
   const filtered = services.filter(s => !ewpCategoryFilter || (s.category||'wash_dryclean') === ewpCategoryFilter);
@@ -2766,7 +3252,7 @@ function renderEwpPanel(){
           <input type="number" class="menu-price-input" id="ewpPrice_${s.id}" value="${s.default_price||0}" min="0">
           <div class="ewp-actions">
             <button type="button" class="ewp-save-btn" title="Save price" onclick="saveEwpPrice(${s.id})">💾</button>
-            <button type="button" class="ewp-del-btn" title="Delete item" onclick="openEwpDeleteModal(${s.id}, '${escAttr(s.name)}')">🗑</button>
+            <button type="button" class="ewp-del-btn" title="Delete item" onclick="openEwpDeleteModal(${s.id}, '${jsArg(s.name)}')">🗑</button>
           </div>
         </div>`;
     });
@@ -2864,8 +3350,45 @@ const TERMINAL_STATUSES = ['archived', 'closed', 'dispatched'];
 // onclick JS that runs when anyone clicks the button. (items already had
 // this same protection via encodeURIComponent — this extends the same
 // idea to phone/code.)
+//
+// SECURITY FIX: escAttr alone is NOT safe for the onclick="fn('...')"
+// case described above — the HTML parser decodes &#39; back into a real
+// ' before the JS ever runs, so a name like  x');alert(1);//  still broke
+// out of the string. Values going into a quoted JS argument inside an
+// inline handler must use jsArg() below instead; escAttr stays for plain
+// attribute values (value="", src="", title="").
 function escAttr(v){
-  return String(v == null ? '' : v).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Escapes a value for a single-quoted JS string literal that itself sits
+// inside a double-quoted HTML attribute — onclick="fn('${jsArg(x)}')".
+// JS-escape first (so the decoded attribute is a valid, closed literal),
+// then HTML-escape the result (so it can't end the attribute early).
+function jsArg(v){
+  const js = String(v == null ? '' : v)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r').replace(/\n/g, '\\n')
+    .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  return js.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// encodeURIComponent leaves ' untouched, so a raw itemsArg inside
+// onclick="fn('${itemsArg}')" could still close the string. %27 decodes
+// back to ' through the same decodeURIComponent every receiver already uses.
+function encArg(obj){
+  return encodeURIComponent(JSON.stringify(obj)).replace(/'/g, '%27');
+}
+
+// Only http(s) URLs may be loaded into iframes / opened — blocks
+// javascript: and data: URLs, which would run in this app's origin.
+function safeHttpUrl(v){
+  try{
+    const u = new URL(String(v || '').trim());
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : '';
+  }catch(e){ return ''; }
 }
 
 // Escapes a value for safe insertion as HTML TEXT CONTENT (table cells,
@@ -2876,7 +3399,9 @@ function escAttr(v){
 // value like "<img src=x onerror=...>" would execute in the viewer's
 // browser instead of just displaying as text.
 function escHtml(v){
-  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Quotes too, so it's also safe if a caller ever drops it into an attribute.
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // Builds a small nested table (Qty | Item) for the Open Orders "Items"
@@ -3122,7 +3647,7 @@ function pendingOrderRowHtml(record){
   const p = record.payload || {};
   const pa = record.printArgs || {};
   const items = Array.isArray(p.p_items) ? p.p_items : [];
-  const itemsArg = encodeURIComponent(JSON.stringify(items));
+  const itemsArg = encArg(items);
   // pa.wdCollectByDate/pa.pressCollectByDate are live Date objects in this
   // same browser session (queueOfflineOrder just set them), but a page
   // reload only leaves the JSON-serialized strings behind — either way,
@@ -3132,7 +3657,7 @@ function pendingOrderRowHtml(record){
   // nothing (printReceipt's own fallback) if neither survived.
   const wdCollectByStr = pa.wdCollectByDate || p.p_wd_collect_by || '';
   const pressCollectByStr = pa.pressCollectByDate || p.p_press_collect_by || '';
-  const reprintArgs = `'${itemsArg}', '${escAttr(pa.phone)}', '${escAttr(pa.name)}', '${escAttr(pa.code)}', ${Number(pa.subtotal)||0}, ${Number(pa.discountPct)||0}, ${Number(pa.discount)||0}, ${Number(pa.total)||0}, ${Number(pa.advancePaid)||0}, ${Number(pa.balanceDue)||0}, ${Number(pa.changeGiven)||0}, '${escAttr(record.queuedAt)}', ${p.p_is_urgent ? 'true' : 'false'}, ${Number(pa.urgentSurcharge)||0}, '${escAttr(wdCollectByStr)}', '${escAttr(pressCollectByStr)}'`;
+  const reprintArgs = `'${itemsArg}', '${jsArg(pa.phone)}', '${jsArg(pa.name)}', '${jsArg(pa.code)}', ${Number(pa.subtotal)||0}, ${Number(pa.discountPct)||0}, ${Number(pa.discount)||0}, ${Number(pa.total)||0}, ${Number(pa.advancePaid)||0}, ${Number(pa.balanceDue)||0}, ${Number(pa.changeGiven)||0}, '${jsArg(record.queuedAt)}', ${p.p_is_urgent ? 'true' : 'false'}, ${Number(pa.urgentSurcharge)||0}, '${jsArg(wdCollectByStr)}', '${jsArg(pressCollectByStr)}'`;
   const errorNote = record.lastError
     ? `<br><span class="small" style="color:#c0392b;">Last error: ${escHtml(record.lastError)}</span>`
     : '';
@@ -3183,7 +3708,7 @@ function pendingDispatchRowHtml(record){
       <td>${formatAppDateTime(record.createdAt || record.queuedAt)}</td>
       <td>${formatAppDateTime(record.queuedAt)}</td>
       <td>${record.receiverName ? `<span style="font-weight:700;">${escHtml(record.receiverName)}</span>${record.receiverPhone ? `<br><span class="small" style="color:var(--accent);font-weight:700;">📞 ${escHtml(record.receiverPhone)}</span>` : ''}` : '<span style="color:var(--muted);">—</span>'}</td>
-      <td><button class="btn-secondary" onclick="printQueuedDispatchBill('${record.localId}')">Print Bill</button> <button class="btn-secondary" onclick="syncAllPending(false)">Retry Sync</button></td>
+      <td><button class="btn-secondary" onclick="printQueuedDispatchBill('${jsArg(record.localId)}')">Print Bill</button> <button class="btn-secondary" onclick="syncAllPending(false)">Retry Sync</button></td>
     </tr>`;
 }
 
@@ -3304,12 +3829,12 @@ async function renderOpenOrdersRows(list){
     // Items travel through the onclick attribute as a URI-encoded JSON
     // string so quotes/apostrophes inside service names can never break
     // the HTML attribute or the single-quoted JS argument around it.
-    const itemsArg = encodeURIComponent(JSON.stringify(o.items || []));
+    const itemsArg = encArg(o.items || []);
     const advancePaid = Number(o.advance_paid || 0);
     const balanceDue = Number(o.balance_due || 0);
     const changeGiven = Number(o.change_given || 0);
     const dispatchChangeGiven = Number(o.dispatch_change_given || 0);
-    const readyArgs = `${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}', '${itemsArg}', ${o.total}, '${escAttr(branchNameKey)}', ${advancePaid}, ${balanceDue}`;
+    const readyArgs = `${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${itemsArg}', ${o.total}, '${jsArg(branchNameKey)}', ${advancePaid}, ${balanceDue}`;
 
     // Whichever timestamp matches the order's current status is what
     // shows up in the hover tooltip on the status badge.
@@ -3335,7 +3860,7 @@ async function renderOpenOrdersRows(list){
     // rather than printing "Rs undefined".
     const orderDiscount = o.discount != null ? Number(o.discount) : null;
     const orderSubtotal = o.subtotal != null ? Number(o.subtotal) : (orderDiscount != null ? Number(o.total) + orderDiscount : null);
-    const printBillArgs = `${o.id}, '${escAttr(o.code || '')}', '${escAttr(o.customer_phone)}', '${escAttr(o.customer_name || '')}', '${itemsArg}', ${o.total}, ${advancePaid}, ${balanceRecovered}, ${dispatchChangeGiven}, ${o.dispatched_at ? `'${o.dispatched_at}'` : 'null'}, ${orderSubtotal != null ? orderSubtotal : 'null'}, ${orderDiscount != null ? orderDiscount : 'null'}, '${escAttr(o.created_at || '')}', '${escAttr(o.receiverName || '')}', '${escAttr(o.receiverPhone || '')}', ${o.is_urgent ? 'true' : 'false'}`;
+    const printBillArgs = `${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_phone)}', '${jsArg(o.customer_name || '')}', '${itemsArg}', ${o.total}, ${advancePaid}, ${balanceRecovered}, ${dispatchChangeGiven}, ${o.dispatched_at ? `'${jsArg(o.dispatched_at)}'` : 'null'}, ${orderSubtotal != null ? orderSubtotal : 'null'}, ${orderDiscount != null ? orderDiscount : 'null'}, '${jsArg(o.created_at || '')}', '${jsArg(o.receiverName || '')}', '${jsArg(o.receiverPhone || '')}', ${o.is_urgent ? 'true' : 'false'}`;
     // Reprints the ORIGINAL booking receipt (not the closing bill) — for
     // a printer jam, a lost receipt, or double-checking a LIVE-status
     // order. Available at every stage, not just before dispatch, since a
@@ -3349,7 +3874,7 @@ async function renderOpenOrdersRows(list){
     // accuracy, never breaks. branchNameKey is passed through too so
     // reprintOrderReceipt can resend the booking confirmation message using
     // the SAME dates already on the receipt, never recomputed.
-    const reprintArgs = `${o.id}, '${escAttr(o.code || '')}', '${escAttr(o.customer_phone)}', '${escAttr(o.customer_name || '')}', '${itemsArg}', ${o.total}, ${advancePaid}, ${balanceDue}, ${changeGiven}, ${orderSubtotal != null ? orderSubtotal : 'null'}, ${orderDiscount != null ? orderDiscount : 'null'}, '${escAttr(o.created_at || '')}', ${o.is_urgent ? 'true' : 'false'}, '${escAttr(o.wd_collect_by || '')}', '${escAttr(o.press_collect_by || '')}', '${escAttr(o.expiry_date || '')}', '${escAttr(branchNameKey)}'`;
+    const reprintArgs = `${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_phone)}', '${jsArg(o.customer_name || '')}', '${itemsArg}', ${o.total}, ${advancePaid}, ${balanceDue}, ${changeGiven}, ${orderSubtotal != null ? orderSubtotal : 'null'}, ${orderDiscount != null ? orderDiscount : 'null'}, '${jsArg(o.created_at || '')}', ${o.is_urgent ? 'true' : 'false'}, '${jsArg(o.wd_collect_by || '')}', '${jsArg(o.press_collect_by || '')}', '${jsArg(o.expiry_date || '')}', '${jsArg(branchNameKey)}'`;
 
     const isVip = !!o.is_vip;
 
@@ -3381,13 +3906,13 @@ async function renderOpenOrdersRows(list){
     const isPartiallyDispatched = status === 'partially_dispatched';
     // Args for the partial dispatch modal button — available on every
     // non-terminal order regardless of current status.
-    const partialArgs = `${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}', '${escAttr(o.customer_name || '')}'`;
+    const partialArgs = `${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}'`;
     const partialBtn = `<button class="btn-secondary" onclick="openPartialDispatchModal(${partialArgs})" title="Release some items now, collect partial or no payment — rest stays in shop">⚙ Partial</button>`;
 
     // Note button — available at every stage including terminal.
     // Picks up a green accent if notes exist (loaded from localStorage cache).
     const noteCount = getOrderNoteCount(o.id);
-    const noteArgs = `${o.id}, '${escAttr(o.code || '')}', '${escAttr(o.customer_name || '')}', '${escAttr(status)}'`;
+    const noteArgs = `${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}', '${jsArg(status)}'`;
     const noteBtn = `<button class="${'note-btn' + (noteCount > 0 ? ' has-notes' : '')}" onclick="openOrderNoteModal(${noteArgs})" title="${noteCount > 0 ? noteCount + ' note' + (noteCount !== 1 ? 's' : '') + ' — click to view/add' : 'Add internal note for this order'}">📝 Note${noteCount > 0 ? ` (${noteCount})` : ''}</button>`;
 
     let actions = '';
@@ -3418,7 +3943,7 @@ async function renderOpenOrdersRows(list){
     const isPartiallyDispatchedAndChecked = isPartiallyDispatched && allItemsChecked;
 
     if(isTerminal){
-      const resendArgs = `${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}', ${o.dispatched_at ? `'${escAttr(o.dispatched_at)}'` : 'null'}, '${escAttr(o.receiverName || '')}', '${escAttr(o.receiverPhone || '')}'`;
+      const resendArgs = `${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', ${o.dispatched_at ? `'${jsArg(o.dispatched_at)}'` : 'null'}, '${jsArg(o.receiverName || '')}', '${jsArg(o.receiverPhone || '')}'`;
       actions = `<button class="btn-secondary" disabled>Ready</button> <button class="btn-secondary" disabled>Close / Dispatched</button> <button class="btn-secondary" onclick="printFinalBill(${printBillArgs})">Print Bill</button> <button class="btn-secondary" onclick="resendDispatchMessage(${resendArgs})" title="Use this if the WhatsApp/SMS notification failed the first time (e.g. the customer's number has no WhatsApp account)">Resend Dispatch Msg</button> ${noteBtn}`;
     } else if(isReady || isPartiallyDispatchedAndChecked){
       // Partially dispatched orders don't need "Notify Again" (not relevant
@@ -3426,12 +3951,12 @@ async function renderOpenOrdersRows(list){
       const notifyBtn = isPartiallyDispatched ? '' :
         `<button class="btn-secondary" ${offlineDisabled} onclick="markReady(${readyArgs})">Notify Again</button> `;
       actions = notifyBtn +
-        `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}', '${escAttr(o.customer_name || '')}')">Close / Dispatched</button> ` +
+        `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')">Close / Dispatched</button> ` +
         partialBtn +
         ` <button class="btn-secondary" onclick="reprintOrderReceipt(${reprintArgs})">Reprint Booking Receipt</button> ${noteBtn}`;
     } else {
       actions = `${checkItemsBtn} ${gatedReadyBtn} ` +
-        `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}', '${escAttr(o.customer_name || '')}')">Close / Dispatched</button> ` +
+        `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')">Close / Dispatched</button> ` +
         partialBtn +
         ` <button class="btn-secondary" onclick="reprintOrderReceipt(${reprintArgs})">Reprint Booking Receipt</button> ${noteBtn}`;
     }
@@ -3452,12 +3977,12 @@ async function renderOpenOrdersRows(list){
     return `<tr class="${rowClass}${urgentRowClass}${idx % 2 === 1 ? ' zebra-b' : ''}">
       <td>${escHtml(o.code || '')}</td>
       <td>${escHtml(o.customer_phone)}</td>
-      <td>${isVip ? `<div class="vip-badge" onclick="toggleOpenOrderVip('${escAttr(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
+      <td>${isVip ? `<div class="vip-badge" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(o.items)}</td>
       <td>Rs ${o.total}</td>
       <td>Rs ${advancePaid}</td>
       <td class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</td>
-      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${escAttr(o.code || '')}', '${escAttr(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
+      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
       <td>${urgentCell}</td>
       <td>${formatAppDateTime(o.created_at)}</td>
       <td>${isTerminal ? (o.dispatched_at ? formatAppDateTime(o.dispatched_at) : '<span style="color:var(--muted);">—</span>') : ''}</td>
@@ -3693,7 +4218,7 @@ function renderOverdueTab(){
       ? '<span class="overdue-state-badge badge-red">RED — Notify</span>'
       : '<span class="overdue-state-badge badge-green">GREEN — Waiting</span>';
     const rowClass = info.state === 'red' ? 'row-overdue-red' : 'row-overdue-green';
-    const notifyArgs = `${o.id}, '${escAttr(o.customer_phone)}', '${escAttr(o.code || '')}'`;
+    const notifyArgs = `${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}'`;
     const offlineDisabled = isReallyOnline() ? '' : 'title="Offline — will be queued and synced automatically once reconnected"';
 
     return `<tr class="${rowClass}">
@@ -4298,7 +4823,7 @@ function downloadPromoPoster(){
     if(!blob){ alert('Could not generate the image — please try again.'); return; }
     const branch = branches.find(b => b.id === currentBranchId);
     const branchSlug = (branch ? branch.name : 'shop').toLowerCase().replace(/[^a-z0-9]+/g, '_');
-    const dateSlug = new Date().toISOString().slice(0, 10);
+    const dateSlug = localDateStr(new Date());
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `${branchSlug}_promo_${dateSlug}.png`;
@@ -5593,7 +6118,7 @@ function printPartialReleaseBill(orderId, code, phone, customerName, releasingIt
 
   document.getElementById('receipt').innerHTML = `
     <div class="receipt-box" style="position:relative;">
-      <div class="center receipt-branch-name">${branch ? branch.name : 'Get Smart / Brite Star'}</div>
+      <div class="center receipt-branch-name">${branch ? escHtml(branch.name) : 'Get Smart / Brite Star'}</div>
       <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
       <div class="center small">${isFinalRelease ? 'FINAL RELEASE' : 'PARTIAL RELEASE'} — printed ${formatAppDateTime(new Date())}</div>
       <hr>
@@ -6051,7 +6576,7 @@ function renderCategoryColorEditor(){
     const label = CATEGORY_LABELS[k] || k;
     return `<div class="catcolor-row" ${catStyleAttr(k)}>
       <span class="catcolor-label" style="color:var(--cat-text);">${escHtml(label)}</span>
-      <input type="color" value="${escAttr(hex)}" onchange="updateCategoryColor('${escAttr(k)}', this.value)" title="Change colour for ${escAttr(label)}">
+      <input type="color" value="${escAttr(hex)}" onchange="updateCategoryColor('${jsArg(k)}', this.value)" title="Change colour for ${escAttr(label)}">
     </div>`;
   }).join('');
 }
@@ -6091,7 +6616,7 @@ function renderMenuCategoryChips(){
   const bar = document.getElementById('menuCategoryChips');
   if(bar){
     const allKeys = getDistinctCategories();
-    const chip = (key, label) => `<button type="button" class="chip-btn${menuCategoryFilter===key?' active':''}" ${key?catStyleAttr(key):''} onclick="setMenuCategoryFilter('${escAttr(key)}')">${escHtml(label)}</button>`;
+    const chip = (key, label) => `<button type="button" class="chip-btn${menuCategoryFilter===key?' active':''}" ${key?catStyleAttr(key):''} onclick="setMenuCategoryFilter('${jsArg(key)}')">${escHtml(label)}</button>`;
     bar.innerHTML = chip('', 'All') + allKeys.map(k => chip(k, CATEGORY_LABELS[k] || k)).join('');
   }
   // Keep both "add new item" category dropdowns in sync with whatever
@@ -7836,6 +8361,13 @@ function showSimpleToast(message, isAlert){
   setTimeout(()=>{ el.classList.add('hide'); setTimeout(()=> el.remove(), 300); }, 10000);
 }
 
+async function countAllPending(){
+  const counts = await Promise.all([
+    idbCountPendingOrders(), idbCountPendingDispatches(), idbCountPendingPartialDispatches(), idbCountPendingReady(), idbCountPendingItemChecks(), idbCountPendingExpenses(), idbCountPendingNotifies()
+  ]);
+  return counts.reduce((s, n) => s + (Number(n) || 0), 0);
+}
+
 async function updateOfflineBadge(state){
   const connBadge = document.getElementById('connBadge');
   const syncBtn = document.getElementById('syncNowBtn');
@@ -7851,10 +8383,7 @@ async function updateOfflineBadge(state){
   // partial dispatches, ready-marks, item checks, expenses, and overdue
   // notifies — so the header badge/button reflect everything waiting to
   // sync, not just new bookings.
-  const [pendingBookings, pendingDispatchCount, pendingPartialDispatchCount, pendingReadyCount, pendingItemCheckCount, pendingExpenseCount, pendingNotifyCount] = await Promise.all([
-    idbCountPendingOrders(), idbCountPendingDispatches(), idbCountPendingPartialDispatches(), idbCountPendingReady(), idbCountPendingItemChecks(), idbCountPendingExpenses(), idbCountPendingNotifies()
-  ]);
-  const pending = pendingBookings + pendingDispatchCount + pendingPartialDispatchCount + pendingReadyCount + pendingItemCheckCount + pendingExpenseCount + pendingNotifyCount;
+  const pending = await countAllPending();
   countSpan.textContent = pending;
   if(pending > 0){
     syncBtn.style.display = 'inline-block';
@@ -8046,7 +8575,7 @@ function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePai
 
   document.getElementById('receipt').innerHTML = `
     <div class="receipt-box" style="position:relative;">
-      <div class="center receipt-branch-name">${branch ? branch.name : 'Get Smart / Brite Star'}</div>
+      <div class="center receipt-branch-name">${branch ? escHtml(branch.name) : 'Get Smart / Brite Star'}</div>
       <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
       <div class="center small">CLOSING BILL — printed ${formatAppDateTime(new Date())}</div>
       ${urgentBillLine}
@@ -8190,7 +8719,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
     : `Order #${orderId} — Code: ${escHtml(code)}`;
   document.getElementById('receipt').innerHTML = `
     <div class="receipt-box">
-      <div class="center receipt-branch-name">${branch ? branch.name : 'Get Smart / Brite Star'}</div>
+      <div class="center receipt-branch-name">${branch ? escHtml(branch.name) : 'Get Smart / Brite Star'}</div>
       <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
       <div class="center">${formatAppDateTime(bookingDate)}</div>
       <hr>
@@ -8403,7 +8932,8 @@ function branchName(id){ return (branches.find(b => b.id === id) || {}).name || 
 let dashDailyAll = [], dashMonthlyAll = [], dashMonthlyExpAll = [], dashPendingAll = [], dashExpenseAll = [];
 let selectedDashMonth = null;
 
-function currentRealMonthKey(){ return new Date().toISOString().slice(0,7); }
+// Local month, not UTC — toISOString() reported the previous month until 5 AM on the 1st in Pakistan.
+function currentRealMonthKey(){ return localDateStr(new Date()).slice(0,7); }
 function formatMonthLabel(monthKey){
   if(!monthKey) return '';
   const d = new Date(monthKey + '-01T00:00:00');
@@ -8487,7 +9017,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
 
   // ---- Daily Cash Register ----
   const dailyRows = bDaily.map(r => `
-    <tr class="audit-row" onclick="openDailyAudit('${r.day}', ${bId}, '${branch.name}')">
+    <tr class="audit-row" onclick="openDailyAudit('${jsArg(r.day)}', ${Number(bId)}, '${jsArg(branch.name)}')">
       <td>${r.day}</td><td>${r.orders_booked}</td><td>Rs ${r.value_booked}</td>
       <td>Rs ${r.advance_collected}</td><td>Rs ${r.balance_collected}</td><td>Rs ${r.total_cash_in}</td>
       <td>Rs ${r.expenses_today}</td><td>Rs ${r.pending_from_bookings}</td>
@@ -8503,7 +9033,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
   const expRows = bExpenses.map(e => `
     <tr><td>${formatAppDateTime(e.created_at)}</td><td>${escHtml(e.category||'')}</td>
       <td>${escHtml(e.note||'')}</td><td>Rs ${e.amount}</td><td>${escHtml(e.worker_name||'—')}</td>
-      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${escAttr(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td></tr>`).join('')
+      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${jsArg(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td></tr>`).join('')
     || '<tr><td colspan="6" class="small">No expenses logged.</td></tr>';
   const expTotal = bExpenses.reduce((s,e) => s + Number(e.amount), 0);
 
@@ -8634,7 +9164,7 @@ async function loadMonthlyRegister(){
       <td>Rs ${r.total_salaries}</td>
       <td>Rs ${Math.round(r.net_cash)}</td>
       <td>${r.is_closed ? 'Closed' : 'Open'}</td>
-      <td><button class="btn-secondary" onclick="toggleMonthClosed('${r.month}', ${r.is_closed})">${r.is_closed ? 'Reopen' : 'Mark Closed'}</button></td>
+      <td><button class="btn-secondary" onclick="toggleMonthClosed('${jsArg(r.month)}', ${r.is_closed ? 'true' : 'false'})">${r.is_closed ? 'Reopen' : 'Mark Closed'}</button></td>
     </tr>`).join('') || '<tr><td colspan="11" class="small">No activity yet.</td></tr>';
 
   const now = new Date();
@@ -9042,7 +9572,7 @@ function auditTagsCell(o, allowClear){
   if(o.is_vip)    chips.push(`<span class="vip-chip">★ VIP</span>`);
   if(o.is_urgent) chips.push(`<span class="audit-urgent-chip">🔥 Urgent</span>`);
   if(o.is_urgent && allowClear){
-    chips.push(`<button class="btn-secondary urgent-clear-btn" onclick="event.stopPropagation();openClearUrgentModal(${o.id},'${escAttr(o.code||'')}')">Clear</button>`);
+    chips.push(`<button class="btn-secondary urgent-clear-btn" onclick="event.stopPropagation();openClearUrgentModal(${o.id},'${jsArg(o.code||'')}')">Clear</button>`);
   }
   return chips.length ? chips.join('') : '<span style="color:var(--muted);">—</span>';
 }
@@ -9113,7 +9643,7 @@ function renderAuditExpenseRows(list){
       <td>${escHtml(e.note || '')}</td>
       <td>Rs ${e.amount}</td>
       <td>${escHtml(e.worker_name || '—')}</td>
-      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${escAttr(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td>
+      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${jsArg(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td>
     </tr>`).join('');
 }
 
@@ -9791,11 +10321,41 @@ async function submitDeleteConfirm(){
   const errBox = document.getElementById('deleteConfirmError');
   if(!password){ errBox.textContent = 'Enter your password.'; return; }
   if(!pendingAdminAction){ errBox.textContent = 'Nothing selected to confirm.'; return; }
+  const lockedFor = authLockedFor('reauth');
+  if(lockedFor > 0){ errBox.textContent = `Too many wrong passwords. Try again in ${formatLockWait(lockedFor)}.`; return; }
 
-  const { error: authError } = await sb.auth.signInWithPassword({ email: currentUserEmail, password });
-  if(authError){ errBox.textContent = 'Incorrect password.'; return; }
+  // Busy state doubles as double-submit protection: an Enter-key repeat or
+  // a second click can't fire the same delete twice.
+  const submitBtn = document.getElementById('deleteConfirmSubmitBtn');
+  if(submitBtn.disabled) return;
+  const submitLabel = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Checking…';
+  try{
+    await runConfirmedAdminAction(password, errBox);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = submitLabel;
+  }
+}
+
+async function runConfirmedAdminAction(password, errBox){
+  let authError;
+  try{
+    ({ error: authError } = await sb.auth.signInWithPassword({ email: currentUserEmail, password }));
+  }catch(e){ authError = e; }
+  if(authError){
+    if(isNetworkError(authError)){ errBox.textContent = "📡 Couldn't reach the server — check the connection and try again."; return; }
+    const wait = authRecordFailure('reauth');
+    errBox.textContent = wait > 0 ? `Incorrect password. Locked for ${formatLockWait(wait)}.` : 'Incorrect password.';
+    document.getElementById('deleteConfirmPassword').value = '';
+    return;
+  }
+  authRecordSuccess('reauth');
+  document.getElementById('deleteConfirmPassword').value = '';
 
   const action = pendingAdminAction;
+  if(!action){ errBox.textContent = 'Nothing selected to confirm.'; return; }
   let opError = null;
   if(action.type === 'expense'){
     ({ error: opError } = await sb.rpc('delete_expense', { p_id: action.id }));
@@ -9922,8 +10482,23 @@ function renderServicesTable(){
 
 // ---------- INIT ----------
 (async function init(){
+  try{
+    if(sessionStorage.getItem('laundry_pos_logout_reason') === 'idle'){
+      sessionStorage.removeItem('laundry_pos_logout_reason');
+      document.getElementById('loginError').textContent = '🔒 You were signed out after a period of inactivity. Please sign in again.';
+    }
+  }catch(e){}
   const { data:{ session } } = await sb.auth.getSession();
   if(session) await afterLogin(session.user);
+  // If the server ends this session (password changed, user removed from
+  // Supabase Auth, refresh token revoked), drop straight back to the login
+  // screen instead of leaving a dead session that fails on every action.
+  sb.auth.onAuthStateChange((event) => {
+    if(event === 'SIGNED_OUT' && profile){
+      clearSensitiveCaches();
+      location.reload();
+    }
+  });
 })();
 
 // ---------- STICKY TABLE HEADER OFFSET (legacy, currently unused) ----------
