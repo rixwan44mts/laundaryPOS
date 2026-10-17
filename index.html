@@ -21,7 +21,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Inter = all on-screen UI text. Space Mono is kept only for the
+     printed thermal receipt (.receipt-box), which needs fixed-width digits. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <!-- Urdu-script fonts for the Promo Poster's "Urdu Script" mode (Nastaliq
      for large display text, Naskh for smaller/body text — Nastaliq gets
      hard to read at small sizes, Naskh is the more legible workhorse). -->
@@ -1286,6 +1288,310 @@
     nav button::before{display:none;}
     .app-dialog{grid-template-columns:1fr;}
     .app-dialog-icon{display:none;}
+  }
+
+  /* =====================================================================
+     V3 MODERN LAYER
+     Replaces the "paper ticket" look (monospace everywhere, dotted paper,
+     awning stripe, perforated edges, italic serif headings) with a clean
+     sans-serif UI: Inter, white cards on a soft tinted background, layered
+     shadows, sentence-case labels, and spring-y motion. Every rule above
+     still applies; this block only overrides. Delete it to roll back.
+     The printed receipt is deliberately untouched (still Space Mono).
+     ===================================================================== */
+  :root{
+    --font-ui:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    /* --font-mono / --font-display are used all over the rules above, so
+       pointing them at Inter switches the whole UI in one place. The
+       receipt re-points --font-mono back to Space Mono (see .receipt-box). */
+    --font-mono:var(--font-ui);
+    --font-display:var(--font-ui);
+
+    --ink:#0f1f24; --ink-soft:#3f5257;
+    --paper:#f3f6f7; --paper-2:#eef2f4; --panel:#ffffff;
+    --line:#e3e9ec; --line-strong:#cdd6db;
+    --muted:#6b7b81; --hover:#f0f5f6;
+    --accent:#0e9f7a; --accent-dim:#0e9f7a2e; --accent-soft:#dcf5ec;
+    --accent-2:#e0563b; --accent-2-soft:#fde5dc;
+    --amber:#e2a019; --amber-soft:#fdf0d2;
+    --blue:#3b6fd4; --blue-soft:#e1eafb;
+    --purple:#7b5cd6; --purple-soft:#eee8fc;
+    --good:#0e9f7a; --warn:#e0563b;
+
+    --grad-accent:linear-gradient(180deg,#14b38b 0%,#0c9271 100%);
+    --shadow-sm:0 1px 2px rgba(15,31,36,.05), 0 1px 1px rgba(15,31,36,.03);
+    --shadow-md:0 2px 4px rgba(15,31,36,.04), 0 10px 24px -8px rgba(15,31,36,.12);
+    --shadow-lg:0 4px 8px rgba(15,31,36,.05), 0 28px 60px -18px rgba(15,31,36,.30);
+    --shadow-accent:0 10px 22px -10px rgba(14,159,122,.75);
+    --radius-sm:10px; --radius-md:14px; --radius-lg:20px;
+    --ease-out:cubic-bezier(.22,1,.36,1);
+    --spring:cubic-bezier(.34,1.56,.64,1);
+  }
+  /* Urdu: Inter has no Arabic-script glyphs, so name a proper fallback
+     instead of letting the browser pick a random system font. */
+  html[dir="rtl"]{--font-ui:'Inter','Noto Naskh Arabic',system-ui,sans-serif;}
+  .receipt-box, #receipt{--font-mono:'Space Mono','Courier New',Courier,monospace;}
+
+  body{
+    font-family:var(--font-ui);font-size:14.5px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    background-color:var(--paper);
+    background-image:
+      radial-gradient(1100px 520px at 0% -10%, rgba(14,159,122,.10), transparent 60%),
+      radial-gradient(900px 480px at 100% -5%, rgba(59,111,212,.08), transparent 60%);
+    background-size:auto;background-attachment:fixed;
+  }
+  body::before{display:none;}
+  button,input,select,textarea{font-family:var(--font-ui);}
+  h1,h2,h3,h4,h5,h6{font-style:normal !important;letter-spacing:-.015em;}
+  td, .ledger-stat-value, .ledger-line, .ledger-total, .qty-val{font-variant-numeric:tabular-nums;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;}
+
+  /* ---- Header ---- */
+  header{border-bottom:none;padding-bottom:4px;margin-bottom:14px;}
+  header::after{display:none;}
+  header h1{font-size:23px;font-weight:800;letter-spacing:-.025em;}
+  header .tagline{font-size:11px;letter-spacing:.12em;font-weight:600;}
+  .badge{background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-sm);font-weight:600;}
+
+  /* ---- Navigation: frosted segmented bar with line icons ---- */
+  nav{
+    background:rgba(255,255,255,.78);backdrop-filter:saturate(1.6) blur(12px);-webkit-backdrop-filter:saturate(1.6) blur(12px);
+    border:1px solid var(--line);border-radius:16px;padding:6px;gap:4px;box-shadow:var(--shadow-md);
+  }
+  nav button{
+    font-family:var(--font-ui);font-size:13.5px;font-weight:600;letter-spacing:0;text-transform:none;
+    color:var(--ink-soft);border-radius:11px;padding:10px 12px;
+    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),box-shadow .3s var(--ease-out),transform .18s var(--spring);
+  }
+  nav button:hover{background:var(--hover);color:var(--ink);}
+  nav button:active{transform:scale(.96);}
+  nav button.active,
+  nav button.active:hover{background:var(--grad-accent);color:#fff;filter:none;box-shadow:var(--shadow-accent), inset 0 1px 0 rgba(255,255,255,.22);}
+  nav button::before{
+    content:"" !important;width:18px;height:18px;flex:none;filter:none;
+    background:currentColor;-webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;
+  }
+  nav button[data-tab="neworder"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M12 8v8M8 12h8'/></svg>");}
+  nav button[data-tab="openorders"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 3 4 6l2 4 2-1v11h8V9l2 1 2-4-5-3a3 3 0 0 1-6 0Z'/></svg>");}
+  nav button[data-tab="overdue"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='13' r='8'/><path d='M12 9v4l2.5 2M5 3 2 6M19 3l3 3'/></svg>");}
+  nav button[data-tab="expenses"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='6' width='18' height='13' rx='2.5'/><path d='M3 10h18M16 15h2'/></svg>");}
+  nav button[data-tab="promo"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10v4l13 5V5L3 10Z'/><path d='M19 9a3 3 0 0 1 0 6M7 15.5 8.5 21h3l-1.2-4.2'/></svg>");}
+  nav button[data-tab="dashboard"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 21h18M6 17v-6M11 17V5M16 17v-9M21 17v-3'/></svg>");}
+  nav button[data-tab="monthlyregister"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2Z'/><path d='M5 20a2 2 0 0 0 2 2h12v-4M9 8h6M9 12h4'/></svg>");}
+  nav button[data-tab="services"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 12V3h9l9 9-9 9Z'/><circle cx='7.5' cy='7.5' r='1.5'/></svg>");}
+  nav button[data-tab="staff"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='9' cy='8' r='3.5'/><path d='M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8'/></svg>");}
+  .tabbtn .overdue-nav-badge{border-radius:999px;box-shadow:0 0 0 2px #fff;}
+
+  /* ---- Cards ---- */
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:22px 24px;box-shadow:var(--shadow-md);
+  }
+  .panel:hover{box-shadow:var(--shadow-md);}
+
+  /* ---- Form fields ---- */
+  label{
+    font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;
+    color:var(--ink-soft);margin-bottom:6px;
+  }
+  input,select,textarea{
+    font-family:var(--font-ui);font-size:14.5px;color:var(--ink);background:#fff;
+    border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;
+    box-shadow:0 1px 2px rgba(15,31,36,.04);
+    transition:border-color .18s var(--ease-out),box-shadow .18s var(--ease-out),background-color .18s;
+  }
+  input:hover,select:hover,textarea:hover{border-color:#b7c3c9;}
+  input:focus,select:focus,textarea:focus,
+  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}
+  input::placeholder,textarea::placeholder{color:#9aa8ad;}
+
+  /* ---- Buttons ---- */
+  .btn-main{
+    background:var(--grad-accent);font-family:var(--font-ui);font-weight:650;font-size:14.5px;letter-spacing:0;
+    border-radius:12px;padding:12px 20px;
+    box-shadow:var(--shadow-accent), inset 0 1px 0 rgba(255,255,255,.22);
+    transition:transform .18s var(--spring),box-shadow .25s var(--ease-out),filter .2s;
+  }
+  .btn-main:hover{filter:brightness(1.05);transform:translateY(-1px);box-shadow:0 14px 26px -12px rgba(14,159,122,.85), inset 0 1px 0 rgba(255,255,255,.22);}
+  .btn-main:active{transform:translateY(0) scale(.98);}
+  .btn-main:disabled{transform:none;}
+  .btn-secondary{
+    font-family:var(--font-ui);font-weight:600;font-size:13px;letter-spacing:0;
+    background:#fff;border:1px solid var(--line-strong);border-radius:10px;
+    box-shadow:var(--shadow-sm);
+    transition:background-color .18s,border-color .18s,box-shadow .2s var(--ease-out),transform .18s var(--spring);
+  }
+  .btn-secondary:hover{background:var(--hover);border-color:#b7c3c9;box-shadow:var(--shadow-md);}
+  .btn-secondary:active{transform:scale(.97);}
+  .btn-secondary:disabled:hover{box-shadow:var(--shadow-sm);}
+  .status-filter-btn, .filter-toggle-btn{text-transform:none;font-size:11px;font-weight:600;}
+  .status-filter-btn.active{background:var(--ink);border-color:var(--ink);}
+  .pw-toggle{font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-weight:600;font-size:12.5px;}
+
+  /* button press ripple (added by the UI-motion script at the bottom) */
+  .has-ripple{overflow:hidden;}
+  .ripple{
+    position:absolute;border-radius:50%;pointer-events:none;
+    background:currentColor;opacity:.18;transform:scale(0);
+    animation:ripple .55s var(--ease-out) forwards;
+  }
+  @keyframes ripple{to{transform:scale(1);opacity:0;}}
+
+  /* ---- Status pills ---- */
+  .status-tag{text-transform:none;letter-spacing:0;font-weight:600;font-size:12px;padding:4px 11px;}
+  .urgent-badge{text-transform:none;letter-spacing:0;font-weight:600;border-radius:999px;}
+
+  /* ---- Tables ---- */
+  table{font-size:13.5px;}
+  .table-scroll{border-radius:14px;border-color:var(--line);background:#fff;}
+  th,td{border-right:none;border-bottom:1px solid var(--line);}
+  th{
+    background:#f6f9fa;color:var(--muted);font-size:12px;font-weight:600;
+    text-transform:none;letter-spacing:0;
+  }
+  tbody tr:nth-child(even){background:rgba(15,31,36,.018);}
+  tbody tr{transition:background-color .15s var(--ease-out);}
+  #openOrdersBody tr.section-heading-row td{
+    background:var(--paper-2);color:var(--ink);font-size:13px;font-weight:700;
+    letter-spacing:0;text-transform:none;box-shadow:inset 3px 0 0 var(--accent);
+  }
+  .items-mini-table th{text-transform:none;font-size:10.5px;}
+
+  /* ---- New Order: rate cards, chips, steppers ---- */
+  .menu-cat-heading{text-transform:none;letter-spacing:-.01em;font-size:16px;font-weight:700;border-bottom-width:1px;}
+  .menu-card{
+    border:1px solid var(--cat-wash-border,var(--line));border-radius:16px;box-shadow:var(--shadow-sm);
+    transition:transform .22s var(--spring),box-shadow .22s var(--ease-out),border-color .18s,background-color .18s;
+  }
+  .menu-card:hover{transform:translateY(-3px);filter:none;box-shadow:var(--shadow-md);}
+  .menu-card.has-qty{box-shadow:0 0 0 2px var(--cat-fill,var(--accent)), var(--shadow-md);}
+  .menu-card .menu-name .customer-rate-tag{text-transform:none;letter-spacing:0;font-size:11px;}
+  .qty-stepper button{
+    border:1px solid var(--line-strong);font-family:var(--font-ui);
+    transition:transform .18s var(--spring),background-color .15s,border-color .15s,box-shadow .2s;
+  }
+  .qty-stepper button:active{transform:scale(.86);}
+  .qty-stepper button.qty-plus{box-shadow:0 6px 12px -6px var(--cat-fill,var(--accent));}
+  .chip-btn{
+    font-family:var(--font-ui);font-weight:600;font-size:13.5px;letter-spacing:0;
+    border:1px solid var(--line-strong);border-radius:999px;padding:8px 16px;
+    transition:background-color .18s,border-color .18s,color .18s,transform .18s var(--spring),box-shadow .2s;
+  }
+  .chip-btn:active{transform:scale(.95);}
+  .chip-btn.active{box-shadow:0 8px 16px -10px var(--cat-fill,var(--accent));}
+  .add-menu-item-panel{border:1.5px dashed var(--purple);border-radius:16px;}
+
+  /* ---- New Order: frosted payment bar ---- */
+  .panel.neworder-payment{
+    background:rgba(255,255,255,.88);backdrop-filter:saturate(1.6) blur(16px);-webkit-backdrop-filter:saturate(1.6) blur(16px);
+    border:1px solid var(--line);border-bottom:none;border-radius:20px 20px 0 0;
+    box-shadow:0 -12px 32px -14px rgba(15,31,36,.22);
+    animation:barUp .5s var(--ease-out) both;
+  }
+  @keyframes barUp{from{transform:translateY(100%);}to{transform:none;}}
+  .panel.neworder-payment{padding:8px 18px calc(8px + env(safe-area-inset-bottom));}
+  .payment-inputs-row label{font-size:11px;margin-bottom:3px;}
+  .payment-inputs-row input{padding:6px 10px;font-size:13.5px;}
+  .ledger-strip{border-top:1px solid var(--line);border-bottom:none;}
+  .ledger-stat-label{text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:600;}
+  .ledger-stat-value{font-size:15px;}
+  .ledger-stat-balance .ledger-stat-value{font-size:20px;font-weight:700;}
+  .ledger-stat-total .ledger-stat-value{font-size:26px;font-weight:800;letter-spacing:-.02em;}
+  .neworder-payment #saveOrderBtn{padding:11px 20px;font-size:14.5px;}
+  .press-deadline-field,.wd-deadline-field{border-radius:12px;}
+  .press-deadline-field label,.wd-deadline-field label{text-transform:none;letter-spacing:0;font-size:12px;}
+  /* numbers that just changed get a small pop (see UI-motion script) */
+  .bump{animation:bump .45s var(--spring);}
+  @keyframes bump{40%{transform:scale(1.12);}}
+
+  /* ---- Ledgers / expenses ---- */
+  .expense-day-block{background:#fff;border-radius:14px;}
+  .expense-day-header{border-bottom:1px solid var(--line);font-size:14.5px;}
+  .ledger-total{border-top:1px solid var(--line-strong);}
+  .branch-heading{border-radius:14px;font-size:19px;}
+
+  /* ---- Admin dashboard tiles ---- */
+  .dash-tile{
+    border-radius:18px;border-color:var(--line);box-shadow:var(--shadow-sm);
+    transition:transform .25s var(--spring),box-shadow .25s var(--ease-out),border-color .2s,background-color .2s,color .2s;
+  }
+  .dash-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);border-color:var(--line-strong);}
+  .dash-tile:active{transform:translateY(-1px) scale(.98);}
+  .dash-tile.active{box-shadow:var(--shadow-md);}
+
+  /* ---- Modals ---- */
+  .modal-overlay{background:rgba(15,31,36,.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .modal-overlay.open{animation:fadeIn .2s ease-out;}
+  .modal-box{
+    background:var(--panel);border:1px solid var(--line);border-radius:20px;
+    box-shadow:var(--shadow-lg);animation:modalPop .38s var(--spring);
+  }
+  @keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:none;}}
+  .modal-header{border-bottom:1px solid var(--line);}
+  .modal-header h2{font-weight:700;font-size:18px;}
+  .modal-close-btn{border-radius:10px;font-family:var(--font-ui);transition:background-color .15s,transform .18s var(--spring);}
+  .modal-close-btn:active{transform:scale(.92);}
+  .app-dialog{border-radius:20px;border:1px solid var(--line);border-top:4px solid var(--tone);animation:modalPop .38s var(--spring);}
+  .app-dialog-overlay{background:rgba(15,31,36,.42);backdrop-filter:blur(6px);}
+
+  /* ---- Toasts ---- */
+  .toast{
+    background:rgba(15,31,36,.94);border-left:none;border-radius:14px !important;
+    box-shadow:inset 3px 0 0 var(--accent), var(--shadow-lg);
+    transform:translateY(-10px) scale(.96);
+    transition:opacity .25s ease,transform .45s var(--spring);
+  }
+  .toast.show{transform:none;}
+  .toast.hide{transform:translateY(-6px) scale(.96);}
+  .toast.toast-alert{background:rgba(110,24,8,.95);box-shadow:inset 3px 0 0 var(--accent-2), var(--shadow-lg);}
+  .idle-warn-bar{border-radius:16px;}
+
+  /* ---- Login ---- */
+  #loginWatermark{opacity:.04;}
+  #loginScreen{
+    background:rgba(255,255,255,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.8);border-radius:24px;
+    box-shadow:0 0 0 1px rgba(15,31,36,.05), 0 40px 80px -30px rgba(15,31,36,.38);
+  }
+  #loginScreen::before{
+    height:4px;background:linear-gradient(90deg,var(--accent),var(--blue),var(--accent-2));
+  }
+  #loginScreen h2{font-size:26px;font-weight:800;letter-spacing:-.025em;}
+  #loginScreen .login-sub{text-transform:none;letter-spacing:0;font-size:14px;color:var(--muted);}
+  #loginScreen input{padding:12px 14px;}
+  .app-footer{font-family:var(--font-ui);font-style:normal;font-size:12px;}
+  .app-footer em, .app-footer strong{font-style:normal;}
+
+  /* ---- Scrollbars ---- */
+  ::-webkit-scrollbar-thumb{background:#c9d3d8;border:3px solid transparent;background-clip:padding-box;}
+  ::-webkit-scrollbar-thumb:hover{background:#a9b6bc;background-clip:padding-box;}
+
+  /* ---- Page entrance: cards rise in one after another when a tab or
+     dashboard section opens. Scoped to the short-lived .enter class (set
+     by the UI-motion script) so cards re-rendered by live refreshes
+     don't replay the animation. The fixed payment bar slides up instead. ---- */
+  .tab.enter .panel:not(.neworder-payment), .dash-section.enter > *{animation:riseIn .5s var(--ease-out) both;}
+  .tab.enter .panel:nth-child(2), .dash-section.enter > :nth-child(2){animation-delay:.05s;}
+  .tab.enter .panel:nth-child(3), .dash-section.enter > :nth-child(3){animation-delay:.10s;}
+  .tab.enter .panel:nth-child(4), .dash-section.enter > :nth-child(4){animation-delay:.15s;}
+  .tab.enter .panel:nth-child(n+5), .dash-section.enter > :nth-child(n+5){animation-delay:.2s;}
+  .tab.enter .dash-tile{animation:riseIn .5s var(--ease-out) both;}
+  .tab.enter .dash-tile:nth-child(2){animation-delay:.04s;}
+  .tab.enter .dash-tile:nth-child(3){animation-delay:.08s;}
+  .tab.enter .dash-tile:nth-child(4){animation-delay:.12s;}
+  .tab.enter .dash-tile:nth-child(n+5){animation-delay:.16s;}
+  @keyframes riseIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  /* .tab's own fade (from the V2 layer) uses transform too — drop it so
+     the fixed payment bar never positions against a moving parent. */
+  .tab{animation:fadeIn .25s ease-out;}
+
+  @media (max-width:640px){
+    .panel{padding:16px;border-radius:16px;}
+    nav button{font-size:12px;padding:8px 10px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
 </style>
 </head>
@@ -10763,6 +11069,82 @@ function showPageHelp(){
 function closeHelpModal(){
   document.getElementById('helpModal').classList.remove('open');
 }
+</script>
+<script>
+// ---------- UI MOTION (V3 modern layer) ----------
+// Purely visual. Watches the DOM instead of hooking into app functions, so
+// none of the order/billing code changes. Respects "reduce motion".
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Cards rise in when a tab or dashboard section is opened. .enter is
+  // removed again shortly after, so live re-renders don't replay it.
+  function playEnter(el){
+    el.classList.remove('enter');
+    void el.offsetWidth;
+    el.classList.add('enter');
+    clearTimeout(el._enterTimer);
+    el._enterTimer = setTimeout(() => el.classList.remove('enter'), 900);
+  }
+  const shown = new WeakMap();
+  const sectionObserver = new MutationObserver(records => {
+    for (const r of records) {
+      const el = r.target;
+      const visible = el.classList.contains('dash-section')
+        ? el.classList.contains('active')
+        : el.style.display !== 'none';
+      if (visible && !shown.get(el)) playEnter(el);
+      shown.set(el, visible);
+    }
+  });
+  document.querySelectorAll('.tab, .dash-section').forEach(el => {
+    shown.set(el, el.classList.contains('dash-section') ? el.classList.contains('active') : el.style.display !== 'none');
+    sectionObserver.observe(el, { attributes:true, attributeFilter:['style','class'] });
+  });
+  const appScreen = document.getElementById('appScreen');
+  new MutationObserver(() => {
+    if (appScreen.style.display === 'none') return;
+    const current = [...document.querySelectorAll('.tab')].find(t => t.style.display !== 'none');
+    if (current) playEnter(current);
+  }).observe(appScreen, { attributes:true, attributeFilter:['style'] });
+
+  // Press ripple on buttons, nav tabs, chips and dashboard tiles.
+  const RIPPLE_TARGETS = '.btn-main, .btn-secondary, nav button, .chip-btn, .dash-tile';
+  document.addEventListener('pointerdown', e => {
+    if (reduceMotion.matches || e.button !== 0) return;
+    const btn = e.target.closest(RIPPLE_TARGETS);
+    if (!btn || btn.disabled) return;
+    // body.style.zoom (the A-/A+ buttons) scales layout px, so convert
+    // viewport coordinates back into the button's own px.
+    const zoom = parseFloat(document.body.style.zoom) || 1;
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 2 / zoom;
+    if (getComputedStyle(btn).position === 'static') btn.style.position = 'relative';
+    btn.classList.add('has-ripple');
+    const dot = document.createElement('span');
+    dot.className = 'ripple';
+    dot.setAttribute('aria-hidden', 'true');
+    dot.style.width = dot.style.height = size + 'px';
+    dot.style.left = ((e.clientX - rect.left) / zoom - size / 2) + 'px';
+    dot.style.top = ((e.clientY - rect.top) / zoom - size / 2) + 'px';
+    btn.appendChild(dot);
+    dot.addEventListener('animationend', () => dot.remove());
+  });
+
+  // Totals on the New Order bar give a small pop whenever they change.
+  ['grandTotalDisplay', 'balanceDisplay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let last = el.textContent;
+    new MutationObserver(() => {
+      if (el.textContent === last) return;
+      last = el.textContent;
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    }).observe(el, { childList:true, characterData:true, subtree:true });
+  });
+})();
 </script>
 </body>
 </html>
