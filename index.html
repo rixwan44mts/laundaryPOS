@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-18-3">
+<meta name="app-build" content="2026-10-18-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2834,7 +2834,7 @@
         <!-- Receiver -->
         <div style="display:flex;gap:10px;margin-bottom:16px;">
           <div class="field" style="flex:1;margin:0;">
-            <label>Receiver Name</label>
+            <label>Receiver Name <span style="color:var(--warn);">*</span></label>
             <input type="text" id="pdReceiverName" placeholder="Who is collecting" style="width:100%;margin-top:4px;">
           </div>
           <div class="field" style="flex:1;margin:0;">
@@ -5815,6 +5815,8 @@ function confirmDispatchReceiver(){
   if(!pendingDispatchOrder) return;
   const receiverName = document.getElementById('dispatchReceiverName').value.trim();
   const receiverPhone = document.getElementById('dispatchReceiverPhone').value.trim();
+  if(!receiverName){ alert('Enter the name of the person collecting (or tap "Same as customer").'); document.getElementById('dispatchReceiverName').focus(); return; }
+  if(receiverPhone && !isValidPakPhone(receiverPhone)){ alert('Receiver phone must be 11 digits starting with 0 (e.g. 03001234567), or leave it blank.'); return; }
   const { orderId, phone, code } = pendingDispatchOrder;
   document.getElementById('dispatchReceiverModal').classList.remove('open');
   pendingDispatchOrder = null;
@@ -5936,8 +5938,9 @@ async function openPartialDispatchModal(orderId, phone, code, customerName){
   document.getElementById('pdItemsBody').innerHTML =
     '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted);">Loading…</td></tr>';
   document.getElementById('pdAmountCollected').value = '';
-  document.getElementById('pdReceiverName').value = '';
-  document.getElementById('pdReceiverPhone').value = '';
+  // Usually the customer collects — pre-fill, the worker changes it if not.
+  document.getElementById('pdReceiverName').value = customerName || '';
+  document.getElementById('pdReceiverPhone').value = phone || '';
   document.getElementById('pdWarning').style.display = 'none';
   document.getElementById('pdConfirmBtn').disabled = true;
   document.getElementById('partialDispatchModal').classList.add('open');
@@ -6099,6 +6102,8 @@ function confirmPartialDispatch(){
   const collected = parseFloat(document.getElementById('pdAmountCollected').value) || 0;
   const receiverName = document.getElementById('pdReceiverName').value.trim();
   const receiverPhone = document.getElementById('pdReceiverPhone').value.trim();
+  if(!receiverName){ alert('Enter the name of the person collecting these clothes.'); document.getElementById('pdReceiverName').focus(); return; }
+  if(receiverPhone && !isValidPakPhone(receiverPhone)){ alert('Receiver phone must be 11 digits starting with 0 (e.g. 03001234567), or leave it blank.'); return; }
   const { orderId, phone, code, customerName, state } = pendingPartialDispatch;
 
   const totalReleasingNow = releasingItems.reduce((s, x) => s + x.qty, 0);
@@ -6463,7 +6468,8 @@ async function openDispatchHistoryModal(orderId, code, customerName){
   const order = allOpenOrders.find(o => o.id === orderId);
   const items = order ? order.items : [];
   if(order && TERMINAL_STATUSES.includes(order.status)){
-    rows = addCloseRelease([...rows], items, order.total, order.advance_paid, order.dispatched_at || null, order.receiverName || order.receiver_name);
+    rows = addCloseRelease([...rows], items, order.total, order.advance_paid, order.dispatched_at || null,
+      order.receiverName || order.receiver_name, order.receiverPhone || order.receiver_phone);
   }
 
   document.getElementById('dhTimelineBody').innerHTML = rows.map(row => {
@@ -6746,7 +6752,7 @@ async function fetchReleaseHistory(orderId){
 // After partial release(s), the rest often goes out via "Close /
 // Dispatched" (close_order), which records no release event. Add that last
 // batch — whatever was still in the shop — at the order's dispatch time.
-function addCloseRelease(releases, items, total, advancePaid, dispatchedAt, receiverName){
+function addCloseRelease(releases, items, total, advancePaid, dispatchedAt, receiverName, receiverPhone){
   if(!releases.length || releases.some(r => r.event_type === 'final')) return releases;
   const releasedByLine = {};
   releases.forEach(r => (r.items_released || []).forEach(ri => {
@@ -6759,7 +6765,7 @@ function addCloseRelease(releases, items, total, advancePaid, dispatchedAt, rece
     const collectedBefore = releases.reduce((t, r) => t + Number(r.amount_collected || 0), 0);
     releases.push({ event_type: 'final', closed_via_dispatch: true, items_released: rest,
       amount_collected: Math.max(0, Number(total || 0) - Number(advancePaid || 0) - collectedBefore),
-      receiver_name: receiverName || null, created_at: dispatchedAt || null });
+      receiver_name: receiverName || null, receiver_phone: receiverPhone || null, created_at: dispatchedAt || null });
   }
   return releases;
 }
@@ -6777,7 +6783,8 @@ function releaseHistoryReceiptHtml(rows, items){
     return `<div class="rh-event">
       <div class="receipt-row"><b>${row.event_type === 'final' ? 'FINAL' : 'RELEASE ' + (i + 1)}</b><b>${row.created_at ? formatAppDateTime(row.created_at) : 'time not recorded'}</b></div>
       ${lines}
-      <div class="receipt-row small"><span>Collected${row.receiver_name ? ' · ' + escHtml(row.receiver_name) : ''}</span><span>Rs ${Number(row.amount_collected || 0).toFixed(2)}</span></div>
+      <div class="small">Collected by: <b>${row.receiver_name ? escHtml(row.receiver_name) + (row.receiver_phone ? ' — ' + escHtml(row.receiver_phone) : '') : 'not recorded'}</b></div>
+      <div class="receipt-row small"><span>Paid at this release</span><span>Rs ${Number(row.amount_collected || 0).toFixed(2)}</span></div>
     </div>`;
   }).join('');
 }
@@ -6806,7 +6813,7 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
   const hasThis = isFinalRelease
     ? history.some(r => r.event_type === 'final')
     : history.some(r => sameItems(r) && Date.now() - new Date(r.created_at) < 10 * 60000);
-  if(!hasThis) history = [...history, { event_type: isFinalRelease ? 'final' : 'partial', items_released: releasingItems, amount_collected: collected, receiver_name: receiverName, created_at: nowIso }];
+  if(!hasThis) history = [...history, { event_type: isFinalRelease ? 'final' : 'partial', items_released: releasingItems, amount_collected: collected, receiver_name: receiverName, receiver_phone: receiverPhone, created_at: nowIso }];
   const historyBlock = history.length > 1
     ? `<hr><div class="small" style="font-weight:700;">${isFinalRelease ? 'ALL CLOTHES RELEASED (WITH TIME)' : 'RELEASES SO FAR'}</div>${releaseHistoryReceiptHtml(history, items)}`
     : '';
@@ -9539,7 +9546,8 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
   try{ items = JSON.parse(decodeURIComponent(itemsJson)); } catch(e){ items = []; }
   // Orders released in parts: list every release with its time.
   const releases = orderId != null ? [...await fetchReleaseHistory(orderId)] : [];
-  addCloseRelease(releases, items, total, advancePaid, dispatchedAt, receiverName || (orderReceivers[orderId] || {}).name);
+  addCloseRelease(releases, items, total, advancePaid, dispatchedAt,
+    receiverName || (orderReceivers[orderId] || {}).name, receiverPhone || (orderReceivers[orderId] || {}).phone);
   if(!dispatchedAt && releases.length) dispatchedAt = releases[releases.length - 1].created_at;
   const releaseBlock = releases.length > 1
     ? `<div class="small" style="font-weight:700;">CLOTHES RELEASED IN ${releases.length} PARTS</div>${releaseHistoryReceiptHtml(releases, items)}<hr>`
