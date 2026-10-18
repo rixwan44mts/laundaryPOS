@@ -3442,6 +3442,8 @@ function setupRoleView(){
   const isAdmin = profile.role === 'admin';
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('.worker-only').forEach(el => el.style.display = isAdmin ? 'none' : '');
+  // KARKHANA belongs to the Get Smart shop only — hidden for every other branch's staff.
+  document.querySelector('.tabbtn[data-tab="karkhana"]').style.display = (isAdmin || KARKHANA_BRANCH_IDS.includes(profile.branch_id)) ? '' : 'none';
   document.getElementById('userBadge').textContent = `${profile.name || profile.role} (${profile.role})`;
   updateNavHeightVar(); // showing/hiding admin vs worker tabs changes how many nav buttons wrap
 
@@ -9636,6 +9638,8 @@ async function loadExpenseMonth(){
 // items: [{category, qty, rate, detail}], total_pieces, charges, paid, note }.
 // Balance = charges − paid, summed per shop. Online only — there is no
 // offline queue for these, unlike orders/expenses.
+// Branches that run the Karkhana (washing for other shops). 1 = Get Smart.
+const KARKHANA_BRANCH_IDS = [1];
 const KK_DEFAULT_CATEGORIES = ['Shalwar Kameez','Shirt','Trouser','Suit (2 pc)','Suit (3 pc)','Sherwani','Waistcoat','Coat / Blazer','Jacket','Sweater','Dupatta','Saree','Lehenga','Bedsheet','Blanket','Quilt / Razai','Curtain','Towel','Carpet / Rug','Sofa Cover'];
 let kkLines = [];
 let kkChargesTouched = false;
@@ -9645,16 +9649,16 @@ function kkMoney(n){ return 'Rs ' + Math.round(Number(n) || 0).toLocaleString('e
 function kkBranchId(){
   if(profile && profile.role === 'admin'){
     const sel = document.getElementById('kkBranchSelect');
-    return sel && sel.value ? parseInt(sel.value) : (branches[0] ? branches[0].id : null);
+    return sel && sel.value ? parseInt(sel.value) : KARKHANA_BRANCH_IDS[0];
   }
-  return currentBranchId;
+  return KARKHANA_BRANCH_IDS.includes(currentBranchId) ? currentBranchId : null;
 }
 function kkShopKey(name){ return String(name || '').trim().toLowerCase(); }
 
 function initKarkhanaTab(){
   const sel = document.getElementById('kkBranchSelect');
   if(profile.role === 'admin' && !sel.options.length){
-    sel.innerHTML = branches.map(b => `<option value="${b.id}">${escHtml(b.name)}</option>`).join('');
+    sel.innerHTML = branches.filter(b => KARKHANA_BRANCH_IDS.includes(b.id)).map(b => `<option value="${b.id}">${escHtml(b.name)}</option>`).join('');
   }
   const today = localDateStr(new Date());
   if(!document.getElementById('kkDate').value) document.getElementById('kkDate').value = today;
