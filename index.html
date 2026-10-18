@@ -1680,6 +1680,15 @@
     .panel{padding:16px;border-radius:16px;}
     nav button{font-size:12px;padding:8px 10px;}
   }
+
+  /* dd/mm/yyyy display for native date boxes (see DATE BOXES script) */
+  .dmy-wrap{position:relative;display:inline-block;max-width:100%;vertical-align:middle;}
+  .dmy-wrap.is-block{display:block;}
+  .dmy-wrap:has(> input.hidden){display:none;}
+  .dmy-wrap > input{width:100%;}
+  .dmy-input::-webkit-datetime-edit{opacity:0;}
+  .dmy-text{position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;white-space:nowrap;overflow:hidden;color:var(--ink);font:inherit;}
+  .dmy-text.is-empty{color:var(--muted);}
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -2038,7 +2047,7 @@
       <label style="margin-top:14px;">Clothes Received</label>
       <div class="kk-lines-wrap">
         <table class="kk-lines">
-          <thead><tr><th>Cloth Type</th><th class="kk-num">Qty</th><th class="kk-num">Rate (Rs)</th><th>Detail (colour, fabric, stains…)</th><th class="kk-num">Amount</th><th></th></tr></thead>
+          <thead><tr><th>Cloth Type</th><th class="kk-num">Pcs</th><th class="kk-num">Rate per Pc (Rs)</th><th>Detail (colour, fabric, stains…)</th><th class="kk-num">Amount</th><th></th></tr></thead>
           <tbody id="kkLinesBody"></tbody>
         </table>
       </div>
@@ -2047,7 +2056,7 @@
 
       <div class="row" style="margin-top:14px;">
         <div class="field">
-          <label>Total Pieces</label>
+          <label>Total Pcs</label>
           <div class="kk-stat" id="kkTotalPieces">0</div>
         </div>
         <div class="field">
@@ -2067,7 +2076,7 @@
           <input type="text" id="kkNote" placeholder="optional">
         </div>
       </div>
-      <div class="small" style="margin-top:6px;">Charges fill in from Qty × Rate — type over them to set your own amount. To record a payment only, leave the clothes empty and enter the amount paid.</div>
+      <div class="small" style="margin-top:6px;">Charges fill in from Pcs × Rate — type over them to set your own amount. To record a payment only, leave the clothes empty and enter the amount paid.</div>
       <div style="margin-top:12px;display:flex;gap:8px;">
         <button class="btn-main" id="kkSaveBtn" onclick="saveKarkhanaEntry()">Save Entry</button>
         <button class="btn-secondary" onclick="resetKarkhanaForm()">Clear</button>
@@ -3943,17 +3952,15 @@ function buildItemsCellHtml(items){
   return `<table class="items-mini-table"><thead><tr><th class="imt-qty">Qty</th><th>Item</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-// App-wide date formatting: "July/10/2026" (full month name, no leading
-// zero on the day, slash-separated). Used everywhere a full date is
-// shown — receipts, bills, and internal tables/tooltips alike — so the
-// date reads the same regardless of the till machine's locale settings,
-// instead of a locale-dependent "7/10/2026".
+// App-wide date formatting: "18/10/2026" (dd/mm/yyyy, as used in
+// Pakistan). Used everywhere a full date is shown — receipts, bills, and
+// internal tables/tooltips alike — so the date reads the same regardless
+// of the till machine's locale settings.
 function formatAppDate(d){
   d = (d instanceof Date) ? d : new Date(d);
-  const month = d.toLocaleDateString('en-US', { month: 'long' });
-  const day = d.getDate();
-  const year = d.getFullYear();
-  return `${month}/${day}/${year}`;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${d.getFullYear()}`;
 }
 function formatAppDateTime(d){
   d = (d instanceof Date) ? d : new Date(d);
@@ -9771,7 +9778,7 @@ async function saveKarkhanaEntry(){
   if(!shop) return alert('Enter the shop name.');
   if(!date) return alert('Pick the date.');
   if(items.some(l => !l.category)) return alert('Each line needs a cloth type.');
-  if(items.some(l => l.qty <= 0)) return alert('Each cloth type needs a quantity above 0.');
+  if(items.some(l => l.qty <= 0)) return alert('Each cloth type needs Pcs above 0.');
   if(!items.length && paid <= 0) return alert('Add at least one cloth type, or enter a payment amount.');
   if(charges < 0 || paid < 0) return alert('Amounts cannot be negative.');
   if(!isReallyOnline()) return alert('Karkhana entries need an internet connection. Please try again when online.');
@@ -9819,7 +9826,7 @@ function kkCategoryTotals(rows){
 function kkCategoryChips(rows){
   const cats = kkCategoryTotals(rows);
   if(!cats.length) return '';
-  return `<div class="kk-cats">${cats.map(([c, q]) => `<span class="kk-cat">${escHtml(c)} × ${q}</span>`).join('')}</div>`;
+  return `<div class="kk-cats">${cats.map(([c, q]) => `<span class="kk-cat">${escHtml(c)}: ${q} pcs</span>`).join('')}</div>`;
 }
 function kkStatsHtml(rows, extra){
   const pieces = rows.reduce((s, r) => s + (Number(r.total_pieces) || 0), 0);
@@ -9827,7 +9834,7 @@ function kkStatsHtml(rows, extra){
   const paid = rows.reduce((s, r) => s + (Number(r.paid) || 0), 0);
   const shops = new Set(rows.map(r => kkShopKey(r.shop_name))).size;
   return `<div><span>Shops</span><b>${shops}</b></div>
-    <div><span>Pieces received</span><b>${pieces}</b></div>
+    <div><span>Pcs received</span><b>${pieces}</b></div>
     <div><span>Charges</span><b>${kkMoney(charges)}</b></div>
     <div><span>Paid</span><b>${kkMoney(paid)}</b></div>
     ${charges - paid >= 0
@@ -9874,7 +9881,7 @@ async function loadKarkhanaDay(){
   listEl.innerHTML = rows.map(r => {
     const due = (Number(r.charges) || 0) - (Number(r.paid) || 0);
     const items = r.items || [];
-    const itemsTable = items.length ? `<table><thead><tr><th>Cloth Type</th><th class="kk-num">Qty</th><th class="kk-num">Rate</th><th>Detail</th><th class="kk-num">Amount</th></tr></thead><tbody>${
+    const itemsTable = items.length ? `<table><thead><tr><th>Cloth Type</th><th class="kk-num">Pcs</th><th class="kk-num">Rate / Pc</th><th>Detail</th><th class="kk-num">Amount</th></tr></thead><tbody>${
       items.map(it => `<tr><td>${escHtml(it.category)}</td><td class="kk-num">${escHtml(it.qty)}</td><td class="kk-num">${kkMoney(it.rate)}</td><td>${escHtml(it.detail || '—')}</td><td class="kk-num">${kkMoney((Number(it.qty)||0) * (Number(it.rate)||0))}</td></tr>`).join('')
     }</tbody></table>` : '<div class="small" style="margin-top:6px;">Payment only — no clothes.</div>';
     return `<div class="kk-entry">
@@ -9941,9 +9948,9 @@ async function loadKarkhanaMonth(){
     return;
   }
   shopsEl.innerHTML = `<div class="small" style="margin-bottom:4px;">Click a shop to see its month day by day — clothes, payments and times.</div><div class="kk-lines-wrap"><table>
-    <thead><tr><th>Shop</th><th class="kk-num">Days</th><th class="kk-num">Pieces</th><th>Cloth Types</th><th class="kk-num">Charges</th><th class="kk-num">Paid</th><th class="kk-num">Month Balance</th><th class="kk-num">Total Outstanding</th></tr></thead>
+    <thead><tr><th>Shop</th><th class="kk-num">Days</th><th class="kk-num">Pcs</th><th>Cloth Types</th><th class="kk-num">Charges</th><th class="kk-num">Paid</th><th class="kk-num">Month Balance</th><th class="kk-num">Total Outstanding</th></tr></thead>
     <tbody>${list.map(([k, s], i) => {
-      const cats = kkCategoryTotals(s.rows).map(([c, q]) => `${escHtml(c)} × ${q}`).join(', ');
+      const cats = kkCategoryTotals(s.rows).map(([c, q]) => `${escHtml(c)}: ${q} pcs`).join(', ');
       const out = lifetime[k] || 0;
       return `<tr class="kk-shop-row" data-idx="${i}" onclick="openKkShopMonth(${i})" title="Show day-by-day detail"><td><b>${escHtml(s.name)}</b><span class="kk-open-hint">›</span></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
         <td class="kk-num">${kkMoney(s.charges)}</td><td class="kk-num">${kkMoney(s.paid)}</td><td class="kk-num">${kkMoney(s.charges - s.paid)}</td>
@@ -9983,7 +9990,7 @@ function openKkShopMonth(i, keepScroll){
     rows.forEach(r => {
       const items = r.items || [];
       if(items.length || Number(r.charges)){
-        const list = items.map(it => `<li><b>${escHtml(it.category)} × ${escHtml(it.qty)}</b>${Number(it.rate) ? ` <span class="small">@ ${kkMoney(it.rate)}</span>` : ''}${it.detail ? ` — ${escHtml(it.detail)}` : ''}</li>`).join('');
+        const list = items.map(it => `<li><b>${escHtml(it.category)}: ${escHtml(it.qty)} pcs</b>${Number(it.rate) ? ` <span class="small">@ ${kkMoney(it.rate)} / pc</span>` : ''}${it.detail ? ` — ${escHtml(it.detail)}` : ''}</li>`).join('');
         events.push(`<div class="kk-ev"><span class="kk-ev-time">${kkTime(r.created_at)}</span><span class="kk-ev-tag is-in">Clothes</span>
           <div class="kk-ev-body"><div>${Number(r.total_pieces) || 0} pcs received · charged <b>${kkMoney(r.charges)}</b></div>${list ? `<ul>${list}</ul>` : ''}</div></div>`);
       }
@@ -10505,7 +10512,7 @@ async function loadStaffList(){
     <tr>
       <td>${escHtml(w.name)}</td>
       <td>${escHtml(w.phone || '')}</td>
-      <td>${w.joining_date || ''}</td>
+      <td>${w.joining_date ? formatAppDate(w.joining_date + 'T00:00:00') : ''}</td>
       <td>
         <input type="date" id="staffLeaveInput_${w.id}" style="width:140px;" value="${w.leaving_date || ''}">
         <button class="btn-secondary" onclick="saveStaffLeavingDate(${w.id})">Save</button>
@@ -10585,7 +10592,7 @@ async function loadStaffLedger(){
   const rows = data || [];
   document.getElementById('staffLedgerBody').innerHTML = rows.map(r => `
     <tr>
-      <td>${r.payment_date || r.month}</td>
+      <td>${r.payment_date ? formatAppDate(r.payment_date + 'T00:00:00') : formatMonthLabel(String(r.month || '').slice(0,7))}</td>
       <td>${escHtml(r.payment_type)}</td>
       <td>Rs ${r.amount}</td>
       <td>${escHtml(r.note || '')}</td>
@@ -11885,6 +11892,77 @@ function closeHelpModal(){
 }
 </script>
 <script>
+
+// ---------- DATE BOXES: show dd/mm/yyyy ----------
+// Chrome draws <input type="date"/"datetime-local"> in the computer's own
+// locale, which is mm/dd/yyyy on US-English Windows. Each box keeps its
+// real value (yyyy-mm-dd, so every save/report works unchanged); its own
+// text is hidden and a dd/mm/yyyy label is drawn on top. Clicking anywhere
+// on the box opens the calendar.
+(function(){
+  const valueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  function label(input){
+    const v = valueDesc.get.call(input);
+    if(!v) return '';
+    const [date, time] = v.split('T');
+    const [y, m, d] = date.split('-');
+    if(!d) return v;
+    let out = `${d}/${m}/${y}`;
+    if(time){
+      const [hh, mm] = time.split(':').map(Number);
+      out += `, ${(hh % 12) || 12}:${String(mm).padStart(2,'0')} ${hh < 12 ? 'AM' : 'PM'}`;
+    }
+    return out;
+  }
+  function enhance(input){
+    if(input.dataset.dmy) return;
+    input.dataset.dmy = '1';
+    const wrap = document.createElement('span');
+    wrap.className = 'dmy-wrap';
+    if(input.style.width){ wrap.style.width = input.style.width; input.style.width = ''; }
+    else wrap.classList.add('is-block');
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    input.classList.add('dmy-input');
+    const text = document.createElement('span');
+    text.className = 'dmy-text';
+    wrap.appendChild(text);
+    const update = () => {
+      const t = label(input);
+      text.textContent = t || (input.type === 'date' ? 'dd/mm/yyyy' : 'dd/mm/yyyy, --:--');
+      text.classList.toggle('is-empty', !t);
+      const cs = getComputedStyle(input);
+      text.style.left = (parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)) + 'px';
+      text.style.right = '34px';
+    };
+    // Code sets .value directly in many places (defaults, +48h deadline…) — keep the label in step.
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get(){ return valueDesc.get.call(this); },
+      set(v){ valueDesc.set.call(this, v); update(); }
+    });
+    input.addEventListener('input', update);
+    input.addEventListener('change', update);
+    input.addEventListener('click', () => { try{ input.showPicker(); }catch(e){} });
+    // Typing would fill the hidden month-first fields, so open the calendar instead.
+    input.addEventListener('keydown', e => {
+      if(e.key === 'Tab' || e.key === 'Escape' || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      if(e.key === 'Backspace' || e.key === 'Delete'){ if(!input.required){ input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); } return; }
+      try{ input.showPicker(); }catch(err){}
+    });
+    update();
+  }
+  const SEL = 'input[type="date"], input[type="datetime-local"]';
+  function scan(root){
+    if(root.matches && root.matches(SEL)) enhance(root);
+    if(root.querySelectorAll) root.querySelectorAll(SEL).forEach(enhance);
+  }
+  scan(document);
+  new MutationObserver(muts => muts.forEach(m => m.addedNodes.forEach(n => { if(n.nodeType === 1) scan(n); })))
+    .observe(document.body, { childList: true, subtree: true });
+})();
+
 // ---------- UI MOTION (V3 modern layer) ----------
 // Purely visual. Watches the DOM instead of hooking into app functions, so
 // none of the order/billing code changes. Respects "reduce motion".
