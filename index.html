@@ -1633,6 +1633,14 @@
   .line-urgent button{width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--line-strong);background:#fff;font-weight:700;cursor:pointer;line-height:1;padding:0;}
   .line-urgent button:disabled{opacity:.35;cursor:default;}
   .imt-urgent{font-size:11px;font-weight:700;color:var(--accent-2);white-space:nowrap;}
+  .price-note-row{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .price-note-row input{width:100%;}
+  .price-note-tag{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .price-history-line{padding:8px 0;border-bottom:1px solid var(--line);}
+  .ph-diff{font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:4px;}
+  .ph-diff.is-up{background:var(--amber-soft);color:#6b4708;}
+  .ph-diff.is-down{background:var(--accent-2-soft);color:var(--accent-2);}
+  .ph-note{font-size:13px;margin:3px 0;}
 
   /* KARKHANA tab */
   nav button[data-tab="karkhana"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 21V10l5 3V10l5 3V10l5 3V4h3v17Z'/><path d='M7 17h2M12 17h2M17 17h1'/></svg>");}
@@ -2540,6 +2548,24 @@
   </div>
 
   <!-- RETURNING CUSTOMER / PRICE HISTORY -->
+  <div id="priceNoteModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <h2>Why a different price?</h2>
+        <button class="modal-close-btn" onclick="closePriceNotes(false)">Cancel</button>
+      </div>
+      <div class="modal-body">
+        <p class="small" style="margin-top:0;">This customer has been charged a different price for the same item before. Add a short reason — it is saved in the customer's price history.</p>
+        <div id="priceNoteBody"></div>
+        <div id="priceNoteError" class="small" style="color:var(--warn);margin-top:6px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+          <button class="btn-secondary" onclick="closePriceNotes(false)">Back to order</button>
+          <button class="btn-main" onclick="submitPriceNotes()">Save reasons &amp; continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="priceHistoryModal" class="modal-overlay">
     <div class="modal-box" style="max-width:520px;">
       <div class="modal-header">
@@ -2547,7 +2573,7 @@
         <button class="modal-close-btn" onclick="closePriceHistoryModal()">Close</button>
       </div>
       <div class="modal-body">
-        <p class="small" style="margin-top:0;">Rates shown here are auto-applied to matching items in the rate list on the right.</p>
+        <p class="small" style="margin-top:0;">Only prices different from the rate list are kept here, newest first, with the reason given. The latest one is pre-filled in the rate list.</p>
         <div id="priceHistoryModalBody"></div>
       </div>
     </div>
@@ -7237,8 +7263,7 @@ function renderMenuPanel(){
       const searchKey = service.trim().toLowerCase();
       const hasCustomerRate = Object.prototype.hasOwnProperty.call(customerPriceMap, searchKey);
       const priceVal = hasCustomerRate ? customerPriceMap[searchKey] : (s.default_price || 0);
-      const existing = currentItems.find(it => it.service.toLowerCase() === searchKey);
-      const qty = existing ? existing.qty : 0;
+      const qty = currentItems.filter(it => it.service.toLowerCase() === searchKey).reduce((t, it) => t + it.qty, 0);
       html += `
         <div class="menu-card${qty>0?' has-qty':''}" ${catStyle} id="menuCard_${s.id}">
           <div class="menu-name">
@@ -7275,18 +7300,20 @@ function menuAdjustQty(serviceId, delta){
   const priceInput = document.getElementById('menuPrice_' + serviceId);
   let price = parseFloat(priceInput.value) || 0;
 
-  const idx = currentItems.findIndex(it => it.service.toLowerCase() === service.toLowerCase());
+  // Same item at a different price (e.g. a costlier shirt type) gets its
+  // own line, so each line keeps the price it was really charged.
+  const sameSvc = it => it.service.toLowerCase() === service.toLowerCase();
+  const idx = currentItems.findIndex(it => sameSvc(it) && Number(it.price) === price);
   if(delta > 0){
     if(price <= 0){ alert('Set a valid price before adding this item.'); return; }
     const pieceNo = (idx >= 0 ? currentItems[idx].qty : 0) + 1;
     openPieceDetails({ title: s.name, sub: `${catLabel} · piece ${pieceNo} · Rs ${price}` }, detail => {
       // Re-find the line: the cart may have changed while the popup was open.
-      const i = currentItems.findIndex(it => it.service.toLowerCase() === service.toLowerCase());
+      const i = currentItems.findIndex(it => sameSvc(it) && Number(it.price) === price);
       if(i >= 0){
         const line = currentItems[i];
         line.details = padPieceDetails(line.details, line.qty);
         line.qty += 1;
-        line.price = price;
         line.line_total = line.qty * price;
         line.details.push(detail);
         // While Urgent is on, a newly added piece is urgent by default.
@@ -7297,11 +7324,15 @@ function menuAdjustQty(serviceId, delta){
       renderItemsList();
     });
     return;
-  } else if(idx >= 0){
-    const line = currentItems[idx];
+  }
+  // "−": take a piece off the line at this price, else the last line of this item.
+  let minusIdx = idx;
+  if(minusIdx < 0){ for(let k = currentItems.length - 1; k >= 0; k--){ if(sameSvc(currentItems[k])){ minusIdx = k; break; } } }
+  if(minusIdx >= 0){
+    const line = currentItems[minusIdx];
     line.qty -= 1;
     if(line.qty <= 0){
-      currentItems.splice(idx, 1);
+      currentItems.splice(minusIdx, 1);
     } else {
       line.line_total = line.qty * line.price;
       if(Array.isArray(line.details)) line.details = line.details.slice(0, line.qty);
@@ -7863,16 +7894,22 @@ async function checkPriceHistory(){
   // Small pill badge instead of dumping every line inline — click opens
   // the full history in a modal. Keeps the New Order screen the same
   // size whether a customer has 3 past orders or 300.
-  box.innerHTML = `<button type="button" class="returning-badge-btn" onclick="openPriceHistoryModal()">🔁 Returning customer — ${data.length} past rate${data.length===1?'':'s'} on file</button>`;
+  box.innerHTML = `<button type="button" class="returning-badge-btn" onclick="openPriceHistoryModal()">🔁 Returning customer — ${data.length} special rate${data.length===1?'':'s'} on file</button>`;
   renderMenuPanel();
 }
 
 function openPriceHistoryModal(){
   const body = document.getElementById('priceHistoryModalBody');
   const shown = lastPriceHistoryData.slice(0, PRICE_HISTORY_DISPLAY_LIMIT);
-  body.innerHTML = shown.map(r =>
-    `<div class="price-history-line">${escHtml(r.branch_name)} — ${escHtml(r.service)}: Rs ${r.price} <span class="small" style="color:var(--muted);">(${formatAppDate(r.updated_at)})</span></div>`
-  ).join('') || '<div class="small">No history to show.</div>';
+  body.innerHTML = shown.map(r => {
+    const std = r.standard_price != null ? Number(r.standard_price) : null;
+    const diff = std !== null ? Number(r.price) - std : null;
+    return `<div class="price-history-line">
+      <div><b>${escHtml(r.service)}</b>: <b>Rs ${r.price}</b>${diff ? ` <span class="ph-diff ${diff > 0 ? 'is-up' : 'is-down'}">${diff > 0 ? '+' : '−'}Rs ${Math.abs(diff)} vs rate list Rs ${std}</span>` : ''}</div>
+      ${r.note ? `<div class="ph-note">💬 ${escHtml(r.note)}</div>` : ''}
+      <div class="small" style="color:var(--muted);">${formatAppDate(r.updated_at)} · ${escHtml(r.branch_name)}${r.order_code ? ` · Order ${escHtml(r.order_code)}` : ''}</div>
+    </div>`;
+  }).join('') || '<div class="small">No history to show.</div>';
   if(lastPriceHistoryData.length > PRICE_HISTORY_DISPLAY_LIMIT){
     body.innerHTML += `<div class="small" style="margin-top:8px;color:var(--muted);">Showing the ${PRICE_HISTORY_DISPLAY_LIMIT} most recent of ${lastPriceHistoryData.length} total entries.</div>`;
   }
@@ -7895,8 +7932,7 @@ function syncMenuQtyBadges(){
     if(!qtyEl) return;
     const catLabel = CATEGORY_LABELS[s.category] || 'Wash + Dry Clean';
     const service = `${s.name} [${catLabel}]`;
-    const item = currentItems.find(it=>it.service.toLowerCase()===service.toLowerCase());
-    const qty = item ? item.qty : 0;
+    const qty = currentItems.filter(it=>it.service.toLowerCase()===service.toLowerCase()).reduce((t, it) => t + it.qty, 0);
     qtyEl.textContent = qty;
     const minusBtn = qtyEl.parentElement.querySelector('.qty-minus');
     if(minusBtn) minusBtn.disabled = qty <= 0;
@@ -7936,7 +7972,7 @@ function renderItemsList(){
     return `<div class="line-urgent${u ? ' is-on' : ''}" title="How many of these pieces are urgent (2x rate)">🔥<button type="button" onclick="changeLineUrgent(${idx},-1)" ${u <= 0 ? 'disabled' : ''} aria-label="Fewer urgent pieces">−</button><b>${u}/${it.qty}</b><button type="button" onclick="changeLineUrgent(${idx},1)" ${u >= it.qty ? 'disabled' : ''} aria-label="More urgent pieces">+</button>urgent</div>`;
   };
   const itemRows = currentItems.map((it,idx)=>
-    `<tr><td>${escHtml(it.service)}${pieceTags(it, idx)}${urgentCtl(it, idx)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
+    `<tr><td>${escHtml(it.service)}${it.price_note ? `<div class="price-note-tag">💬 ${escHtml(it.price_note)}</div>` : ''}${pieceTags(it, idx)}${urgentCtl(it, idx)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
      <td><button class="btn-secondary" onclick="removeLineItem(${idx})">x</button></td></tr>`
   ).join('');
   const baseSubtotalForRow = currentItems.reduce((s,it)=>s+it.line_total,0);
@@ -8022,6 +8058,66 @@ async function flagRateMismatches(code, items){
   }
 }
 
+
+// ---------- PRICE NOTES ----------
+// Lines charged at a non-standard price are logged to the customer's price
+// history (server trigger, see supabase/price_history_log.sql). If this
+// customer was charged a DIFFERENT price for the same item before — last
+// time, or on another line of this same order — the cashier must say why;
+// the reason travels on the line as `price_note` and shows in the history.
+function standardPriceOf(line){
+  const svc = findServiceForLine(line.service);
+  return svc ? Number(svc.default_price || 0) : null;
+}
+function linesNeedingPriceNote(){
+  return currentItems.map((it, i) => {
+    const price = Number(it.price);
+    const std = standardPriceOf(it);
+    if(std !== null && price === std) return null; // rate-list price: never asked, never logged
+    const key = it.service.trim().toLowerCase();
+    const last = Object.prototype.hasOwnProperty.call(customerPriceMap, key) ? Number(customerPriceMap[key]) : null;
+    // Compare with the customer's last price; with no history yet, with an
+    // earlier line of the same item in this order.
+    const otherLine = last === null
+      ? currentItems.find((o, j) => j < i && o.service.trim().toLowerCase() === key && Number(o.price) !== price)
+      : null;
+    const reasons = [];
+    if(last !== null && last !== price) reasons.push(`last time charged Rs ${last}`);
+    if(otherLine) reasons.push(`also Rs ${otherLine.price} in this order`);
+    return reasons.length ? { i, it, std, reasons } : null;
+  }).filter(Boolean);
+}
+let priceNoteResolve = null;
+// Resolves true once every required note is filled in, false if cancelled.
+function askPriceNotes(){
+  const need = linesNeedingPriceNote();
+  if(!need.length || need.every(n => (n.it.price_note || '').trim())) return Promise.resolve(true);
+  document.getElementById('priceNoteBody').innerHTML = need.map(n => `
+    <div class="price-note-row">
+      <div><b>${escHtml(n.it.service)}</b> — charging <b>Rs ${n.it.price}</b> × ${n.it.qty}
+        <div class="small">${n.std !== null ? `Rate list Rs ${n.std} · ` : ''}${escHtml(n.reasons.join(' · '))}</div></div>
+      <input type="text" maxlength="300" data-line="${n.i}" placeholder="Why Rs ${n.it.price}? e.g. silk shirt, heavy embroidery" value="${escHtml(n.it.price_note || '')}">
+    </div>`).join('');
+  document.getElementById('priceNoteError').textContent = '';
+  document.getElementById('priceNoteModal').classList.add('open');
+  const first = document.querySelector('#priceNoteBody input');
+  if(first) first.focus();
+  return new Promise(res => { priceNoteResolve = res; });
+}
+function submitPriceNotes(){
+  const inputs = [...document.querySelectorAll('#priceNoteBody input')];
+  if(inputs.some(inp => !inp.value.trim())){
+    document.getElementById('priceNoteError').textContent = 'Write a reason for every price above.';
+    return;
+  }
+  inputs.forEach(inp => { const it = currentItems[Number(inp.dataset.line)]; if(it) it.price_note = inp.value.trim().slice(0, 300); });
+  closePriceNotes(true);
+}
+function closePriceNotes(ok){
+  document.getElementById('priceNoteModal').classList.remove('open');
+  if(priceNoteResolve){ const r = priceNoteResolve; priceNoteResolve = null; r(!!ok); }
+}
+
 // Shared by both the normal (online, server-confirmed) booking path and
 // the offline-queue path below — same form, same reset either way.
 function resetOrderForm(){
@@ -8097,6 +8193,7 @@ async function saveAndPrint(){
   // surcharge equal to 100% of the base item total. baseSubtotal +
   // urgentSurcharge always equals subtotal, so subtotal/discount/total
   // still reconcile normally from here on.
+  if(!(await askPriceNotes())) return;
   const baseSubtotal = currentItems.reduce((s,it)=>s+it.line_total,0);
   if(isUrgent && urgentPiecesOf(currentItems) === 0){
     alert('Urgent is on, but no piece is marked urgent. Use + next to the urgent item(s), or cancel Urgent.');
