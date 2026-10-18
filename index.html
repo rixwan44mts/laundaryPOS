@@ -1645,6 +1645,7 @@
   .kk-stats span{display:block;font-size:12px;color:var(--muted);}
   .kk-stats b{font-size:18px;font-variant-numeric:tabular-nums;}
   .kk-stats .is-due b{color:var(--accent-2);}
+  .kk-stats .is-extra b{color:var(--good);}
   .kk-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
   .kk-cat{background:var(--accent-soft);color:#08624b;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;}
   .kk-entry{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:#fff;}
@@ -1654,6 +1655,26 @@
   .kk-entry-money .is-due{color:var(--accent-2);font-weight:700;}
   .kk-entry table{margin-top:8px;}
   .kk-entry td,.kk-entry th{padding:6px 8px;}
+  .kk-shop-row{cursor:pointer;}
+  .kk-shop-row:hover td{background:var(--hover);}
+  .kk-shop-row.active td{background:var(--accent-soft);}
+  .kk-open-hint{color:var(--muted);font-weight:700;margin-left:4px;}
+  .kk-shop-detail{margin-top:16px;border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--paper);}
+  .kk-day{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:10px;}
+  .kk-day-head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;font-size:13px;font-variant-numeric:tabular-nums;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:6px;}
+  .kk-day-head b{font-size:14.5px;margin-right:4px;}
+  .kk-day-head .is-due,.kk-day-head .is-clear{margin-left:auto;font-weight:700;}
+  .kk-day-head .is-due{color:var(--accent-2);}
+  .kk-day-head .is-clear{color:var(--good);}
+  .kk-ev{display:grid;grid-template-columns:72px 78px 1fr;gap:8px;align-items:start;padding:6px 0;font-size:13.5px;}
+  .kk-ev-time{color:var(--muted);font-size:12.5px;padding-top:2px;font-variant-numeric:tabular-nums;}
+  .kk-ev-tag{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;text-align:center;}
+  .kk-ev-tag.is-in{background:var(--accent-soft);color:#08624b;}
+  .kk-ev-tag.is-pay{background:var(--amber-soft);color:#6b4708;}
+  .kk-ev-body ul{margin:4px 0 0;padding-left:18px;}
+  .kk-ev-body li{margin:2px 0;}
+  .kk-ev-note{grid-template-columns:72px 1fr;}
+  @media (max-width:640px){ .kk-ev{grid-template-columns:60px 1fr;} .kk-ev-tag{grid-column:2;justify-self:start;} .kk-ev-body{grid-column:2;} }
 
   @media (max-width:640px){
     .panel{padding:16px;border-radius:16px;}
@@ -2074,6 +2095,7 @@
       <div id="kkMonthStats" class="kk-stats"></div>
       <div id="kkMonthCats"></div>
       <div id="kkMonthShops"><div class="small">Loading…</div></div>
+      <div id="kkShopDetail"></div>
     </div>
   </div>
 
@@ -9808,7 +9830,9 @@ function kkStatsHtml(rows, extra){
     <div><span>Pieces received</span><b>${pieces}</b></div>
     <div><span>Charges</span><b>${kkMoney(charges)}</b></div>
     <div><span>Paid</span><b>${kkMoney(paid)}</b></div>
-    <div class="is-due"><span>Balance due</span><b>${kkMoney(charges - paid)}</b></div>${extra || ''}`;
+    ${charges - paid >= 0
+      ? `<div class="is-due"><span>Balance due</span><b>${kkMoney(charges - paid)}</b></div>`
+      : `<div class="is-extra"><span>Extra paid (old dues)</span><b>${kkMoney(paid - charges)}</b></div>`}${extra || ''}`;
 }
 
 async function loadKarkhanaShops(){
@@ -9878,7 +9902,7 @@ async function loadKarkhanaMonth(){
   const [monthRes, allRes] = await Promise.all([
     sb.from('karkhana_entries').select('*').eq('branch_id', branchId).gte('entry_date', from).lte('entry_date', to),
     // Lifetime balance per shop, so last month's unpaid amount isn't forgotten.
-    sb.from('karkhana_entries').select('shop_name, charges, paid').eq('branch_id', branchId).lte('entry_date', to)
+    sb.from('karkhana_entries').select('shop_name, entry_date, charges, paid').eq('branch_id', branchId).lte('entry_date', to)
   ]);
   if(monthRes.error || allRes.error){
     document.getElementById('kkMonthStats').innerHTML = '';
@@ -9887,10 +9911,12 @@ async function loadKarkhanaMonth(){
     return;
   }
   const rows = monthRes.data || [];
-  const lifetime = {};
+  const lifetime = {}, opening = {};
   (allRes.data || []).forEach(r => {
     const k = kkShopKey(r.shop_name);
-    lifetime[k] = (lifetime[k] || 0) + (Number(r.charges) || 0) - (Number(r.paid) || 0);
+    const net = (Number(r.charges) || 0) - (Number(r.paid) || 0);
+    lifetime[k] = (lifetime[k] || 0) + net;
+    if(r.entry_date < from) opening[k] = (opening[k] || 0) + net;
   });
   const totalOutstanding = Object.values(lifetime).reduce((s, v) => s + v, 0);
   document.getElementById('kkMonthStats').innerHTML = kkStatsHtml(rows, `<div class="is-due"><span>Total outstanding (all time)</span><b>${kkMoney(totalOutstanding)}</b></div>`);
@@ -9907,19 +9933,114 @@ async function loadKarkhanaMonth(){
     s.rows.push(r);
   });
   const list = Object.entries(shops).sort((a, b) => b[1].pieces - a[1].pieces);
+  kkMonthShopList = list.map(([k, s]) => ({ ...s, opening: opening[k] || 0, monthLabel: formatMonthLabel(month) }));
+  const openName = kkOpenShopName;
+  document.getElementById('kkShopDetail').innerHTML = '';
   if(!list.length){
     shopsEl.innerHTML = '<div class="small">No Karkhana entries this month.</div>';
     return;
   }
-  shopsEl.innerHTML = `<div class="kk-lines-wrap"><table>
+  shopsEl.innerHTML = `<div class="small" style="margin-bottom:4px;">Click a shop to see its month day by day — clothes, payments and times.</div><div class="kk-lines-wrap"><table>
     <thead><tr><th>Shop</th><th class="kk-num">Days</th><th class="kk-num">Pieces</th><th>Cloth Types</th><th class="kk-num">Charges</th><th class="kk-num">Paid</th><th class="kk-num">Month Balance</th><th class="kk-num">Total Outstanding</th></tr></thead>
-    <tbody>${list.map(([k, s]) => {
+    <tbody>${list.map(([k, s], i) => {
       const cats = kkCategoryTotals(s.rows).map(([c, q]) => `${escHtml(c)} × ${q}`).join(', ');
       const out = lifetime[k] || 0;
-      return `<tr><td><b>${escHtml(s.name)}</b></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
+      return `<tr class="kk-shop-row" data-idx="${i}" onclick="openKkShopMonth(${i})" title="Show day-by-day detail"><td><b>${escHtml(s.name)}</b><span class="kk-open-hint">›</span></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
         <td class="kk-num">${kkMoney(s.charges)}</td><td class="kk-num">${kkMoney(s.paid)}</td><td class="kk-num">${kkMoney(s.charges - s.paid)}</td>
         <td class="kk-num" style="${out > 0 ? 'color:var(--accent-2);font-weight:700;' : ''}">${kkMoney(out)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
+  // Keep the same shop open after a refresh / new entry.
+  if(openName){
+    const i = kkMonthShopList.findIndex(s => kkShopKey(s.name) === kkShopKey(openName));
+    if(i >= 0) openKkShopMonth(i, true);
+  }
+}
+
+// ---- one shop's month, day by day ----
+let kkMonthShopList = [];
+let kkOpenShopName = null;
+function kkTime(ts){ return new Date(ts).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }); }
+
+function openKkShopMonth(i, keepScroll){
+  const s = kkMonthShopList[i];
+  if(!s) return;
+  kkOpenShopName = s.name;
+  document.querySelectorAll('.kk-shop-row').forEach(tr => tr.classList.toggle('active', Number(tr.dataset.idx) === i));
+
+  const byDay = {};
+  s.rows.forEach(r => (byDay[r.entry_date] = byDay[r.entry_date] || []).push(r));
+  const days = Object.keys(byDay).sort();
+  let running = s.opening;
+
+  const dayHtml = days.map(date => {
+    const rows = byDay[date].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const pieces = rows.reduce((t, r) => t + (Number(r.total_pieces) || 0), 0);
+    const charged = rows.reduce((t, r) => t + (Number(r.charges) || 0), 0);
+    const paid = rows.reduce((t, r) => t + (Number(r.paid) || 0), 0);
+    running += charged - paid;
+
+    const events = [];
+    rows.forEach(r => {
+      const items = r.items || [];
+      if(items.length || Number(r.charges)){
+        const list = items.map(it => `<li><b>${escHtml(it.category)} × ${escHtml(it.qty)}</b>${Number(it.rate) ? ` <span class="small">@ ${kkMoney(it.rate)}</span>` : ''}${it.detail ? ` — ${escHtml(it.detail)}` : ''}</li>`).join('');
+        events.push(`<div class="kk-ev"><span class="kk-ev-time">${kkTime(r.created_at)}</span><span class="kk-ev-tag is-in">Clothes</span>
+          <div class="kk-ev-body"><div>${Number(r.total_pieces) || 0} pcs received · charged <b>${kkMoney(r.charges)}</b></div>${list ? `<ul>${list}</ul>` : ''}</div></div>`);
+      }
+      if(Number(r.paid)){
+        events.push(`<div class="kk-ev"><span class="kk-ev-time">${kkTime(r.created_at)}</span><span class="kk-ev-tag is-pay">Payment</span>
+          <div class="kk-ev-body">Paid <b>${kkMoney(r.paid)}</b></div></div>`);
+      }
+      if(r.note) events.push(`<div class="kk-ev kk-ev-note"><span class="kk-ev-time"></span><span class="small">Note: ${escHtml(r.note)}</span></div>`);
+    });
+
+    return `<div class="kk-day">
+      <div class="kk-day-head">
+        <b>${escHtml(new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }))}</b>
+        ${pieces || charged ? `<span>${pieces} pcs</span><span>Charged ${kkMoney(charged)}</span>` : ''}${paid ? `<span>Paid ${kkMoney(paid)}</span>` : ''}
+        <span class="${running > 0 ? 'is-due' : 'is-clear'}">Balance after day: ${kkMoney(running)}</span>
+      </div>
+      ${events.join('')}
+    </div>`;
+  }).join('');
+
+  const el = document.getElementById('kkShopDetail');
+  el.innerHTML = `<div class="kk-shop-detail">
+    <div class="kk-head">
+      <div><div style="font-size:17px;font-weight:700;">${escHtml(s.name)}</div><div class="small">${escHtml(s.monthLabel)} · day by day</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="kkRecordPaymentFor(${i})">+ Record Payment</button>
+        <button class="btn-secondary" onclick="closeKkShopMonth()">Close</button>
+      </div>
+    </div>
+    <div class="kk-stats">
+      <div><span>Brought forward</span><b>${kkMoney(s.opening)}</b></div>
+      <div><span>Clothes this month</span><b>${s.pieces} pcs</b></div>
+      <div><span>Charged</span><b>${kkMoney(s.charges)}</b></div>
+      <div><span>Paid</span><b>${kkMoney(s.paid)}</b></div>
+      <div class="is-due"><span>Balance at month end</span><b>${kkMoney(running)}</b></div>
+    </div>
+    ${kkCategoryChips(s.rows)}
+    ${dayHtml}
+  </div>`;
+  if(!keepScroll) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function closeKkShopMonth(){
+  kkOpenShopName = null;
+  document.getElementById('kkShopDetail').innerHTML = '';
+  document.querySelectorAll('.kk-shop-row').forEach(tr => tr.classList.remove('active'));
+}
+// Shops often pay 2-3 days after handing over clothes: prefill a payment-only entry for today.
+function kkRecordPaymentFor(i){
+  const s = kkMonthShopList[i];
+  if(!s) return;
+  resetKarkhanaForm();
+  document.getElementById('kkDate').value = localDateStr(new Date());
+  document.getElementById('kkShop').value = s.name;
+  onKkShopInput();
+  const paidEl = document.getElementById('kkPaid');
+  paidEl.scrollIntoView({ behavior:'smooth', block:'center' });
+  paidEl.focus();
 }
 
 // ---------- ADMIN DASHBOARD ----------
