@@ -1633,6 +1633,26 @@
   .line-urgent button{width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--line-strong);background:#fff;font-weight:700;cursor:pointer;line-height:1;padding:0;}
   .line-urgent button:disabled{opacity:.35;cursor:default;}
   .imt-urgent{font-size:11px;font-weight:700;color:var(--accent-2);white-space:nowrap;}
+  .dh-details{font-size:12px;color:var(--muted);font-weight:400;}
+  .rh-event{border-left:2px solid #000;padding-left:6px;margin:4px 0 6px;}
+  nav button[data-tab="returns"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 14 4 9l5-5'/><path d='M4 9h11a5 5 0 0 1 0 10h-3'/></svg>");}
+  .return-badge{display:inline-block;background:var(--accent-2);color:#fff;font-size:11px;font-weight:800;letter-spacing:.3px;border-radius:999px;padding:2px 9px;animation:returnPulse 1.6s ease-in-out infinite;}
+  @keyframes returnPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,86,59,.45);}50%{box-shadow:0 0 0 6px rgba(224,86,59,0);}}
+  tr.row-returned td{background:var(--accent-2-soft) !important;}
+  tr.row-returned td:first-child{box-shadow:inset 4px 0 0 var(--accent-2);}
+  .return-btn{border-color:var(--accent-2) !important;color:var(--accent-2) !important;}
+  .return-card{border:2px solid var(--accent-2);background:var(--accent-2-soft);border-radius:16px;padding:14px 16px;margin-bottom:12px;}
+  .return-items{margin:8px 0;padding-left:20px;}
+  .return-items li{margin:3px 0;}
+  .return-reason{font-weight:600;margin:6px 0 10px;}
+  .return-resolve{display:flex;gap:8px;flex-wrap:wrap;}
+  .return-resolve input{flex:1;min-width:200px;}
+  .return-done{border-bottom:1px solid var(--line);padding:10px 0;}
+  .return-line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
+  .return-line.is-on{border-color:var(--accent-2);background:var(--accent-2-soft);}
+  .return-step{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  .return-step button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line-strong);background:#fff;font-weight:700;cursor:pointer;}
+  .return-step button:disabled{opacity:.35;cursor:default;}
   .price-note-row{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line);}
   .price-note-row input{width:100%;}
   .price-note-tag{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
@@ -1785,6 +1805,7 @@
     <button class="tabbtn worker-only active" data-tab="neworder" data-i18n="nav_neworder">New Order</button>
     <button class="tabbtn worker-only" data-tab="openorders" data-i18n="nav_openorders">Open Orders</button>
     <button class="tabbtn worker-only" data-tab="overdue">Overdue <span id="overdueNavBadge" class="overdue-nav-badge">0</span></button>
+    <button class="tabbtn" data-tab="returns">Returns <span id="returnsNavBadge" class="overdue-nav-badge">0</span></button>
     <button class="tabbtn worker-only" data-tab="expenses" data-i18n="nav_expenses">Expenses</button>
     <button class="tabbtn" data-tab="karkhana" data-i18n="nav_karkhana">KARKHANA</button>
     <button class="tabbtn" data-tab="promo" data-i18n="nav_promo">Promo</button>
@@ -2031,6 +2052,24 @@
     <div class="panel">
       <label><span id="expSelectedMonthLabel">This Month</span> — Total: <span id="expMonthTotal" style="font-weight:bold;color:var(--accent-2);">Rs 0</span></label>
       <div id="expenseDaysList"><div class="small">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- RETURNS — clothes a customer brought back unhappy after dispatch.
+       Open returns stay highlighted (nav badge + red cards + Open Orders
+       badge) until staff mark them fixed and handed back. -->
+  <div id="tab-returns" class="tab">
+    <div class="panel">
+      <div class="kk-head">
+        <label style="margin:0;">↩ Customer Returns — needs attention</label>
+        <button class="btn-secondary" onclick="loadReturnsTab()">Refresh</button>
+      </div>
+      <div class="small" style="margin-bottom:10px;">Open a return from any partly or fully dispatched order in Open Orders (↩ Return button).</div>
+      <div id="returnsOpenList"><div class="small">Loading…</div></div>
+    </div>
+    <div class="panel">
+      <label>Recently fixed &amp; handed back</label>
+      <div id="returnsResolvedList"><div class="small">Loading…</div></div>
     </div>
   </div>
 
@@ -2548,6 +2587,28 @@
   </div>
 
   <!-- RETURNING CUSTOMER / PRICE HISTORY -->
+  <div id="returnModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:600px;">
+      <div class="modal-header">
+        <h2>↩ Customer Return</h2>
+        <button class="modal-close-btn" onclick="closeReturnModal()">Cancel</button>
+      </div>
+      <div class="modal-body">
+        <div id="returnOrderLine" style="font-weight:700;margin-bottom:6px;"></div>
+        <p class="small" style="margin-top:0;">Customer is not satisfied — pick the clothes they brought back and why. They will be flagged for special attention until marked fixed.</p>
+        <div id="returnItemsBody"></div>
+        <label style="margin-top:12px;">Reason</label>
+        <div class="chip-bar" id="returnReasonChips" style="margin-bottom:6px;"></div>
+        <input type="text" id="returnReason" maxlength="500" placeholder="e.g. Stain on collar still there" style="width:100%;">
+        <div id="returnError" class="small" style="color:var(--warn);margin-top:6px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+          <button class="btn-secondary" onclick="closeReturnModal()">Cancel</button>
+          <button class="btn-main" id="returnSaveBtn" onclick="saveReturn()">Save Return</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="priceNoteModal" class="modal-overlay">
     <div class="modal-box" style="max-width:560px;">
       <div class="modal-header">
@@ -3511,6 +3572,7 @@ function setupRoleView(){
   document.querySelector('.tabbtn[data-tab="karkhana"]').style.display = (isAdmin || KARKHANA_BRANCH_IDS.includes(profile.branch_id)) ? '' : 'none';
   document.getElementById('userBadge').textContent = `${profile.name || profile.role} (${profile.role})`;
   updateNavHeightVar(); // showing/hiding admin vs worker tabs changes how many nav buttons wrap
+  loadOpenReturns();
 
   if(isAdmin){
     currentBranchId = branches[0] ? branches[0].id : null;
@@ -3902,6 +3964,7 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
     if(btn.dataset.tab === 'neworder') renderMenuPanel();
     if(btn.dataset.tab === 'expenses') initExpensesTab();
     if(btn.dataset.tab === 'karkhana') initKarkhanaTab();
+    if(btn.dataset.tab === 'returns') loadReturnsTab();
   };
 });
 
@@ -4056,6 +4119,7 @@ function openOrdersCacheKey(branchId){ return `laundry_pos_cached_open_orders_${
 
 async function loadOpenOrders(){
   if(!currentBranchId) return;
+  loadOpenReturns();
 
   // Offline: there is no point even attempting the network RPC — it will
   // just throw a raw "TypeError: Failed to fetch" that means nothing to
@@ -4481,6 +4545,12 @@ async function renderOpenOrdersRows(list){
     const noteArgs = `${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}', '${jsArg(status)}'`;
     const noteBtn = `<button class="${'note-btn' + (noteCount > 0 ? ' has-notes' : '')}" onclick="openOrderNoteModal(${noteArgs})" title="${noteCount > 0 ? noteCount + ' note' + (noteCount !== 1 ? 's' : '') + ' — click to view/add' : 'Add internal note for this order'}">📝 Note${noteCount > 0 ? ` (${noteCount})` : ''}</button>`;
 
+    const openReturn = openReturnsByOrder[o.id];
+    const returnBtn = (isTerminal || isPartiallyDispatched)
+      ? `<button class="btn-secondary return-btn" onclick="openReturnModal(${o.id})" title="Customer not satisfied — log clothes brought back">↩ Return</button>`
+      : '';
+    const returnBadge = openReturn ? ` <span class="return-badge" title="${escHtml(openReturn.reason)}">↩ RETURNED</span>` : '';
+
     let actions = '';
     // Ready/Dispatch now work offline too (queued locally, synced once
     // reconnected — see markReady/closeOrder). No longer disabled while
@@ -4510,18 +4580,18 @@ async function renderOpenOrdersRows(list){
 
     if(isTerminal){
       const resendArgs = `${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', ${o.dispatched_at ? `'${jsArg(o.dispatched_at)}'` : 'null'}, '${jsArg(o.receiverName || '')}', '${jsArg(o.receiverPhone || '')}'`;
-      actions = `<button class="btn-secondary" disabled>Ready</button> <button class="btn-secondary" disabled>Close / Dispatched</button> <button class="btn-secondary" onclick="printFinalBill(${printBillArgs})">Print Bill</button> <button class="btn-secondary" onclick="resendDispatchMessage(${resendArgs})" title="Use this if the WhatsApp/SMS notification failed the first time (e.g. the customer's number has no WhatsApp account)">Resend Dispatch Msg</button> ${noteBtn}`;
+      actions = `${returnBtn} <button class="btn-secondary" disabled>Ready</button> <button class="btn-secondary" disabled>Close / Dispatched</button> <button class="btn-secondary" onclick="printFinalBill(${printBillArgs})">Print Bill</button> <button class="btn-secondary" onclick="resendDispatchMessage(${resendArgs})" title="Use this if the WhatsApp/SMS notification failed the first time (e.g. the customer's number has no WhatsApp account)">Resend Dispatch Msg</button> ${noteBtn}`;
     } else if(isReady || isPartiallyDispatchedAndChecked){
       // Partially dispatched orders don't need "Notify Again" (not relevant
       // mid-release), so that button is suppressed for them.
       const notifyBtn = isPartiallyDispatched ? '' :
         `<button class="btn-secondary" ${offlineDisabled} onclick="markReady(${readyArgs})">Notify Again</button> `;
-      actions = notifyBtn +
+      actions = returnBtn + notifyBtn +
         `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')">Close / Dispatched</button> ` +
         partialBtn +
         ` <button class="btn-secondary" onclick="reprintOrderReceipt(${reprintArgs})">Reprint Booking Receipt</button> ${noteBtn}`;
     } else {
-      actions = `${checkItemsBtn} ${gatedReadyBtn} ` +
+      actions = `${returnBtn} ${checkItemsBtn} ${gatedReadyBtn} ` +
         `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')">Close / Dispatched</button> ` +
         partialBtn +
         ` <button class="btn-secondary" onclick="reprintOrderReceipt(${reprintArgs})">Reprint Booking Receipt</button> ${noteBtn}`;
@@ -4540,7 +4610,7 @@ async function renderOpenOrdersRows(list){
       rowClass = 'row-printed';
     }
 
-    return `<tr class="${rowClass}${urgentRowClass}${idx % 2 === 1 ? ' zebra-b' : ''}">
+    return `<tr class="${rowClass}${urgentRowClass}${openReturn ? ' row-returned' : ''}${idx % 2 === 1 ? ' zebra-b' : ''}">
       <td>${escHtml(o.code || '')}</td>
       <td>${escHtml(o.customer_phone)}</td>
       <td>${isVip ? `<div class="vip-badge" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
@@ -4549,7 +4619,7 @@ async function renderOpenOrdersRows(list){
       <td>Rs ${advancePaid}</td>
       <td class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</td>
       <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
-      <td>${urgentCell}</td>
+      <td>${urgentCell}${returnBadge}</td>
       <td>${formatAppDateTime(o.created_at)}</td>
       <td>${isTerminal ? (o.dispatched_at ? formatAppDateTime(o.dispatched_at) : '<span style="color:var(--muted);">—</span>') : ''}</td>
       <td>${isTerminal
@@ -5908,7 +5978,7 @@ function renderPdItemsTable(items, remainingByLine){
     const released = ordered - remaining;
     const isDone = remaining === 0;
     return `<tr style="${isDone ? 'opacity:0.45;' : ''}">
-      <td style="padding:8px 10px;font-weight:600;">${escHtml(name)}</td>
+      <td style="padding:8px 10px;font-weight:600;">${escHtml(name)}${pieceDetailsSummary(it) ? `<div class="dh-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td>
       <td style="text-align:center;padding:8px 6px;">${ordered}</td>
       <td style="text-align:center;padding:8px 6px;color:var(--muted);">${released}</td>
       <td style="text-align:center;padding:8px 6px;font-weight:700;
@@ -6390,10 +6460,9 @@ async function openDispatchHistoryModal(orderId, code, customerName){
   document.getElementById('dhTimelineBody').innerHTML = rows.map(row => {
     const released = Array.isArray(row.items_released) ? row.items_released : [];
     const itemsLine = released.map(ri => {
-      const line = (items || []).find(it => it.line_id === ri.line_id);
-      const name = line ? splitServiceLabel(line.service).name : `line ${ri.line_id}`;
-      return `${ri.qty}× ${escHtml(name)}`;
-    }).join(', ') || '—';
+      const l = releaseItemLabel(items, ri.line_id);
+      return `<div>${ri.qty}× <b>${escHtml(l.name)}</b>${l.details ? ` <span class="dh-details">— ${escHtml(l.details)}</span>` : ''}</div>`;
+    }).join('') || '—';
     const isFinal = row.event_type === 'final';
     return `<div style="border-bottom:1px solid var(--line);padding:10px 0;">
       <div style="display:flex;justify-content:space-between;font-weight:700;">
@@ -6652,29 +6721,72 @@ async function syncPendingNotes(silent){
   }
 }
 
+
+// ---------- RELEASE HISTORY (shared by release slips + closing bill) ----------
+// Every partial/final release with its time, so the last slip and the
+// closing bill show ALL clothes that left the shop — not just the last batch.
+async function fetchReleaseHistory(orderId){
+  if(isReallyOnline()){
+    try{
+      const { data, error } = await sb.rpc('get_dispatch_history', { p_order_id: orderId });
+      if(!error && data){ partialDispatchEventsCache.set(orderId, data); return data; }
+    }catch(e){}
+  }
+  return partialDispatchEventsCache.get(orderId) || [];
+}
+function releaseItemLabel(items, lineId){
+  const line = (items || []).find(it => String(it.line_id) === String(lineId));
+  return line ? { name: splitServiceLabel(line.service).name, details: pieceDetailsSummary(line) } : { name: `line ${lineId}`, details: '' };
+}
+function releaseHistoryReceiptHtml(rows, items){
+  return rows.map((row, i) => {
+    const released = Array.isArray(row.items_released) ? row.items_released : [];
+    const lines = released.map(ri => {
+      const l = releaseItemLabel(items, ri.line_id);
+      return `<div class="receipt-row"><span>• ${escHtml(l.name)}${l.details ? `<div class="ri-details">${escHtml(l.details)}</div>` : ''}</span><span>× ${ri.qty}</span></div>`;
+    }).join('');
+    return `<div class="rh-event">
+      <div class="receipt-row"><b>${row.event_type === 'final' ? 'FINAL' : 'RELEASE ' + (i + 1)}</b><b>${formatAppDateTime(row.created_at)}</b></div>
+      ${lines}
+      <div class="receipt-row small"><span>Collected${row.receiver_name ? ' · ' + escHtml(row.receiver_name) : ''}</span><span>Rs ${Number(row.amount_collected || 0).toFixed(2)}</span></div>
+    </div>`;
+  }).join('');
+}
+
 // ---------- PARTIAL-RELEASE RECEIPT (Step 8) ----------
 // Printed the moment items physically leave — shows what's going out now,
 // what's still in the shop, and the running balance. Deliberately distinct
 // from both the original booking receipt (printReceipt) and the eventual
 // full closing bill (printFinalBill) so there's a clear paper trail for
 // every release, not just the final one.
-function printPartialReleaseBill(orderId, code, phone, customerName, releasingItems, collected, changeGiven, newBalanceDue, remainingByLine, receiverName, receiverPhone, isFinalRelease){
+async function printPartialReleaseBill(orderId, code, phone, customerName, releasingItems, collected, changeGiven, newBalanceDue, remainingByLine, receiverName, receiverPhone, isFinalRelease){
   const branch = branches.find(b => b.id === currentBranchId);
   const order = allOpenOrders.find(o => o.id === orderId);
   const items = order ? order.items : [];
 
   const releasingRows = (releasingItems || []).map(ri => {
-    const line = (items || []).find(it => it.line_id === ri.line_id);
-    const name = line ? splitServiceLabel(line.service).name : `line ${ri.line_id}`;
-    return `<div class="receipt-row"><span>${escHtml(name)} × ${ri.qty}</span><span></span></div>`;
+    const l = releaseItemLabel(items, ri.line_id);
+    return `<div class="receipt-row"><span>${escHtml(l.name)} × ${ri.qty}${l.details ? `<div class="ri-details">${escHtml(l.details)}</div>` : ''}</span><span></span></div>`;
   }).join('');
+
+  // Earlier releases of this order (with times). Online the fresh history
+  // already contains this release; offline it's added here by hand.
+  let history = await fetchReleaseHistory(orderId);
+  const nowIso = new Date().toISOString();
+  const sameItems = r => JSON.stringify(r.items_released) === JSON.stringify(releasingItems);
+  const hasThis = isFinalRelease
+    ? history.some(r => r.event_type === 'final')
+    : history.some(r => sameItems(r) && Date.now() - new Date(r.created_at) < 10 * 60000);
+  if(!hasThis) history = [...history, { event_type: isFinalRelease ? 'final' : 'partial', items_released: releasingItems, amount_collected: collected, receiver_name: receiverName, created_at: nowIso }];
+  const historyBlock = history.length > 1
+    ? `<hr><div class="small" style="font-weight:700;">${isFinalRelease ? 'ALL CLOTHES RELEASED (WITH TIME)' : 'RELEASES SO FAR'}</div>${releaseHistoryReceiptHtml(history, items)}`
+    : '';
 
   const remainingEntries = Object.entries(remainingByLine || {}).filter(([, qty]) => Number(qty) > 0);
   const remainingRows = remainingEntries.length
     ? remainingEntries.map(([lineId, qty]) => {
-        const line = (items || []).find(it => String(it.line_id) === String(lineId));
-        const name = line ? splitServiceLabel(line.service).name : `line ${lineId}`;
-        return `<div class="receipt-row"><span>${escHtml(name)}</span><span>${qty}</span></div>`;
+        const l = releaseItemLabel(items, lineId);
+        return `<div class="receipt-row"><span>${escHtml(l.name)}${l.details ? `<div class="ri-details">${escHtml(l.details)}</div>` : ''}</span><span>${qty}</span></div>`;
       }).join('')
     : (isFinalRelease ? '<div class="small">None — order complete.</div>' : '<div class="small">(exact counts available once synced)</div>');
 
@@ -6698,6 +6810,7 @@ function printPartialReleaseBill(orderId, code, phone, customerName, releasingIt
       <hr>
       <div class="small" style="font-weight:700;">STILL IN SHOP</div>
       ${remainingRows}
+      ${historyBlock}
       <hr>
       <div class="receipt-row"><b>COLLECTED NOW</b><b>Rs ${Number(collected || 0).toFixed(2)}</b></div>
       ${Number(changeGiven || 0) > 0 ? `<div class="receipt-row"><span>CHANGE GIVEN</span><span>Rs ${Number(changeGiven).toFixed(2)}</span></div>` : ''}
@@ -9391,10 +9504,16 @@ function receiptItemsGrid(items){
   </table>`;
 }
 
-function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePaid, balanceRecovered, dispatchChangeGiven, dispatchedAt, subtotal, discount, createdAt, receiverName, receiverPhone, isUrgentOrder){
+async function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePaid, balanceRecovered, dispatchChangeGiven, dispatchedAt, subtotal, discount, createdAt, receiverName, receiverPhone, isUrgentOrder){
   const branch = branches.find(b => b.id === currentBranchId);
   let items = [];
   try{ items = JSON.parse(decodeURIComponent(itemsJson)); } catch(e){ items = []; }
+  // Orders released in parts: list every release with its time.
+  const releases = orderId != null ? await fetchReleaseHistory(orderId) : [];
+  if(!dispatchedAt && releases.length) dispatchedAt = releases[releases.length - 1].created_at;
+  const releaseBlock = releases.length > 1
+    ? `<div class="small" style="font-weight:700;">CLOTHES RELEASED IN ${releases.length} PARTS</div>${releaseHistoryReceiptHtml(releases, items)}<hr>`
+    : '';
   const urgentBillLine = isUrgentOrder
     ? `<div class="center receipt-urgent-line">🔥 URGENT ORDER — ${itemsHaveUrgentInfo(items) ? `${urgentPiecesOf(items)} pc(s) billed at 2x rate` : 'billed at 2x rate'}</div>`
     : '';
@@ -9461,11 +9580,12 @@ function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePai
       <div class="receipt-line">Order #${orderId} — Code: ${escHtml(code)}</div>
       <div class="receipt-line">Booked by: ${escHtml(name) || 'Walk-in'} — ${escHtml(phone)}</div>
       ${bookedLine ? `<div class="small receipt-line">Booked: ${bookedLine}</div>` : ''}
-      <div class="small receipt-line">Dispatched: ${dispatchedLine ? dispatchedLine : '(not recorded)'}</div>
+      <div class="small receipt-line">${releases.length > 1 ? 'Last release' : 'Dispatched'}: ${dispatchedLine ? dispatchedLine : '(not recorded)'}</div>
       ${receiverLine}
       <hr>
       ${receiptItemsGrid(items)}
       <hr>
+      ${releaseBlock}
       ${discountLines}
       <div class="receipt-row"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
       <div style="background:#f2f2f2;border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
@@ -9803,6 +9923,164 @@ async function loadExpenseMonth(){
   } else {
     listEl.innerHTML = '<div class="small">No expenses logged this month.</div>';
   }
+}
+
+
+// ---------- CUSTOMER RETURNS ----------
+// Table order_returns (supabase/returns_and_price_fix.sql). A return is
+// opened from a partly/fully dispatched order; while 'open' it is flagged
+// in the Returns tab, the nav badge and on the order's Open Orders row.
+let openReturnsByOrder = {};   // order_id -> first open return
+let returnsLoading = false;
+const RETURN_REASONS = ['Stain not removed', 'Not pressed properly', 'Damaged', 'Colour faded / bled', 'Bad smell', 'Shrunk', 'Wrong item'];
+
+async function loadOpenReturns(){
+  if(returnsLoading || !isReallyOnline()) return;
+  returnsLoading = true;
+  try{
+    let q = sb.from('order_returns').select('id, order_id, reason, created_at').eq('status', 'open');
+    if(profile && profile.role !== 'admin' && currentBranchId) q = q.eq('branch_id', currentBranchId);
+    const { data, error } = await q;
+    if(error) return;
+    const next = {};
+    (data || []).forEach(r => { if(!next[r.order_id]) next[r.order_id] = r; });
+    const changed = JSON.stringify(Object.keys(next).sort()) !== JSON.stringify(Object.keys(openReturnsByOrder).sort());
+    openReturnsByOrder = next;
+    const badge = document.getElementById('returnsNavBadge');
+    if(badge){ badge.textContent = (data || []).length; badge.classList.toggle('show', (data || []).length > 0); }
+    if(changed && typeof filterOpenOrders === 'function' && allOpenOrders.length) filterOpenOrders();
+  } finally { returnsLoading = false; }
+}
+
+// Released qty per line: everything for a closed order, the released part
+// for a partly dispatched one.
+let returnCtx = null;
+async function openReturnModal(orderId){
+  if(!isReallyOnline()){ alert('Returns need an internet connection.'); return; }
+  const order = allOpenOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const items = (order.items || []).filter(it => it);
+  let releasedByLine = {};
+  if(order.status === 'partially_dispatched'){
+    const { remainingByLine } = await computePartialDispatchState(order);
+    items.forEach(it => { if(it.line_id != null) releasedByLine[it.line_id] = Number(it.qty || 0) - Number(remainingByLine[it.line_id] ?? it.qty); });
+  } else {
+    items.forEach((it, i) => { releasedByLine[it.line_id ?? ('i' + i)] = Number(it.qty || 0); });
+  }
+  const lines = items.map((it, i) => ({ key: it.line_id ?? ('i' + i), line_id: it.line_id ?? null, service: it.service, details: pieceDetailsSummary(it), max: releasedByLine[it.line_id ?? ('i' + i)] || 0, qty: 0 }))
+    .filter(l => l.max > 0);
+  if(!lines.length){ alert('No clothes from this order have left the shop yet.'); return; }
+  returnCtx = { order, lines };
+  document.getElementById('returnOrderLine').textContent = `Order ${order.code || order.id} — ${order.customer_name || 'Walk-in'} ${order.customer_phone || ''}`;
+  document.getElementById('returnReason').value = '';
+  document.getElementById('returnError').textContent = '';
+  document.getElementById('returnReasonChips').innerHTML = RETURN_REASONS.map(r => `<button type="button" class="chip-btn" onclick="pickReturnReason(this)">${escHtml(r)}</button>`).join('');
+  renderReturnItems();
+  document.getElementById('returnModal').classList.add('open');
+}
+function renderReturnItems(){
+  document.getElementById('returnItemsBody').innerHTML = returnCtx.lines.map((l, i) => `
+    <div class="return-line${l.qty ? ' is-on' : ''}">
+      <div><b>${escHtml(splitServiceLabel(l.service).name)}</b> <span class="small">${escHtml(splitServiceLabel(l.service).category)}</span>
+        ${l.details ? `<div class="dh-details">${escHtml(l.details)}</div>` : ''}</div>
+      <div class="return-step">
+        <button type="button" onclick="stepReturnQty(${i},-1)" ${l.qty <= 0 ? 'disabled' : ''}>−</button>
+        <b>${l.qty}</b><span class="small">/ ${l.max}</span>
+        <button type="button" onclick="stepReturnQty(${i},1)" ${l.qty >= l.max ? 'disabled' : ''}>+</button>
+      </div>
+    </div>`).join('');
+}
+function stepReturnQty(i, d){
+  const l = returnCtx.lines[i];
+  l.qty = Math.max(0, Math.min(l.max, l.qty + d));
+  renderReturnItems();
+}
+function pickReturnReason(btn){
+  const inp = document.getElementById('returnReason');
+  const add = btn.textContent;
+  inp.value = inp.value.trim() ? `${inp.value.trim()}, ${add}` : add;
+  inp.focus();
+}
+function closeReturnModal(){
+  document.getElementById('returnModal').classList.remove('open');
+  returnCtx = null;
+}
+async function saveReturn(){
+  if(!returnCtx) return;
+  const picked = returnCtx.lines.filter(l => l.qty > 0);
+  const reason = document.getElementById('returnReason').value.trim();
+  const err = document.getElementById('returnError');
+  if(!picked.length){ err.textContent = 'Choose at least one cloth (use +).'; return; }
+  if(!reason){ err.textContent = 'Write why the customer is not satisfied.'; return; }
+  const o = returnCtx.order;
+  const btn = document.getElementById('returnSaveBtn');
+  btn.disabled = true;
+  const { error } = await sb.from('order_returns').insert({
+    order_id: o.id, branch_id: o.branch_id || currentBranchId, order_code: o.code || null, customer_phone: o.customer_phone || null,
+    items: picked.map(l => ({ line_id: l.line_id, service: l.service, qty: l.qty, details: l.details || null })),
+    reason
+  });
+  btn.disabled = false;
+  if(error){ err.textContent = 'Could not save: ' + error.message; return; }
+  await logActivity('order_returned', `Order ${o.code || o.id} returned by customer [oid:${o.id}] — ${picked.map(l => l.qty + '× ' + splitServiceLabel(l.service).name).join(', ')} — ${reason}`);
+  closeReturnModal();
+  showSimpleToast(`Return logged for order ${o.code || o.id} — see the Returns tab.`, true, '↩ Return');
+  await loadOpenReturns();
+  filterOpenOrders();
+}
+
+function ageText(ts){
+  const h = Math.floor((Date.now() - new Date(ts)) / 3600000);
+  if(h < 1) return 'just now';
+  if(h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d} day${d === 1 ? '' : 's'} ago`;
+}
+function returnItemsHtml(items){
+  return (items || []).map(it => `<li><b>${escHtml(it.qty)}× ${escHtml(splitServiceLabel(it.service).name)}</b> <span class="small">${escHtml(splitServiceLabel(it.service).category)}</span>${it.details ? `<div class="dh-details">${escHtml(it.details)}</div>` : ''}</li>`).join('');
+}
+async function loadReturnsTab(){
+  const openEl = document.getElementById('returnsOpenList');
+  const doneEl = document.getElementById('returnsResolvedList');
+  if(!isReallyOnline()){ openEl.innerHTML = '<div class="small">Offline — connect to see returns.</div>'; return; }
+  const isAdmin = profile && profile.role === 'admin';
+  let q1 = sb.from('order_returns').select('*').eq('status', 'open').order('created_at', { ascending: true });
+  let q2 = sb.from('order_returns').select('*').eq('status', 'resolved').order('resolved_at', { ascending: false }).limit(20);
+  if(!isAdmin && currentBranchId){ q1 = q1.eq('branch_id', currentBranchId); q2 = q2.eq('branch_id', currentBranchId); }
+  const [openRes, doneRes] = await Promise.all([q1, q2]);
+  if(openRes.error){ openEl.innerHTML = `<div class="small" style="color:var(--warn);">Couldn't load returns — ${escHtml(openRes.error.message)}</div>`; return; }
+  const open = openRes.data || [];
+  openEl.innerHTML = open.length ? open.map(r => `
+    <div class="return-card">
+      <div class="kk-entry-head">
+        <div><span class="return-badge">↩ NEEDS ATTENTION</span> <b>Order ${escHtml(r.order_code || r.order_id)}</b> · ${escHtml(r.customer_phone || '')}${isAdmin ? ` · ${escHtml(branchName(r.branch_id))}` : ''}</div>
+        <div class="small">Returned ${formatAppDateTime(r.created_at)} · <b>${ageText(r.created_at)}</b></div>
+      </div>
+      <ul class="return-items">${returnItemsHtml(r.items)}</ul>
+      <div class="return-reason">😟 ${escHtml(r.reason)}</div>
+      <div class="return-resolve">
+        <input type="text" id="returnFix_${r.id}" maxlength="500" placeholder="What was done? e.g. re-washed, stain removed">
+        <button class="btn-main" onclick="resolveReturn(${r.id})">✓ Fixed &amp; handed back</button>
+      </div>
+    </div>`).join('') : '<div class="small">No open returns. 👍</div>';
+  const done = doneRes.data || [];
+  doneEl.innerHTML = done.length ? done.map(r => `
+    <div class="return-done">
+      <div><b>Order ${escHtml(r.order_code || r.order_id)}</b> · ${escHtml(r.customer_phone || '')} — ${escHtml(r.reason)}</div>
+      <ul class="return-items">${returnItemsHtml(r.items)}</ul>
+      <div class="small">Returned ${formatAppDateTime(r.created_at)} → fixed ${r.resolved_at ? formatAppDateTime(r.resolved_at) : ''}${r.resolution_note ? ` — ${escHtml(r.resolution_note)}` : ''}</div>
+    </div>`).join('') : '<div class="small">Nothing yet.</div>';
+  loadOpenReturns();
+}
+async function resolveReturn(id){
+  const note = (document.getElementById('returnFix_' + id).value || '').trim();
+  if(!note){ alert('Write what was done before closing this return.'); return; }
+  const { error } = await sb.from('order_returns')
+    .update({ status: 'resolved', resolved_at: new Date().toISOString(), resolved_by: profile.id, resolution_note: note })
+    .eq('id', id);
+  if(error){ alert('Could not update: ' + error.message); return; }
+  await logActivity('return_resolved', `Customer return #${id} fixed — ${note}`);
+  loadReturnsTab();
 }
 
 // ---------- KARKHANA (clothes received from other shops) ----------
