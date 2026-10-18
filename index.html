@@ -1626,6 +1626,35 @@
   .imt-details,.icr-details{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
   .ri-details{font-size:9px;line-height:1.25;color:#000;}
 
+  /* KARKHANA tab */
+  nav button[data-tab="karkhana"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 21V10l5 3V10l5 3V10l5 3V4h3v17Z'/><path d='M7 17h2M12 17h2M17 17h1'/></svg>");}
+  .kk-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .kk-lines-wrap{overflow-x:auto;}
+  .kk-lines{margin-top:6px;}
+  .kk-lines td{padding:6px 8px;vertical-align:middle;}
+  .kk-lines input{width:100%;min-width:70px;}
+  .kk-lines td:first-child input{min-width:140px;}
+  .kk-lines td:nth-child(4) input{min-width:180px;}
+  .kk-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .kk-lines .kk-num input{text-align:right;max-width:100px;}
+  .kk-del{border:none;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:8px;}
+  .kk-del:hover{background:var(--accent-2-soft);color:var(--accent-2);}
+  .kk-stat{font-size:18px;font-weight:700;padding:8px 0;font-variant-numeric:tabular-nums;}
+  .kk-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px;}
+  .kk-stats > div{background:var(--paper-2);border-radius:12px;padding:10px 12px;}
+  .kk-stats span{display:block;font-size:12px;color:var(--muted);}
+  .kk-stats b{font-size:18px;font-variant-numeric:tabular-nums;}
+  .kk-stats .is-due b{color:var(--accent-2);}
+  .kk-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .kk-cat{background:var(--accent-soft);color:#08624b;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;}
+  .kk-entry{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  .kk-entry-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .kk-entry-head b{font-size:15px;}
+  .kk-entry-money{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:8px;font-variant-numeric:tabular-nums;}
+  .kk-entry-money .is-due{color:var(--accent-2);font-weight:700;}
+  .kk-entry table{margin-top:8px;}
+  .kk-entry td,.kk-entry th{padding:6px 8px;}
+
   @media (max-width:640px){
     .panel{padding:16px;border-radius:16px;}
     nav button{font-size:12px;padding:8px 10px;}
@@ -1711,6 +1740,7 @@
     <button class="tabbtn worker-only" data-tab="openorders" data-i18n="nav_openorders">Open Orders</button>
     <button class="tabbtn worker-only" data-tab="overdue">Overdue <span id="overdueNavBadge" class="overdue-nav-badge">0</span></button>
     <button class="tabbtn worker-only" data-tab="expenses" data-i18n="nav_expenses">Expenses</button>
+    <button class="tabbtn" data-tab="karkhana" data-i18n="nav_karkhana">KARKHANA</button>
     <button class="tabbtn" data-tab="promo" data-i18n="nav_promo">Promo</button>
     <button class="tabbtn admin-only" data-tab="dashboard" data-i18n="nav_dashboard">Admin Dashboard</button>
     <button class="tabbtn admin-only" data-tab="monthlyregister" data-i18n="nav_monthlyregister">Monthly Register</button>
@@ -1955,6 +1985,95 @@
     <div class="panel">
       <label><span id="expSelectedMonthLabel">This Month</span> — Total: <span id="expMonthTotal" style="font-weight:bold;color:var(--accent-2);">Rs 0</span></label>
       <div id="expenseDaysList"><div class="small">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- KARKHANA — other shops send their clothes to our washing facility.
+       Logs what came in from each shop per day (cloth type, qty, rate,
+       details), what we charged, and what the shop owner paid. Stored in
+       the karkhana_entries table (RLS: own branch, admin sees all). -->
+  <div id="tab-karkhana" class="tab">
+    <div class="panel">
+      <div class="kk-head">
+        <label style="margin:0;">Receive Clothes from Shop</label>
+        <select id="kkBranchSelect" class="admin-only" onchange="onKkBranchChange()" style="width:auto;"></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="kkDate" style="width:160px;">
+        </div>
+        <div class="field">
+          <label>Shop Name</label>
+          <input type="text" id="kkShop" list="kkShopList" placeholder="e.g. Al-Noor Dry Cleaners" style="width:220px;" oninput="onKkShopInput()">
+          <datalist id="kkShopList"></datalist>
+        </div>
+        <div class="field">
+          <label>Shop Phone</label>
+          <input type="text" id="kkPhone" placeholder="03xx-xxxxxxx" style="width:150px;">
+        </div>
+      </div>
+
+      <label style="margin-top:14px;">Clothes Received</label>
+      <div class="kk-lines-wrap">
+        <table class="kk-lines">
+          <thead><tr><th>Cloth Type</th><th class="kk-num">Qty</th><th class="kk-num">Rate (Rs)</th><th>Detail (colour, fabric, stains…)</th><th class="kk-num">Amount</th><th></th></tr></thead>
+          <tbody id="kkLinesBody"></tbody>
+        </table>
+      </div>
+      <datalist id="kkCategoryList"></datalist>
+      <button class="btn-secondary" style="margin-top:8px;" onclick="addKkLine()">+ Add Cloth Type</button>
+
+      <div class="row" style="margin-top:14px;">
+        <div class="field">
+          <label>Total Pieces</label>
+          <div class="kk-stat" id="kkTotalPieces">0</div>
+        </div>
+        <div class="field">
+          <label>Washing Charges (Rs)</label>
+          <input type="number" id="kkCharges" min="0" style="width:130px;" oninput="kkChargesTouched=true;updateKkBalance()">
+        </div>
+        <div class="field">
+          <label>Paid by Shop Owner (Rs)</label>
+          <input type="number" id="kkPaid" min="0" style="width:130px;" oninput="updateKkBalance()">
+        </div>
+        <div class="field">
+          <label>Balance Due</label>
+          <div class="kk-stat" id="kkBalance">Rs 0</div>
+        </div>
+        <div class="field" style="flex:1;min-width:180px;">
+          <label>Note</label>
+          <input type="text" id="kkNote" placeholder="optional">
+        </div>
+      </div>
+      <div class="small" style="margin-top:6px;">Charges fill in from Qty × Rate — type over them to set your own amount. To record a payment only, leave the clothes empty and enter the amount paid.</div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn-main" id="kkSaveBtn" onclick="saveKarkhanaEntry()">Save Entry</button>
+        <button class="btn-secondary" onclick="resetKarkhanaForm()">Clear</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="kk-head">
+        <label style="margin:0;">Daily Record</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="kkViewDate" style="width:160px;" onchange="loadKarkhanaDay()">
+          <button class="btn-secondary" onclick="loadKarkhanaDay()">Refresh</button>
+        </div>
+      </div>
+      <div id="kkDayStats" class="kk-stats"></div>
+      <div id="kkDayCats"></div>
+      <div id="kkDayList"><div class="small">Loading…</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="kk-head">
+        <label style="margin:0;">Monthly Shop Summary</label>
+        <input type="month" id="kkMonth" style="width:170px;" onchange="loadKarkhanaMonth()">
+      </div>
+      <div id="kkMonthStats" class="kk-stats"></div>
+      <div id="kkMonthCats"></div>
+      <div id="kkMonthShops"><div class="small">Loading…</div></div>
     </div>
   </div>
 
@@ -3715,6 +3834,7 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
     if(btn.dataset.tab === 'overdue') loadOpenOrders();
     if(btn.dataset.tab === 'neworder') renderMenuPanel();
     if(btn.dataset.tab === 'expenses') initExpensesTab();
+    if(btn.dataset.tab === 'karkhana') initKarkhanaTab();
   };
 });
 
@@ -8936,12 +9056,12 @@ async function syncAllPending(silent){
 // Minimal one-off toast for offline/sync status — reuses the existing
 // #toastContainer + .toast styling (see showToast) without needing a full
 // activity_log row shape.
-function showSimpleToast(message, isAlert){
+function showSimpleToast(message, isAlert, title){
   const container = document.getElementById('toastContainer');
   if(!container) return;
   const el = document.createElement('div');
   el.className = 'toast' + (isAlert ? ' toast-alert' : '');
-  el.innerHTML = `<b>${isAlert ? '⚠ Sync' : '🔄 Sync'}</b> — ${escHtml(message)}`;
+  el.innerHTML = `<b>${escHtml(title || (isAlert ? '⚠ Sync' : '🔄 Sync'))}</b> — ${escHtml(message)}`;
   container.appendChild(el);
   requestAnimationFrame(()=> el.classList.add('show'));
   setTimeout(()=>{ el.classList.add('hide'); setTimeout(()=> el.remove(), 300); }, 10000);
@@ -9508,6 +9628,294 @@ async function loadExpenseMonth(){
   } else {
     listEl.innerHTML = '<div class="small">No expenses logged this month.</div>';
   }
+}
+
+// ---------- KARKHANA (clothes received from other shops) ----------
+// One row per delivery (or payment) from a partner shop:
+// karkhana_entries { branch_id, entry_date, shop_name, shop_phone,
+// items: [{category, qty, rate, detail}], total_pieces, charges, paid, note }.
+// Balance = charges − paid, summed per shop. Online only — there is no
+// offline queue for these, unlike orders/expenses.
+const KK_DEFAULT_CATEGORIES = ['Shalwar Kameez','Shirt','Trouser','Suit (2 pc)','Suit (3 pc)','Sherwani','Waistcoat','Coat / Blazer','Jacket','Sweater','Dupatta','Saree','Lehenga','Bedsheet','Blanket','Quilt / Razai','Curtain','Towel','Carpet / Rug','Sofa Cover'];
+let kkLines = [];
+let kkChargesTouched = false;
+let kkShopPhones = {};
+
+function kkMoney(n){ return 'Rs ' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+function kkBranchId(){
+  if(profile && profile.role === 'admin'){
+    const sel = document.getElementById('kkBranchSelect');
+    return sel && sel.value ? parseInt(sel.value) : (branches[0] ? branches[0].id : null);
+  }
+  return currentBranchId;
+}
+function kkShopKey(name){ return String(name || '').trim().toLowerCase(); }
+
+function initKarkhanaTab(){
+  const sel = document.getElementById('kkBranchSelect');
+  if(profile.role === 'admin' && !sel.options.length){
+    sel.innerHTML = branches.map(b => `<option value="${b.id}">${escHtml(b.name)}</option>`).join('');
+  }
+  const today = localDateStr(new Date());
+  if(!document.getElementById('kkDate').value) document.getElementById('kkDate').value = today;
+  if(!document.getElementById('kkViewDate').value) document.getElementById('kkViewDate').value = today;
+  if(!document.getElementById('kkMonth').value) document.getElementById('kkMonth').value = today.slice(0,7);
+
+  const cats = [...new Set([...KK_DEFAULT_CATEGORIES, ...services.map(s => s.name).filter(Boolean)])];
+  document.getElementById('kkCategoryList').innerHTML = cats.map(c => `<option value="${escHtml(c)}">`).join('');
+
+  if(!kkLines.length) addKkLine();
+  loadKarkhanaAll();
+}
+function onKkBranchChange(){ loadKarkhanaAll(); }
+function loadKarkhanaAll(){
+  loadKarkhanaShops();
+  loadKarkhanaDay();
+  loadKarkhanaMonth();
+}
+
+// ---- entry form ----
+function addKkLine(){
+  kkLines.push({ category:'', qty:'', rate:'', detail:'' });
+  renderKkLines();
+  const inputs = document.querySelectorAll('#kkLinesBody tr:last-child input');
+  if(inputs[0]) inputs[0].focus();
+}
+function removeKkLine(i){
+  kkLines.splice(i, 1);
+  if(!kkLines.length) kkLines.push({ category:'', qty:'', rate:'', detail:'' });
+  renderKkLines();
+}
+function renderKkLines(){
+  document.getElementById('kkLinesBody').innerHTML = kkLines.map((l, i) => `
+    <tr>
+      <td><input type="text" list="kkCategoryList" placeholder="e.g. Shalwar Kameez" value="${escHtml(l.category)}" oninput="onKkLineInput(${i},'category',this.value)"></td>
+      <td class="kk-num"><input type="number" min="0" placeholder="0" value="${escHtml(l.qty)}" oninput="onKkLineInput(${i},'qty',this.value)"></td>
+      <td class="kk-num"><input type="number" min="0" placeholder="0" value="${escHtml(l.rate)}" oninput="onKkLineInput(${i},'rate',this.value)"></td>
+      <td><input type="text" placeholder="e.g. 3 white, 2 black; 1 has oil stain" value="${escHtml(l.detail)}" oninput="onKkLineInput(${i},'detail',this.value)"></td>
+      <td class="kk-num" id="kkAmt-${i}">${kkMoney((Number(l.qty)||0) * (Number(l.rate)||0))}</td>
+      <td><button class="kk-del" title="Remove" onclick="removeKkLine(${i})">×</button></td>
+    </tr>`).join('');
+  updateKkTotals();
+}
+function onKkLineInput(i, field, value){
+  kkLines[i][field] = value;
+  if(field === 'qty' || field === 'rate'){
+    const l = kkLines[i];
+    document.getElementById('kkAmt-' + i).textContent = kkMoney((Number(l.qty)||0) * (Number(l.rate)||0));
+    updateKkTotals();
+  }
+}
+function updateKkTotals(){
+  const pieces = kkLines.reduce((s, l) => s + (parseInt(l.qty) || 0), 0);
+  const amount = kkLines.reduce((s, l) => s + (Number(l.qty)||0) * (Number(l.rate)||0), 0);
+  document.getElementById('kkTotalPieces').textContent = pieces;
+  if(!kkChargesTouched) document.getElementById('kkCharges').value = amount ? Math.round(amount) : '';
+  updateKkBalance();
+}
+function updateKkBalance(){
+  const charges = Number(document.getElementById('kkCharges').value) || 0;
+  const paid = Number(document.getElementById('kkPaid').value) || 0;
+  document.getElementById('kkBalance').textContent = kkMoney(charges - paid);
+}
+function onKkShopInput(){
+  const phone = kkShopPhones[kkShopKey(document.getElementById('kkShop').value)];
+  const phoneEl = document.getElementById('kkPhone');
+  if(phone && !phoneEl.value) phoneEl.value = phone;
+}
+function resetKarkhanaForm(){
+  ['kkShop','kkPhone','kkCharges','kkPaid','kkNote'].forEach(id => document.getElementById(id).value = '');
+  kkChargesTouched = false;
+  kkLines = [];
+  addKkLine();
+  document.getElementById('kkShop').focus();
+}
+
+async function saveKarkhanaEntry(){
+  const branchId = kkBranchId();
+  const shop = document.getElementById('kkShop').value.trim();
+  const date = document.getElementById('kkDate').value;
+  const items = kkLines
+    .map(l => ({ category: l.category.trim(), qty: parseInt(l.qty) || 0, rate: Number(l.rate) || 0, detail: l.detail.trim() }))
+    .filter(l => l.category || l.qty);
+  const charges = Number(document.getElementById('kkCharges').value) || 0;
+  const paid = Number(document.getElementById('kkPaid').value) || 0;
+
+  if(!branchId) return alert('No branch selected.');
+  if(!shop) return alert('Enter the shop name.');
+  if(!date) return alert('Pick the date.');
+  if(items.some(l => !l.category)) return alert('Each line needs a cloth type.');
+  if(items.some(l => l.qty <= 0)) return alert('Each cloth type needs a quantity above 0.');
+  if(!items.length && paid <= 0) return alert('Add at least one cloth type, or enter a payment amount.');
+  if(charges < 0 || paid < 0) return alert('Amounts cannot be negative.');
+  if(!isReallyOnline()) return alert('Karkhana entries need an internet connection. Please try again when online.');
+
+  const btn = document.getElementById('kkSaveBtn');
+  btn.disabled = true;
+  const { error } = await sb.from('karkhana_entries').insert({
+    branch_id: branchId,
+    entry_date: date,
+    shop_name: shop,
+    shop_phone: document.getElementById('kkPhone').value.trim() || null,
+    items,
+    total_pieces: items.reduce((s, l) => s + l.qty, 0),
+    charges,
+    paid,
+    note: document.getElementById('kkNote').value.trim() || null
+  });
+  btn.disabled = false;
+  if(error) return alert('Could not save: ' + error.message);
+
+  const pieces = items.reduce((s, l) => s + l.qty, 0);
+  showSimpleToast(items.length ? `${shop}: ${pieces} pcs, ${kkMoney(charges)} charged, ${kkMoney(paid)} paid` : `${shop}: payment of ${kkMoney(paid)} received`, false, '✓ Karkhana');
+  document.getElementById('kkViewDate').value = date;
+  document.getElementById('kkMonth').value = date.slice(0,7);
+  resetKarkhanaForm();
+  loadKarkhanaAll();
+}
+
+async function deleteKarkhanaEntry(id){
+  if(!confirm('Delete this Karkhana entry? This cannot be undone.')) return;
+  const { error } = await sb.from('karkhana_entries').delete().eq('id', id);
+  if(error) return alert('Could not delete: ' + error.message);
+  loadKarkhanaAll();
+}
+
+// ---- reports ----
+function kkCategoryTotals(rows){
+  const totals = {};
+  rows.forEach(r => (r.items || []).forEach(it => {
+    const k = it.category || 'Other';
+    totals[k] = (totals[k] || 0) + (Number(it.qty) || 0);
+  }));
+  return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+}
+function kkCategoryChips(rows){
+  const cats = kkCategoryTotals(rows);
+  if(!cats.length) return '';
+  return `<div class="kk-cats">${cats.map(([c, q]) => `<span class="kk-cat">${escHtml(c)} × ${q}</span>`).join('')}</div>`;
+}
+function kkStatsHtml(rows, extra){
+  const pieces = rows.reduce((s, r) => s + (Number(r.total_pieces) || 0), 0);
+  const charges = rows.reduce((s, r) => s + (Number(r.charges) || 0), 0);
+  const paid = rows.reduce((s, r) => s + (Number(r.paid) || 0), 0);
+  const shops = new Set(rows.map(r => kkShopKey(r.shop_name))).size;
+  return `<div><span>Shops</span><b>${shops}</b></div>
+    <div><span>Pieces received</span><b>${pieces}</b></div>
+    <div><span>Charges</span><b>${kkMoney(charges)}</b></div>
+    <div><span>Paid</span><b>${kkMoney(paid)}</b></div>
+    <div class="is-due"><span>Balance due</span><b>${kkMoney(charges - paid)}</b></div>${extra || ''}`;
+}
+
+async function loadKarkhanaShops(){
+  const branchId = kkBranchId();
+  if(!branchId) return;
+  const { data } = await sb.from('karkhana_entries').select('shop_name, shop_phone, created_at').eq('branch_id', branchId).order('created_at', { ascending: true });
+  kkShopPhones = {};
+  const names = {};
+  (data || []).forEach(r => {
+    const k = kkShopKey(r.shop_name);
+    names[k] = r.shop_name.trim();
+    if(r.shop_phone) kkShopPhones[k] = r.shop_phone;
+  });
+  document.getElementById('kkShopList').innerHTML = Object.values(names).sort().map(n => `<option value="${escHtml(n)}">`).join('');
+}
+
+async function loadKarkhanaDay(){
+  const branchId = kkBranchId();
+  const date = document.getElementById('kkViewDate').value;
+  const listEl = document.getElementById('kkDayList');
+  if(!branchId || !date) return;
+  listEl.innerHTML = '<div class="small">Loading…</div>';
+  const { data, error } = await sb.from('karkhana_entries').select('*')
+    .eq('branch_id', branchId).eq('entry_date', date).order('created_at', { ascending: false });
+  if(error){
+    document.getElementById('kkDayStats').innerHTML = '';
+    document.getElementById('kkDayCats').innerHTML = '';
+    listEl.innerHTML = `<div class="small" style="color:var(--warn);">Couldn't load the Karkhana record — ${escHtml(error.message)}</div>`;
+    return;
+  }
+  const rows = data || [];
+  document.getElementById('kkDayStats').innerHTML = kkStatsHtml(rows);
+  document.getElementById('kkDayCats').innerHTML = kkCategoryChips(rows);
+  if(!rows.length){
+    listEl.innerHTML = `<div class="small">No clothes received on ${escHtml(formatAppDate(date + 'T00:00:00'))}.</div>`;
+    return;
+  }
+  const isAdmin = profile.role === 'admin';
+  listEl.innerHTML = rows.map(r => {
+    const due = (Number(r.charges) || 0) - (Number(r.paid) || 0);
+    const items = r.items || [];
+    const itemsTable = items.length ? `<table><thead><tr><th>Cloth Type</th><th class="kk-num">Qty</th><th class="kk-num">Rate</th><th>Detail</th><th class="kk-num">Amount</th></tr></thead><tbody>${
+      items.map(it => `<tr><td>${escHtml(it.category)}</td><td class="kk-num">${escHtml(it.qty)}</td><td class="kk-num">${kkMoney(it.rate)}</td><td>${escHtml(it.detail || '—')}</td><td class="kk-num">${kkMoney((Number(it.qty)||0) * (Number(it.rate)||0))}</td></tr>`).join('')
+    }</tbody></table>` : '<div class="small" style="margin-top:6px;">Payment only — no clothes.</div>';
+    return `<div class="kk-entry">
+      <div class="kk-entry-head">
+        <div><b>${escHtml(r.shop_name)}</b>${r.shop_phone ? ` <span class="small">· ${escHtml(r.shop_phone)}</span>` : ''}</div>
+        <div class="small">${new Date(r.created_at).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' })} · ${r.total_pieces} pcs
+          ${isAdmin ? `<button class="kk-del" title="Delete entry" onclick="deleteKarkhanaEntry(${Number(r.id)})">×</button>` : ''}</div>
+      </div>
+      ${itemsTable}
+      <div class="kk-entry-money">${items.length ? `<span>Charges: <b>${kkMoney(r.charges)}</b></span><span>Paid: <b>${kkMoney(r.paid)}</b></span><span class="${due > 0 ? 'is-due' : ''}">Balance: ${kkMoney(due)}</span>` : `<span>Payment received: <b>${kkMoney(r.paid)}</b></span>`}${r.note ? `<span class="small">Note: ${escHtml(r.note)}</span>` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadKarkhanaMonth(){
+  const branchId = kkBranchId();
+  const month = document.getElementById('kkMonth').value; // YYYY-MM
+  const shopsEl = document.getElementById('kkMonthShops');
+  if(!branchId || !month) return;
+  shopsEl.innerHTML = '<div class="small">Loading…</div>';
+  const [y, m] = month.split('-').map(Number);
+  const from = `${month}-01`;
+  const to = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2,'0')}`;
+
+  const [monthRes, allRes] = await Promise.all([
+    sb.from('karkhana_entries').select('*').eq('branch_id', branchId).gte('entry_date', from).lte('entry_date', to),
+    // Lifetime balance per shop, so last month's unpaid amount isn't forgotten.
+    sb.from('karkhana_entries').select('shop_name, charges, paid').eq('branch_id', branchId).lte('entry_date', to)
+  ]);
+  if(monthRes.error || allRes.error){
+    document.getElementById('kkMonthStats').innerHTML = '';
+    document.getElementById('kkMonthCats').innerHTML = '';
+    shopsEl.innerHTML = `<div class="small" style="color:var(--warn);">Couldn't load the monthly summary — ${escHtml((monthRes.error || allRes.error).message)}</div>`;
+    return;
+  }
+  const rows = monthRes.data || [];
+  const lifetime = {};
+  (allRes.data || []).forEach(r => {
+    const k = kkShopKey(r.shop_name);
+    lifetime[k] = (lifetime[k] || 0) + (Number(r.charges) || 0) - (Number(r.paid) || 0);
+  });
+  const totalOutstanding = Object.values(lifetime).reduce((s, v) => s + v, 0);
+  document.getElementById('kkMonthStats').innerHTML = kkStatsHtml(rows, `<div class="is-due"><span>Total outstanding (all time)</span><b>${kkMoney(totalOutstanding)}</b></div>`);
+  document.getElementById('kkMonthCats').innerHTML = kkCategoryChips(rows);
+
+  const shops = {};
+  rows.forEach(r => {
+    const k = kkShopKey(r.shop_name);
+    const s = shops[k] || (shops[k] = { name: r.shop_name.trim(), days: new Set(), pieces: 0, charges: 0, paid: 0, rows: [] });
+    s.days.add(r.entry_date);
+    s.pieces += Number(r.total_pieces) || 0;
+    s.charges += Number(r.charges) || 0;
+    s.paid += Number(r.paid) || 0;
+    s.rows.push(r);
+  });
+  const list = Object.entries(shops).sort((a, b) => b[1].pieces - a[1].pieces);
+  if(!list.length){
+    shopsEl.innerHTML = '<div class="small">No Karkhana entries this month.</div>';
+    return;
+  }
+  shopsEl.innerHTML = `<div class="kk-lines-wrap"><table>
+    <thead><tr><th>Shop</th><th class="kk-num">Days</th><th class="kk-num">Pieces</th><th>Cloth Types</th><th class="kk-num">Charges</th><th class="kk-num">Paid</th><th class="kk-num">Month Balance</th><th class="kk-num">Total Outstanding</th></tr></thead>
+    <tbody>${list.map(([k, s]) => {
+      const cats = kkCategoryTotals(s.rows).map(([c, q]) => `${escHtml(c)} × ${q}`).join(', ');
+      const out = lifetime[k] || 0;
+      return `<tr><td><b>${escHtml(s.name)}</b></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
+        <td class="kk-num">${kkMoney(s.charges)}</td><td class="kk-num">${kkMoney(s.paid)}</td><td class="kk-num">${kkMoney(s.charges - s.paid)}</td>
+        <td class="kk-num" style="${out > 0 ? 'color:var(--accent-2);font-weight:700;' : ''}">${kkMoney(out)}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
 }
 
 // ---------- ADMIN DASHBOARD ----------
@@ -11136,6 +11544,7 @@ const I18N = {
   nav_neworder:        { en: 'New Order',              ur: 'نیا آرڈر' },
   nav_openorders:      { en: 'Open Orders',             ur: 'کھلے آرڈرز' },
   nav_expenses:        { en: 'Expenses',                ur: 'اخراجات' },
+  nav_karkhana:        { en: 'KARKHANA',                ur: 'کارخانہ' },
   nav_promo:           { en: 'Promo',                   ur: 'پروموشن' },
   nav_dashboard:       { en: 'Admin Dashboard',         ur: 'ایڈمن ڈیش بورڈ' },
   nav_monthlyregister: { en: 'Monthly Register',        ur: 'ماہانہ رجسٹر' },
