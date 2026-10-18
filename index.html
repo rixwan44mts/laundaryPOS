@@ -1625,6 +1625,14 @@
   .piece-tag.is-empty{color:var(--muted);border-style:dashed;background:transparent;}
   .imt-details,.icr-details{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
   .ri-details{font-size:9px;line-height:1.25;color:#000;}
+  /* per-item urgent stepper in the New Order cart */
+  .line-urgent{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;
+    background:var(--paper-2);border:1px dashed var(--line-strong);border-radius:999px;padding:2px 10px 2px 6px;}
+  .line-urgent b{font-variant-numeric:tabular-nums;min-width:26px;text-align:center;}
+  .line-urgent.is-on{color:var(--accent-2);background:var(--accent-2-soft);border:1px solid var(--accent-2);}
+  .line-urgent button{width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--line-strong);background:#fff;font-weight:700;cursor:pointer;line-height:1;padding:0;}
+  .line-urgent button:disabled{opacity:.35;cursor:default;}
+  .imt-urgent{font-size:11px;font-weight:700;color:var(--accent-2);white-space:nowrap;}
 
   /* KARKHANA tab */
   nav button[data-tab="karkhana"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 21V10l5 3V10l5 3V10l5 3V4h3v17Z'/><path d='M7 17h2M12 17h2M17 17h1'/></svg>");}
@@ -3947,7 +3955,7 @@ function buildItemsCellHtml(items){
   items = items || [];
   if(!items.length) return '<span class="small" style="color:var(--muted);">—</span>';
   const rows = items.map(it =>
-    `<tr><td class="imt-qty">${escHtml(it.qty)}</td><td>${escHtml(it.service)}${pieceDetailsSummary(it) ? `<div class="imt-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td></tr>`
+    `<tr><td class="imt-qty">${escHtml(it.qty)}</td><td>${escHtml(it.service)}${lineUrgentQty(it) ? ` <span class="imt-urgent">🔥 ${lineUrgentQty(it)} urgent</span>` : ''}${pieceDetailsSummary(it) ? `<div class="imt-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td></tr>`
   ).join('');
   return `<table class="items-mini-table"><thead><tr><th class="imt-qty">Qty</th><th>Item</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -5411,7 +5419,7 @@ function copyPromoCaption(btnEl){
 // above, near buildUrduMessage, and shared by every customer message.)
 function buildBookingMessage(code, branchInfo, items, total, advancePaid, balanceDue, isUrgentOrder, wdCollectByDate, pressCollectByDate, expiryDate){
   const itemsText = (items || [])
-    .map(it => `• ${escHtml(it.service)} × ${it.qty} — Rs ${it.line_total ?? (it.qty * it.price)}`)
+    .map(it => `• ${escHtml(it.service)} × ${it.qty} — Rs ${it.line_total ?? (it.qty * it.price)}${lineUrgentQty(it) ? ` (🔥 ${lineUrgentQty(it)} urgent pc${lineUrgentQty(it) === 1 ? '' : 's'} +Rs ${lineUrgentQty(it) * it.price})` : ''}`)
     .join('\n');
 
   const paymentBlock = balanceDue > 0
@@ -5419,7 +5427,7 @@ function buildBookingMessage(code, branchInfo, items, total, advancePaid, balanc
     : `Total Bill: *Rs ${total}*\n*✅ PAID IN FULL*`;
 
   const urgentLine = isUrgentOrder
-    ? `\n🔥 *URGENT ORDER* — billed at double the normal rate\n`
+    ? `\n🔥 *URGENT ORDER* — ${itemsHaveUrgentInfo(items) ? 'urgent pieces are' : 'order is'} billed at double the normal rate\n`
     : '';
 
   // Collect-by/expiry section — a mixed order shows BOTH lines, since W+D
@@ -7281,8 +7289,10 @@ function menuAdjustQty(serviceId, delta){
         line.price = price;
         line.line_total = line.qty * price;
         line.details.push(detail);
+        // While Urgent is on, a newly added piece is urgent by default.
+        if(isUrgent) line.urgent_qty = lineUrgentQty(line) + 1;
       } else {
-        currentItems.push({ service, qty: 1, price, line_total: price, details: [detail] });
+        currentItems.push({ service, qty: 1, price, line_total: price, details: [detail], urgent_qty: isUrgent ? 1 : 0 });
       }
       renderItemsList();
     });
@@ -7295,6 +7305,7 @@ function menuAdjustQty(serviceId, delta){
     } else {
       line.line_total = line.qty * line.price;
       if(Array.isArray(line.details)) line.details = line.details.slice(0, line.qty);
+      line.urgent_qty = lineUrgentQty(line);
     }
   }
   renderItemsList();
@@ -7432,7 +7443,8 @@ function submitPieceDetails(skip){
 // Copy of a cart line as sent to book_order: details padded to qty, or
 // left off entirely when no piece on the line was described.
 function lineForSave(it){
-  const { details, ...rest } = it;
+  const { details, urgent_qty, ...rest } = it;
+  if(isUrgent) rest.urgent_qty = lineUrgentQty(it);
   const padded = padPieceDetails(details, it.qty);
   return padded.some(pieceHasDetail) ? { ...rest, details: padded } : rest;
 }
@@ -7584,6 +7596,23 @@ let codeManuallyEdited = false;
 let isUrgent = false;
 let urgentHours = null;
 
+// Per-item urgent: each cart line carries `urgent_qty` (0..qty) — only
+// those pieces are billed at 2x, the rest of the order stays at the normal
+// rate. Switching Urgent on marks every piece urgent; the cashier then
+// lowers it per line with − / +. Orders saved before this change have no
+// urgent_qty on any line, so they're treated as fully urgent (old 2x rule).
+function lineUrgentQty(it){ return Math.max(0, Math.min(Number(it.qty) || 0, parseInt(it.urgent_qty, 10) || 0)); }
+function itemsHaveUrgentInfo(items){ return (items || []).some(it => it && it.urgent_qty != null); }
+function urgentSurchargeOf(items){ return (items || []).reduce((s, it) => s + lineUrgentQty(it) * (Number(it.price) || 0), 0); }
+function urgentPiecesOf(items){ return (items || []).reduce((s, it) => s + lineUrgentQty(it), 0); }
+function setAllLinesUrgent(on){ currentItems.forEach(it => { it.urgent_qty = on ? it.qty : 0; }); }
+function changeLineUrgent(idx, delta){
+  const it = currentItems[idx];
+  if(!it) return;
+  it.urgent_qty = Math.max(0, Math.min(it.qty, lineUrgentQty(it) + delta));
+  renderItemsList();
+}
+
 const URGENT_MIN_HOURS = { 'Get Smart': 3, 'Brite Star': 4 };
 function urgentMinHoursForBranch(){
   const key = document.getElementById('branchNameFixed').textContent;
@@ -7626,9 +7655,10 @@ function setUrgentHours(hours){
     return;
   }
   urgentHours = n;
+  if(!isUrgent) setAllLinesUrgent(true);
   isUrgent = true;
   preview.textContent =
-    `Deadline: ${formatAppDateTime(new Date(Date.now() + n*60*60*1000).toISOString())} — Urgent charges are billed at double the normal rate.`;
+    `Deadline: ${formatAppDateTime(new Date(Date.now() + n*60*60*1000).toISOString())} — only the pieces marked 🔥 urgent are billed at double rate; use − / + on each item to set how many.`;
   updateUrgentButton();
   renderItemsList(); // show the surcharge row/doubled total immediately, not just on the next keystroke
 }
@@ -7636,6 +7666,7 @@ function setUrgentHours(hours){
 function cancelUrgent(){
   isUrgent = false;
   urgentHours = null;
+  setAllLinesUrgent(false);
   const customInput = document.getElementById('urgentCustomHours');
   if(customInput) customInput.value = '';
   document.getElementById('urgentDeadlinePreview').textContent = '';
@@ -7651,7 +7682,7 @@ function cancelUrgent(){
 function updateUrgentButton(){
   const btn = document.getElementById('urgentToggleBtn');
   if(isUrgent && urgentHours){
-    btn.textContent = `🔥 Urgent — ${urgentHours}h (2x rate)`;
+    btn.textContent = `🔥 Urgent — ${urgentHours}h (2x on urgent pcs)`;
     btn.classList.add('urgent-active');
   } else {
     btn.textContent = 'Mark Urgent';
@@ -7662,6 +7693,7 @@ function updateUrgentButton(){
 function resetUrgentSelector(){
   isUrgent = false;
   urgentHours = null;
+  setAllLinesUrgent(false);
   document.getElementById('urgentPanel').style.display = 'none';
   const customInput = document.getElementById('urgentCustomHours');
   if(customInput) customInput.value = '';
@@ -7897,8 +7929,14 @@ function renderItemsList(){
       return `<button type="button" class="piece-tag${text ? '' : ' is-empty'}" onclick="editPieceDetails(${idx},${p})" title="Edit piece ${p + 1}">${details.length > 1 ? `<b>${p + 1}</b>` : ''}${text ? escHtml(text) : '+ details'}</button>`;
     }).join('')}</div>`;
   };
+  // While Urgent is on, each line gets a "🔥 urgent n/qty" stepper.
+  const urgentCtl = (it, idx) => {
+    if(!isUrgent) return '';
+    const u = lineUrgentQty(it);
+    return `<div class="line-urgent${u ? ' is-on' : ''}" title="How many of these pieces are urgent (2x rate)">🔥<button type="button" onclick="changeLineUrgent(${idx},-1)" ${u <= 0 ? 'disabled' : ''} aria-label="Fewer urgent pieces">−</button><b>${u}/${it.qty}</b><button type="button" onclick="changeLineUrgent(${idx},1)" ${u >= it.qty ? 'disabled' : ''} aria-label="More urgent pieces">+</button>urgent</div>`;
+  };
   const itemRows = currentItems.map((it,idx)=>
-    `<tr><td>${escHtml(it.service)}${pieceTags(it, idx)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
+    `<tr><td>${escHtml(it.service)}${pieceTags(it, idx)}${urgentCtl(it, idx)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
      <td><button class="btn-secondary" onclick="removeLineItem(${idx})">x</button></td></tr>`
   ).join('');
   const baseSubtotalForRow = currentItems.reduce((s,it)=>s+it.line_total,0);
@@ -7908,9 +7946,10 @@ function renderItemsList(){
   // and folded into subtotal/discount/total below so the ledger strip
   // actually matches what gets saved/printed, instead of quietly
   // excluding the surcharge until after the order is saved.
-  const urgentSurchargeForRow = isUrgent ? baseSubtotalForRow : 0;
+  const urgentSurchargeForRow = isUrgent ? urgentSurchargeOf(currentItems) : 0;
+  const urgentPcs = isUrgent ? urgentPiecesOf(currentItems) : 0;
   const urgentRow = (isUrgent && baseSubtotalForRow > 0)
-    ? `<tr class="urgent-surcharge-row"><td colspan="3">🔥 URGENT SERVICE (2x RATE)</td><td>+Rs ${urgentSurchargeForRow}</td><td></td></tr>`
+    ? `<tr class="urgent-surcharge-row"><td colspan="3">🔥 URGENT SERVICE (2x RATE on ${urgentPcs} pc${urgentPcs === 1 ? '' : 's'})</td><td>+Rs ${urgentSurchargeForRow}</td><td></td></tr>`
     : '';
   document.querySelector('#itemsTable tbody').innerHTML = itemRows + urgentRow;
   syncMenuQtyBadges();
@@ -8059,7 +8098,12 @@ async function saveAndPrint(){
   // urgentSurcharge always equals subtotal, so subtotal/discount/total
   // still reconcile normally from here on.
   const baseSubtotal = currentItems.reduce((s,it)=>s+it.line_total,0);
-  const urgentSurcharge = isUrgent ? baseSubtotal : 0;
+  if(isUrgent && urgentPiecesOf(currentItems) === 0){
+    alert('Urgent is on, but no piece is marked urgent. Use + next to the urgent item(s), or cancel Urgent.');
+    return;
+  }
+  // Only the pieces marked urgent are doubled (see lineUrgentQty).
+  const urgentSurcharge = isUrgent ? urgentSurchargeOf(currentItems) : 0;
   const subtotal = baseSubtotal + urgentSurcharge;
   const discountPct = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0));
   const discount = Math.round((subtotal * discountPct / 100) * 100) / 100; // rupee amount saved to the order, same as before
@@ -9237,7 +9281,7 @@ function receiptItemsGrid(items){
   const rows = (items || []).map(it => {
     const { name, category } = splitServiceLabel(it.service);
     return `<tr>
-      <td class="ri-name">${escHtml(name)}${pieceDetailsSummary(it) ? `<div class="ri-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td>
+      <td class="ri-name">${escHtml(name)}${lineUrgentQty(it) ? `<div class="ri-details"><b>URGENT ${lineUrgentQty(it) === it.qty ? 'ALL' : lineUrgentQty(it) + ' of ' + it.qty} PC${it.qty === 1 ? '' : 'S'} (2x)</b></div>` : ''}${pieceDetailsSummary(it) ? `<div class="ri-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td>
       <td class="ri-cat">${escHtml(abbrevCategory(category))}</td>
       <td class="ri-qty">${it.qty}</td>
       <td class="ri-price">${it.price}</td>
@@ -9255,7 +9299,7 @@ function printFinalBill(orderId, code, phone, name, itemsJson, total, advancePai
   let items = [];
   try{ items = JSON.parse(decodeURIComponent(itemsJson)); } catch(e){ items = []; }
   const urgentBillLine = isUrgentOrder
-    ? `<div class="center receipt-urgent-line">🔥 URGENT ORDER — billed at 2x rate</div>`
+    ? `<div class="center receipt-urgent-line">🔥 URGENT ORDER — ${itemsHaveUrgentInfo(items) ? `${urgentPiecesOf(items)} pc(s) billed at 2x rate` : 'billed at 2x rate'}</div>`
     : '';
 
   // Who physically collected the order. Prefer the persisted record
@@ -9362,10 +9406,13 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
   // urgentSurcharge explicitly (e.g. an older reprint code path), fall back
   // to half of `subtotal`, since urgent subtotal = base + base = 2 x base.
   const effectiveUrgentSurcharge = isUrgentOrder
-    ? (urgentSurcharge != null ? Number(urgentSurcharge) : Number(subtotal) / 2)
+    ? (urgentSurcharge != null ? Number(urgentSurcharge)
+       : itemsHaveUrgentInfo(items) ? urgentSurchargeOf(items) : Number(subtotal) / 2)
     : 0;
+  const urgentPcsLabel = isUrgentOrder && itemsHaveUrgentInfo(items || currentItems)
+    ? ` ON ${urgentPiecesOf(items || currentItems)} PC${urgentPiecesOf(items || currentItems) === 1 ? '' : 'S'}` : '';
   const urgentReceiptLine = isUrgentOrder
-    ? `<div class="receipt-row receipt-urgent-line"><span>🔥 URGENT SERVICE (2x RATE)</span><span>+Rs ${effectiveUrgentSurcharge.toFixed(2)}</span></div>`
+    ? `<div class="receipt-row receipt-urgent-line"><span>🔥 URGENT (2x RATE${urgentPcsLabel})</span><span>+Rs ${effectiveUrgentSurcharge.toFixed(2)}</span></div>`
     : '';
   // `items` lets a reprint (see reprintOrderReceipt) pass the ORIGINAL
   // order's item list explicitly. Without this, a reprint would silently
