@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
+<meta name="app-build" content="2026-10-18-3">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -11,7 +13,7 @@
      out through images (img-src), load scripts from other hosts, or
      submit forms anywhere. If the Supabase project URL ever changes,
      update connect-src below to match SUPABASE_URL. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://adkbnwfweidrzmnvtkfn.supabase.co wss://adkbnwfweidrzmnvtkfn.supabase.co; frame-src http: https:; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://adkbnwfweidrzmnvtkfn.supabase.co wss://adkbnwfweidrzmnvtkfn.supabase.co; frame-src http: https:; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <!-- Pinned to an exact version + Subresource Integrity hash: the old
      "@2" tag silently pulled whatever the newest release was on every
@@ -1633,6 +1635,10 @@
   .line-urgent button{width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--line-strong);background:#fff;font-weight:700;cursor:pointer;line-height:1;padding:0;}
   .line-urgent button:disabled{opacity:.35;cursor:default;}
   .imt-urgent{font-size:11px;font-weight:700;color:var(--accent-2);white-space:nowrap;}
+  .update-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:#0f1f24;color:#fff;padding:10px 16px;border-radius:14px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);font-weight:600;max-width:calc(100vw - 32px);}
+  .update-bar button{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-weight:700;cursor:pointer;}
+  .update-bar .small{color:#b9c6ca;}
   .dh-details{font-size:12px;color:var(--muted);font-weight:400;}
   .rh-event{border-left:2px solid #000;padding-left:6px;margin:4px 0 6px;}
   nav button[data-tab="returns"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 14 4 9l5-5'/><path d='M4 9h11a5 5 0 0 1 0 10h-3'/></svg>");}
@@ -6456,6 +6462,9 @@ async function openDispatchHistoryModal(orderId, code, customerName){
 
   const order = allOpenOrders.find(o => o.id === orderId);
   const items = order ? order.items : [];
+  if(order && TERMINAL_STATUSES.includes(order.status)){
+    rows = addCloseRelease([...rows], items, order.total, order.advance_paid, order.dispatched_at || null, order.receiverName || order.receiver_name);
+  }
 
   document.getElementById('dhTimelineBody').innerHTML = rows.map(row => {
     const released = Array.isArray(row.items_released) ? row.items_released : [];
@@ -6466,8 +6475,8 @@ async function openDispatchHistoryModal(orderId, code, customerName){
     const isFinal = row.event_type === 'final';
     return `<div style="border-bottom:1px solid var(--line);padding:10px 0;">
       <div style="display:flex;justify-content:space-between;font-weight:700;">
-        <span>${isFinal ? '✅ Final release' : '⚙ Partial release'}</span>
-        <span style="color:var(--muted);font-weight:400;">${formatAppDateTime(row.created_at)}</span>
+        <span>${isFinal ? (row.closed_via_dispatch ? '✅ Final release (Close / Dispatched)' : '✅ Final release') : '⚙ Partial release'}</span>
+        <span style="color:var(--muted);font-weight:400;">${row.created_at ? formatAppDateTime(row.created_at) : 'time not recorded'}</span>
       </div>
       <div style="margin-top:4px;">${itemsLine}</div>
       <div style="margin-top:2px;color:var(--muted);font-size:13px;">
@@ -6734,6 +6743,26 @@ async function fetchReleaseHistory(orderId){
   }
   return partialDispatchEventsCache.get(orderId) || [];
 }
+// After partial release(s), the rest often goes out via "Close /
+// Dispatched" (close_order), which records no release event. Add that last
+// batch — whatever was still in the shop — at the order's dispatch time.
+function addCloseRelease(releases, items, total, advancePaid, dispatchedAt, receiverName){
+  if(!releases.length || releases.some(r => r.event_type === 'final')) return releases;
+  const releasedByLine = {};
+  releases.forEach(r => (r.items_released || []).forEach(ri => {
+    releasedByLine[ri.line_id] = (releasedByLine[ri.line_id] || 0) + Number(ri.qty || 0);
+  }));
+  const rest = (items || []).filter(it => it && it.line_id != null)
+    .map(it => ({ line_id: it.line_id, qty: Number(it.qty || 0) - (releasedByLine[it.line_id] || 0) }))
+    .filter(x => x.qty > 0);
+  if(rest.length){
+    const collectedBefore = releases.reduce((t, r) => t + Number(r.amount_collected || 0), 0);
+    releases.push({ event_type: 'final', closed_via_dispatch: true, items_released: rest,
+      amount_collected: Math.max(0, Number(total || 0) - Number(advancePaid || 0) - collectedBefore),
+      receiver_name: receiverName || null, created_at: dispatchedAt || null });
+  }
+  return releases;
+}
 function releaseItemLabel(items, lineId){
   const line = (items || []).find(it => String(it.line_id) === String(lineId));
   return line ? { name: splitServiceLabel(line.service).name, details: pieceDetailsSummary(line) } : { name: `line ${lineId}`, details: '' };
@@ -6746,7 +6775,7 @@ function releaseHistoryReceiptHtml(rows, items){
       return `<div class="receipt-row"><span>• ${escHtml(l.name)}${l.details ? `<div class="ri-details">${escHtml(l.details)}</div>` : ''}</span><span>× ${ri.qty}</span></div>`;
     }).join('');
     return `<div class="rh-event">
-      <div class="receipt-row"><b>${row.event_type === 'final' ? 'FINAL' : 'RELEASE ' + (i + 1)}</b><b>${formatAppDateTime(row.created_at)}</b></div>
+      <div class="receipt-row"><b>${row.event_type === 'final' ? 'FINAL' : 'RELEASE ' + (i + 1)}</b><b>${row.created_at ? formatAppDateTime(row.created_at) : 'time not recorded'}</b></div>
       ${lines}
       <div class="receipt-row small"><span>Collected${row.receiver_name ? ' · ' + escHtml(row.receiver_name) : ''}</span><span>Rs ${Number(row.amount_collected || 0).toFixed(2)}</span></div>
     </div>`;
@@ -9509,7 +9538,8 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
   let items = [];
   try{ items = JSON.parse(decodeURIComponent(itemsJson)); } catch(e){ items = []; }
   // Orders released in parts: list every release with its time.
-  const releases = orderId != null ? await fetchReleaseHistory(orderId) : [];
+  const releases = orderId != null ? [...await fetchReleaseHistory(orderId)] : [];
+  addCloseRelease(releases, items, total, advancePaid, dispatchedAt, receiverName || (orderReceivers[orderId] || {}).name);
   if(!dispatchedAt && releases.length) dispatchedAt = releases[releases.length - 1].created_at;
   const releaseBlock = releases.length > 1
     ? `<div class="small" style="font-weight:700;">CLOTHES RELEASED IN ${releases.length} PARTS</div>${releaseHistoryReceiptHtml(releases, items)}<hr>`
@@ -12383,6 +12413,39 @@ function closeHelpModal(){
   scan(document);
   new MutationObserver(muts => muts.forEach(m => m.addedNodes.forEach(n => { if(n.nodeType === 1) scan(n); })))
     .observe(document.body, { childList: true, subtree: true });
+})();
+
+// ---------- NEW VERSION CHECK ----------
+// GitHub Pages lets browsers keep the page for up to 10 minutes, so a till
+// can keep running an old build after an update. Every 2 minutes (and when
+// the tab comes back into view) compare our app-build tag with the live
+// page's; if it changed, offer a refresh — never reload on its own, since
+// an order might be half-typed.
+(function(){
+  const meta = document.querySelector('meta[name="app-build"]');
+  const mine = meta ? meta.content : '';
+  if(!mine || location.protocol === 'file:') return;
+  let shown = false;
+  async function check(){
+    if(shown || !navigator.onLine) return;
+    try{
+      const res = await fetch(location.pathname + '?build=' + Date.now(), { cache: 'no-store' });
+      if(!res.ok) return;
+      const m = /<meta name="app-build" content="([^"]+)"/.exec(await res.text());
+      if(m && m[1] !== mine) show();
+    }catch(e){}
+  }
+  function show(){
+    shown = true;
+    const bar = document.createElement('div');
+    bar.className = 'update-bar';
+    bar.innerHTML = '🔄 A new version of the POS is available. <button type="button">Refresh now</button><span class="small">Finish the order you are typing first.</span>';
+    bar.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(bar);
+  }
+  setInterval(check, 120000);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) check(); });
+  setTimeout(check, 15000);
 })();
 
 // ---------- UI MOTION (V3 modern layer) ----------
