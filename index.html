@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-12">
+<meta name="app-build" content="2026-10-24-13">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -1661,7 +1661,23 @@
   .return-line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;}
   .return-line.is-on{border-color:var(--accent-2);background:var(--accent-2-soft);}
   .return-step{display:flex;align-items:center;gap:8px;white-space:nowrap;}
-  .return-step button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line-strong);background:#fff;font-weight:700;cursor:pointer;}
+  .return-step button{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line-strong);background:#fff;font-size:24px;font-weight:700;line-height:1;cursor:pointer;}
+  .return-step button.is-plus:not(:disabled){background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
+  .return-count{display:flex;flex-direction:column;align-items:center;min-width:34px;line-height:1.1;}
+  .return-count b{font-size:22px;}
+  .return-pic{flex:0 0 auto;width:56px;height:56px;border-radius:12px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;padding:6px;}
+  .return-pic svg{width:40px;height:40px;}
+  .return-name{flex:1;min-width:0;}
+  .return-name > .kk-ur{display:block;font-size:18px;line-height:1.7;text-align:left;}
+  .return-cat{display:block;font-size:12px;color:var(--muted);}
+  .return-cat .kk-ur{font-size:14px;}
+  .return-help{margin:0 0 10px;}
+  .return-help .kk-ur{display:block;font-size:17px;line-height:2;margin:0 0 2px;text-align:right;}
+  .return-reason-chip{display:inline-flex;flex-direction:column;align-items:center;gap:0;min-width:96px;padding:8px 12px;border-radius:14px;}
+  .return-reason-chip.is-picked{border-color:var(--accent-2);background:var(--accent-2-soft);box-shadow:inset 0 0 0 1.5px var(--accent-2);}
+  .return-reason-chip .rr-icon{font-size:22px;line-height:1.2;}
+  .return-reason-chip .kk-ur{font-size:16px;line-height:1.8;margin:0;}
+  .return-reason-chip .rr-en{font-size:11px;color:var(--muted);}
   .return-step button:disabled{opacity:.35;cursor:default;}
   .price-note-row{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line);}
   .price-note-row input{width:100%;}
@@ -3141,7 +3157,8 @@
       </div>
       <div class="modal-body">
         <div id="returnOrderLine" style="font-weight:700;margin-bottom:6px;"></div>
-        <p class="small" style="margin-top:0;">Customer is not satisfied — pick the clothes they brought back and why. They will be flagged for special attention until marked fixed.</p>
+        <p class="return-help"><span class="kk-ur">گاہک خوش نہیں۔ جو کپڑے واپس لایا ان پر + دبائیں، پھر وجہ چنیں۔ ٹھیک ہونے تک یہ آرڈر الگ نشان کے ساتھ رہے گا۔</span>
+          <span class="small">Customer is not satisfied — tap + on the clothes they brought back, then pick why. The order stays flagged until marked fixed.</span></p>
         <div id="returnItemsBody"></div>
         <label style="margin-top:12px;">Reason</label>
         <div class="chip-bar" id="returnReasonChips" style="margin-bottom:6px;"></div>
@@ -10801,6 +10818,18 @@ async function loadExpenseMonth(){
 let openReturnsByOrder = {};   // order_id -> first open return
 let returnsLoading = false;
 const RETURN_REASONS = ['Stain not removed', 'Not pressed properly', 'Damaged', 'Colour faded / bled', 'Bad smell', 'Shrunk', 'Wrong item'];
+// Urdu + a picture for each reason chip. The saved reason stays in English
+// so reports and old returns read the same.
+const RETURN_REASONS_UR = {
+  'Stain not removed': ['داغ نہیں گیا', '🟤'], 'Not pressed properly': ['استری ٹھیک نہیں', '♨️'],
+  'Damaged': ['کپڑا خراب ہو گیا', '✂️'], 'Colour faded / bled': ['رنگ اتر گیا', '🎨'],
+  'Bad smell': ['بدبو آ رہی ہے', '👃'], 'Shrunk': ['کپڑا سکڑ گیا', '📏'], 'Wrong item': ['غلط کپڑا', '🔄']
+};
+function returnReasonChipHtml(r){
+  const [ur, icon] = RETURN_REASONS_UR[r] || ['', ''];
+  return `<button type="button" class="chip-btn return-reason-chip" data-reason="${escHtml(r)}" onclick="pickReturnReason(this)"><span class="rr-icon" aria-hidden="true">${icon}</span>${ur ? `<span class="kk-ur">${ur}</span>` : ''}<span class="rr-en">${escHtml(r)}</span></button>`;
+}
+const CATEGORY_LABEL_UR = { 'wash + dry clean': 'دھلائی', 'press only': 'استری' };
 
 async function loadOpenReturns(){
   if(returnsLoading || !isReallyOnline()) return;
@@ -10842,21 +10871,30 @@ async function openReturnModal(orderId){
   document.getElementById('returnOrderLine').textContent = `${orderRef(order.id, order.code)} — ${order.customer_name || 'Walk-in'} ${order.customer_phone || ''}`;
   document.getElementById('returnReason').value = '';
   document.getElementById('returnError').textContent = '';
-  document.getElementById('returnReasonChips').innerHTML = RETURN_REASONS.map(r => `<button type="button" class="chip-btn" onclick="pickReturnReason(this)">${escHtml(r)}</button>`).join('');
+  document.getElementById('returnReasonChips').innerHTML = RETURN_REASONS.map(returnReasonChipHtml).join('');
   renderReturnItems();
   document.getElementById('returnModal').classList.add('open');
 }
 function renderReturnItems(){
-  document.getElementById('returnItemsBody').innerHTML = returnCtx.lines.map((l, i) => `
+  document.getElementById('returnItemsBody').innerHTML = returnCtx.lines.map((l, i) => {
+    const { name, category } = splitServiceLabel(l.service);
+    const pic = itemPicture(name);
+    const catUr = CATEGORY_LABEL_UR[category.toLowerCase()] || '';
+    return `
     <div class="return-line${l.qty ? ' is-on' : ''}">
-      <div><b>${escHtml(splitServiceLabel(l.service).name)}</b> <span class="small">${escHtml(splitServiceLabel(l.service).category)}</span>
-        ${l.details ? `<div class="dh-details">${escHtml(l.details)}</div>` : ''}</div>
-      <div class="return-step">
-        <button type="button" onclick="stepReturnQty(${i},-1)" ${l.qty <= 0 ? 'disabled' : ''}>−</button>
-        <b>${l.qty}</b><span class="small">/ ${l.max}</span>
-        <button type="button" onclick="stepReturnQty(${i},1)" ${l.qty >= l.max ? 'disabled' : ''}>+</button>
+      <button type="button" class="return-pic" onclick="stepReturnQty(${i},1)" aria-label="Add one ${escHtml(name)}">${pic.svg}</button>
+      <div class="return-name">
+        ${pic.ur ? `<span class="kk-ur">${pic.ur}</span>` : ''}<b>${escHtml(name)}</b>
+        <span class="return-cat">${catUr ? `<span class="kk-ur">${catUr}</span>` : ''}${escHtml(category)}</span>
+        ${l.details ? `<div class="dh-details">${escHtml(l.details)}</div>` : ''}
       </div>
-    </div>`).join('');
+      <div class="return-step">
+        <button type="button" onclick="stepReturnQty(${i},-1)" ${l.qty <= 0 ? 'disabled' : ''} aria-label="One less">−</button>
+        <span class="return-count"><b>${l.qty}</b><span class="small">of ${l.max}</span></span>
+        <button type="button" class="is-plus" onclick="stepReturnQty(${i},1)" ${l.qty >= l.max ? 'disabled' : ''} aria-label="One more">+</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 function stepReturnQty(i, d){
   const l = returnCtx.lines[i];
@@ -10865,7 +10903,8 @@ function stepReturnQty(i, d){
 }
 function pickReturnReason(btn){
   const inp = document.getElementById('returnReason');
-  const add = btn.textContent;
+  const add = btn.dataset.reason || btn.textContent;
+  btn.classList.add('is-picked');
   inp.value = inp.value.trim() ? `${inp.value.trim()}, ${add}` : add;
   inp.focus();
 }
