@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-8">
+<meta name="app-build" content="2026-10-24-9">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -21,6 +21,10 @@
      full access to every logged-in session. To upgrade, change the
      version AND regenerate the integrity hash (see SECURITY.md). -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<!-- QR code on booking receipts (qrcode-generator, MIT). Same rule:
+     exact version + integrity hash. If it fails to load, receipts just
+     print without the QR. -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" integrity="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Inter = all on-screen UI text. Space Mono is kept only for the
@@ -2258,6 +2262,11 @@
   .kk-pending{font-size:12px;font-weight:700;color:var(--printed-ink);background:var(--printed-soft);border-radius:999px;padding:1px 8px;margin-inline-start:6px;}
   .kk-pending .kk-ur{font-size:13px;line-height:1.5;}
 
+  /* QR on the booking receipt */
+  .receipt-qr{text-align:center;margin:6px 0 2px;}
+  .receipt-qr svg{width:30mm;height:30mm;display:block;margin:0 auto 2px;}
+  .receipt-qr div{font-size:10px;font-weight:700;}
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -3717,6 +3726,8 @@ function dialogPic(key){ return `<svg viewBox="0 0 24 24" aria-hidden="true">${D
 // alert(). First match wins, so specific patterns sit above general ones.
 // The English text is still shown underneath in small print.
 const URDU_ALERTS = [
+  [/^scanned order .* not found/i, 'یہ آرڈر اس برانچ میں نہیں ملا۔ شاید کسی اور برانچ کا ہے یا بہت پرانا ہے۔', 'warn'],
+  [/^scanned order/i, 'آرڈر ڈھونڈنے کے لیے کاؤنٹر والے لاگ اِن پر کھلے آرڈر کھولیں۔', 'info'],
   [/saved offline|queued|will sync automatically/i, 'انٹرنیٹ نہیں تھا، اس لیے یہ اسی کمپیوٹر میں محفوظ ہو گیا۔ انٹرنیٹ آتے ہی خود بھیج دیا جائے گا۔', 'wifi'],
   [/cached order list|device's cached/i, 'یہ آرڈر اس کمپیوٹر میں نہیں ملا۔ انٹرنیٹ سے آرڈر تازہ کریں، پھر دوبارہ کوشش کریں۔', 'wifi'],
   [/internet|connection|online/i, 'انٹرنیٹ نہیں ہے۔ انٹرنیٹ آنے پر دوبارہ کوشش کریں۔', 'wifi'],
@@ -10352,6 +10363,20 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
   printWithSound();
 }
 
+// QR printed on the booking receipt. It holds "LPOS:<order id>:<code>";
+// a USB scanner at the counter types that back in and the scan handler
+// below opens the order. Offline-queued orders have no server id yet, so
+// they carry 0 and are found by code alone.
+function receiptQrHtml(orderId, code){
+  if(typeof qrcode !== 'function' || !code) return '';
+  try{
+    const qr = qrcode(0, 'M');
+    qr.addData(`LPOS:${Number(orderId) || 0}:${code}`);
+    qr.make();
+    return `<div class="receipt-qr">${qr.createSvgTag({ cellSize: 4, margin: 0 })}<div>Scan at pickup — ${escHtml(code)}</div></div>`;
+  }catch(e){ return ''; }
+}
+
 function printReceipt(orderId, phone, name, code, subtotal, discountPct, discount, total, advancePaid, balanceDue, changeGiven, offlinePending, items, bookingDateOverride, isUrgentOrder, urgentSurcharge, wdCollectByOverride, pressCollectByOverride){
   const branch = branches.find(b => b.id === currentBranchId);
   // Urgent orders are billed at double the normal item rate. The itemized
@@ -10477,6 +10502,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       <hr>
       ${balanceLine}
       ${expiryLine}
+      ${receiptQrHtml(offlinePending ? 0 : orderId, code)}
       <hr>
       <div class="receipt-terms" dir="rtl" lang="ur" style="text-align:right;">
         ۱۔ براہِ کرم بکنگ کی تاریخ سے 30 دن کے اندر اپنی اشیاء وصول کریں، اس کے بعد ہونے والے کسی بھی نقصان یا خرابی کی ذمہ داری شاپ پر نہیں ہوگی۔<br>
@@ -10489,6 +10515,47 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
     </div>`;
   printWithSound();
+}
+
+// ---------- RECEIPT QR SCANS ----------
+// A USB QR/barcode scanner acts as a keyboard: it types the code very fast
+// and presses Enter. Keys arriving less than 80 ms apart are collected;
+// on Enter, a buffer ending in "LPOS:<id>:<code>" opens that order in
+// Open Orders. People type far slower than 80 ms per key, so normal typing
+// never triggers this. If the scan landed in a text box, it is removed.
+let qrScanBuf = '', qrScanLast = 0;
+document.addEventListener('keydown', e => {
+  const now = performance.now();
+  if(now - qrScanLast > 80) qrScanBuf = '';
+  qrScanLast = now;
+  if(e.key === 'Enter'){
+    const m = /LPOS:(\d+):([^\s:]+)$/i.exec(qrScanBuf);
+    qrScanBuf = '';
+    if(!m) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = document.activeElement;
+    if(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')){
+      const at = el.value.toUpperCase().indexOf('LPOS');
+      if(at >= 0){ el.value = el.value.slice(0, at); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+    openScannedOrder(Number(m[1]), m[2]);
+    return;
+  }
+  if(e.key.length === 1) qrScanBuf = (qrScanBuf + e.key).slice(-60);
+}, true);
+
+async function openScannedOrder(orderId, code){
+  if(document.getElementById('appScreen').style.display === 'none') return; // not signed in
+  const btn = document.querySelector('.tabbtn[data-tab="openorders"]');
+  if(!btn || getComputedStyle(btn).display === 'none') return alert('Scanned order ' + code + ': open the Open Orders screen on a counter login to find it.');
+  playSfx('tap');
+  btn.click();
+  document.getElementById('searchPhoneInput').value = '';
+  document.getElementById('searchCodeInput').value = code;
+  await filterOpenOrders();
+  const found = allOpenOrders.some(o => o.id === orderId || String(o.code) === String(code));
+  if(!found) alert('Scanned order ' + code + ' was not found at this branch. It may be from another branch, or too old to show.');
 }
 
 // ---------- EXPENSES ----------
