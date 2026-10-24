@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-4">
+<meta name="app-build" content="2026-10-24-5">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2414,12 +2414,12 @@
       <div class="no-step no-step-pay"><span class="no-step-n">3</span><span class="kk-ur">پیسے</span> Money and save</div>
       <div class="payment-inputs-row">
         <div class="field">
-          <label data-i18n="lbl_discount" data-ur="رعایت">Discount %</label>
+          <label data-i18n="lbl_discount" data-ur="ڈسکاؤنٹ">Discount %</label>
           <input type="number" id="discountInput" oninput="clampDiscountInput(this); renderItemsList()" value="0" min="0" max="100" step="0.5">
           <div id="discountAmountPreview" class="small"></div>
         </div>
         <div class="field">
-          <label data-i18n="lbl_advance" data-ur="ابھی ملے">Advance Paid (Rs)</label>
+          <label data-i18n="lbl_advance" data-ur="ایڈوانس">Advance Paid (Rs)</label>
           <input type="number" id="advanceInput" oninput="renderItemsList()" placeholder="0" min="0">
         </div>
         <div class="field">
@@ -2428,10 +2428,10 @@
         </div>
       </div>
       <div class="ledger-strip">
-        <div class="ledger-stat"><span class="ledger-stat-label" data-ur="رقم">Subtotal</span><span class="ledger-stat-value" id="subtotalDisplay">Rs 0</span></div>
-        <div class="ledger-stat"><span class="ledger-stat-label" data-ur="ملے">Advance Paid</span><span class="ledger-stat-value" id="advanceDisplay">Rs 0</span></div>
+        <div class="ledger-stat"><span class="ledger-stat-label" data-ur="سب ٹوٹل">Subtotal</span><span class="ledger-stat-value" id="subtotalDisplay">Rs 0</span></div>
+        <div class="ledger-stat"><span class="ledger-stat-label" data-ur="ایڈوانس">Advance Paid</span><span class="ledger-stat-value" id="advanceDisplay">Rs 0</span></div>
         <div class="ledger-stat" id="tenderedChangeLine" style="display:none;"><span class="ledger-stat-label" data-ur="واپس دیں">Change to Give</span><span class="ledger-stat-value" id="tenderedChangeDisplay">Rs 0</span></div>
-        <div class="ledger-stat ledger-stat-balance"><span class="ledger-stat-label" data-ur="باقی">Balance Due</span><span class="ledger-stat-value" id="balanceDisplay">Rs 0</span></div>
+        <div class="ledger-stat ledger-stat-balance"><span class="ledger-stat-label" data-ur="بقایا">Balance Due</span><span class="ledger-stat-value" id="balanceDisplay">Rs 0</span></div>
         <div class="ledger-stat ledger-stat-total"><span class="ledger-stat-label" data-ur="کل رقم">Total</span><span class="ledger-stat-value" id="grandTotalDisplay">Rs 0</span></div>
       </div>
       <!-- Only shown when the cart contains a Wash + Dry Clean item — see
@@ -2662,7 +2662,6 @@
         <div id="kkMonthStats" class="kk-stats"></div>
         <div id="kkMonthCats"></div>
         <div id="kkMonthShops"><div class="small">Loading…</div></div>
-        <div id="kkShopDetail"></div>
       </div>
     </details>
 
@@ -3100,7 +3099,6 @@
     <div class="modal-box" style="max-width:600px;">
       <div class="modal-header">
         <h2>↩ Customer Return</h2>
-        <button class="modal-close-btn" onclick="closeReturnModal()">Cancel</button>
       </div>
       <div class="modal-body">
         <div id="returnOrderLine" style="font-weight:700;margin-bottom:6px;"></div>
@@ -3122,7 +3120,6 @@
     <div class="modal-box" style="max-width:560px;">
       <div class="modal-header">
         <h2>Why a different price?</h2>
-        <button class="modal-close-btn" onclick="closePriceNotes(false)">Cancel</button>
       </div>
       <div class="modal-body">
         <p class="small" style="margin-top:0;">This customer has been charged a different price for the same item before. Add a short reason — it is saved in the customer's price history.</p>
@@ -3153,7 +3150,6 @@
     <div class="modal-box" style="max-width:420px;">
       <div class="modal-header">
         <h2>Who's Collecting the Order?</h2>
-        <button class="modal-close-btn" onclick="closeDispatchReceiverModal()">Close</button>
       </div>
       <div class="modal-body">
         <p class="small" style="margin-top:0;">Record who is physically taking the clothes back — this name/number is added to the dispatch WhatsApp/SMS message and printed on the closing bill.</p>
@@ -3186,7 +3182,6 @@
     <div class="modal-box" style="max-width:480px;">
       <div class="modal-header">
         <h2>Check Items — <span id="itemCheckCode"></span></h2>
-        <button class="modal-close-btn" onclick="closeItemCheckModal()">Close</button>
       </div>
       <div class="modal-body">
         <p class="small" style="margin-top:0;">Tap OK on each item as it comes off the line. Once every item is OK, this order moves to Ready and the customer is notified automatically — no extra tap needed.</p>
@@ -3203,17 +3198,16 @@
     <div class="modal-box" style="max-width:420px;">
       <div class="modal-header">
         <h2>Collect Payment</h2>
-        <button class="modal-close-btn" onclick="closeDispatchCashModal()">Close</button>
       </div>
       <div class="modal-body">
         <div class="row" style="justify-content:space-between;margin-bottom:6px;">
           <span class="small" data-ur="کل رقم">Order Total</span><strong id="dcTotal">Rs 0</strong>
         </div>
         <div class="row" style="justify-content:space-between;margin-bottom:6px;">
-          <span class="small" data-ur="پہلے ملے">Advance Already Paid</span><strong id="dcAdvance">Rs 0</strong>
+          <span class="small" data-ur="ایڈوانس">Advance Already Paid</span><strong id="dcAdvance">Rs 0</strong>
         </div>
         <div class="row" style="justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border,#ddd);">
-          <span class="small" data-ur="باقی">Balance Due</span><strong id="dcBalanceDue" style="color:var(--warn);font-size:18px;">Rs 0</strong>
+          <span class="small" data-ur="بقایا">Balance Due</span><strong id="dcBalanceDue" style="color:var(--warn);font-size:18px;">Rs 0</strong>
         </div>
 
         <div class="field">
@@ -3269,14 +3263,13 @@
           <h2>⚙ Partial Dispatch</h2>
           <span id="pdOrderLine" style="font-size:13px;color:var(--muted);font-family:var(--font-mono);font-style:normal;"></span>
         </div>
-        <button class="modal-close-btn" onclick="closePartialDispatchModal()">Close</button>
       </div>
       <div class="modal-body">
 
         <!-- Balance + remaining summary banner -->
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;background:var(--accent-2-soft);border:1px solid var(--accent-2);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:3px;" data-ur="باقی">Balance Due</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:3px;" data-ur="بقایا">Balance Due</div>
             <strong id="pdBalanceDue" style="font-size:20px;color:var(--warn);">Rs 0</strong>
           </div>
           <div style="flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;">
@@ -3319,7 +3312,7 @@
           </div>
           <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line);">
             <div>
-              <div style="font-size:12px;color:var(--muted);" data-ur="نیا باقی">New Balance After</div>
+              <div style="font-size:12px;color:var(--muted);" data-ur="نیا بقایا">New Balance After</div>
               <strong id="pdNewBalance" style="font-size:17px;color:var(--warn);">—</strong>
             </div>
             <div style="text-align:right;">
@@ -3416,7 +3409,6 @@
           <h2>📝 Order Notes</h2>
           <span id="noteOrderLine" style="font-size:13px;color:var(--muted);font-family:var(--font-mono);font-style:normal;"></span>
         </div>
-        <button class="modal-close-btn" onclick="closeOrderNoteModal()">Close</button>
       </div>
       <div class="modal-body">
         <div id="noteTimelineBody" class="note-timeline"></div>
@@ -3443,7 +3435,6 @@
     <div class="modal-box" style="max-width:460px;">
       <div class="modal-header">
         <h2>Send SMS via Messages for Web</h2>
-        <button class="modal-close-btn" onclick="closeSmsHelperModal()">Close</button>
       </div>
       <div class="modal-body">
         <p class="small" style="margin-top:0;">Google Messages for Web can't be pre-filled automatically. Copy each piece below, then paste it into the chat.</p>
@@ -3477,7 +3468,6 @@
     <div class="modal-box" style="max-width:420px;">
       <div class="modal-header">
         <h2 id="deleteConfirmTitle">Confirm Deletion</h2>
-        <button class="modal-close-btn" onclick="closeDeleteConfirmModal()">Close</button>
       </div>
       <div class="modal-body">
         <p id="deleteConfirmLabel" class="small" style="margin-top:0;"></p>
@@ -5077,9 +5067,6 @@ async function renderOpenOrdersRows(list){
     const checkedItemsCount = itemsForCheck.filter(it => it && it.checked).length;
     const allItemsChecked = orderItemsAllChecked(o);
     const checkItemsBtn = `<button class="btn-secondary" onclick="openItemCheckModal(${readyArgs})">☑ Check Items (${checkedItemsCount}/${totalItemsCount})</button>`;
-    const gatedReadyBtn = allItemsChecked
-      ? `<button class="btn-secondary" disabled title="All items checked — this order moves to Ready automatically">✓ Ready</button>`
-      : `<button class="btn-secondary" disabled title="Mark every item OK first (use Check Items)">Ready</button>`;
 
     // A partially_dispatched order only belongs with the fully-Ready
     // orders once every remaining line item has actually been OK'd —
@@ -5100,7 +5087,7 @@ async function renderOpenOrdersRows(list){
         partialBtn +
         ` <button class="btn-secondary" onclick="reprintOrderReceipt(${reprintArgs})">Reprint Booking Receipt</button> ${noteBtn}`;
     } else {
-      actions = `${returnBtn} ${checkItemsBtn} ${gatedReadyBtn} ` +
+      actions = `${returnBtn} ${checkItemsBtn} ` +
         `<button class="btn-secondary" ${offlineDisabled} onclick="openDispatchReceiverModal(${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')">Close / Dispatched</button> ` +
         partialBtn +
         ` <button class="btn-secondary" onclick="reprintOrderReceipt(${reprintArgs})">Reprint Booking Receipt</button> ${noteBtn}`;
@@ -5185,9 +5172,6 @@ async function renderOpenOrdersRows(list){
     + sectionHtml('Dispatched', archivedGroup, 'dispatched');
 }
 
-// Filters by phone and/or code. Either box can be left empty — whichever
-// box has text in it is used to narrow the list; if both have text, an
-// order must match both to show up.
 // Filters by phone and/or code. Either box can be left empty — whichever
 // box has text in it is used to narrow the list; if both have text, an
 // order must match both to show up.
@@ -7915,7 +7899,12 @@ const ITEM_PICTURES = [
   [/frock|gown/, 'skirt', 'فراک'], [/bed ?sheet/, 'sheet', 'چادر'], [/blanket/, 'sheet', 'کمبل'],
   [/razai|quilt|comforter|duvet/, 'sheet', 'رضائی'], [/pillow/, 'sheet', 'تکیہ'],
   [/curtain|parda/, 'curtain', 'پردہ'], [/towel/, 'towel', 'تولیہ'], [/carpet|rug/, 'carpet', 'قالین'],
-  [/sofa/, 'sofa', 'صوفہ']
+  [/sofa|seat cover/, 'sofa', 'صوفہ کور'], [/kambal|flai/, 'sheet', 'کمبل'], [/chadder|chadar|chaddar/, 'sheet', 'چادر'],
+  [/takkiya|takia/, 'sheet', 'تکیہ کور'], [/bed ?cover/, 'sheet', 'بیڈ کور'], [/khais|khes/, 'sheet', 'کھیس'],
+  [/gari cover|car cover/, 'sheet', 'گاڑی کور'], [/chandni/, 'carpet', 'چاندنی'], [/burqa|burka/, 'kameez', 'برقعہ'],
+  [/gharara/, 'skirt', 'غرارہ'], [/maxi/, 'skirt', 'میکسی'], [/blouse/, 'shirt', 'بلاؤز'], [/banyan|baniyan/, 'shirt', 'بنیان'],
+  [/dangeri|dungaree/, 'trouser', 'ڈانگری'], [/stoller|stole/, 'drape', 'سٹول'], [/socks/, 'other', 'جرابیں'],
+  [/topi|cap\b/, 'other', 'ٹوپی'], [/\btie\b/, 'other', 'ٹائی'], [/bachgana/, 'kameez', 'بچگانہ']
 ];
 const CATEGORY_UR = { wash_dryclean: 'دھلائی', press_only: 'استری' };
 function itemPicture(name){
@@ -10776,7 +10765,7 @@ let kkSheet = null;      // the open entry sheet's state
 
 // Plain-words balance: what the shop owes us, nothing, or paid ahead.
 function kkBalanceLabel(bal){
-  if(bal > 0) return { cls:'is-due', ur:'باقی', en:'Owes you' };
+  if(bal > 0) return { cls:'is-due', ur:'بقایا', en:'Owes you' };
   if(bal < 0) return { cls:'is-advance', ur:'ایڈوانس', en:'Paid extra' };
   return { cls:'is-clear', ur:'حساب کتاب', en:'All clear' };
 }
@@ -10823,7 +10812,7 @@ function renderKkHome(){
   const pcsToday = todayRows.reduce((t, r) => t + (Number(r.total_pieces) || 0), 0);
   const gotToday = todayRows.reduce((t, r) => t + (Number(r.paid) || 0), 0);
   document.getElementById('kkTotals').innerHTML = `
-    <div class="kk-total is-due"><span class="kk-ur">کل باقی</span><span class="kk-en">All shops owe you</span><b>${kkMoney(totalDue)}</b></div>
+    <div class="kk-total is-due"><span class="kk-ur">کل بقایا</span><span class="kk-en">All shops owe you</span><b>${kkMoney(totalDue)}</b></div>
     <div class="kk-total is-in">${kkIcon('shirt')}<span class="kk-ur">آج کپڑے آئے</span><span class="kk-en">Clothes in today</span><b>${pcsToday} pcs</b></div>
     <div class="kk-total is-pay">${kkIcon('money')}<span class="kk-ur">آج پیسے ملے</span><span class="kk-en">Money in today</span><b>${kkMoney(gotToday)}</b></div>`;
 
@@ -11218,12 +11207,11 @@ async function loadKarkhanaMonth(){
     return;
   }
   const rows = monthRes.data || [];
-  const lifetime = {}, opening = {};
+  const lifetime = {};
   (allRes.data || []).forEach(r => {
     const k = kkShopKey(r.shop_name);
     const net = (Number(r.charges) || 0) - (Number(r.paid) || 0);
     lifetime[k] = (lifetime[k] || 0) + net;
-    if(r.entry_date < from) opening[k] = (opening[k] || 0) + net;
   });
   const totalOutstanding = Object.values(lifetime).reduce((s, v) => s + v, 0);
   document.getElementById('kkMonthStats').innerHTML = kkStatsHtml(rows, `<div class="is-due"><span>Total outstanding (all time)</span><b>${kkMoney(totalOutstanding)}</b></div>`);
@@ -11240,113 +11228,22 @@ async function loadKarkhanaMonth(){
     s.rows.push(r);
   });
   const list = Object.entries(shops).sort((a, b) => b[1].pieces - a[1].pieces);
-  kkMonthShopList = list.map(([k, s]) => ({ ...s, opening: opening[k] || 0, monthLabel: formatMonthLabel(month) }));
-  const openName = kkOpenShopName;
-  document.getElementById('kkShopDetail').innerHTML = '';
   if(!list.length){
     shopsEl.innerHTML = '<div class="small">No Karkhana entries this month.</div>';
     return;
   }
-  shopsEl.innerHTML = `<div class="small" style="margin-bottom:4px;">Click a shop to see its month day by day — clothes, payments and times.</div><div class="kk-lines-wrap"><table>
+  shopsEl.innerHTML = `<div class="small" style="margin-bottom:4px;">Tap a shop to open its khata.</div><div class="kk-lines-wrap"><table>
     <thead><tr><th>Shop</th><th class="kk-num">Days</th><th class="kk-num">Pcs</th><th>Cloth Types</th><th class="kk-num">Charges</th><th class="kk-num">Paid</th><th class="kk-num">Month Balance</th><th class="kk-num">Total Outstanding</th></tr></thead>
     <tbody>${list.map(([k, s], i) => {
       const cats = kkCategoryTotals(s.rows).map(([c, q]) => `${escHtml(c)}: ${q} pcs`).join(', ');
       const out = lifetime[k] || 0;
-      return `<tr class="kk-shop-row" data-idx="${i}" onclick="openKkShopMonth(${i})" title="Show day-by-day detail"><td><b>${escHtml(s.name)}</b><span class="kk-open-hint">›</span></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
+      return `<tr class="kk-shop-row" onclick="openKkKhata('${jsArg(k)}')" title="Open this shop's khata"><td><b>${escHtml(s.name)}</b><span class="kk-open-hint">›</span></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
         <td class="kk-num">${kkMoney(s.charges)}</td><td class="kk-num">${kkMoney(s.paid)}</td><td class="kk-num">${kkMoney(s.charges - s.paid)}</td>
         <td class="kk-num" style="${out > 0 ? 'color:var(--accent-2);font-weight:700;' : ''}">${kkMoney(out)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
-  // Keep the same shop open after a refresh / new entry.
-  if(openName){
-    const i = kkMonthShopList.findIndex(s => kkShopKey(s.name) === kkShopKey(openName));
-    if(i >= 0) openKkShopMonth(i, true);
-  }
 }
 
-// ---- one shop's month, day by day ----
-let kkMonthShopList = [];
-let kkOpenShopName = null;
 function kkTime(ts){ return new Date(ts).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }); }
-
-function openKkShopMonth(i, keepScroll){
-  const s = kkMonthShopList[i];
-  if(!s) return;
-  kkOpenShopName = s.name;
-  document.querySelectorAll('.kk-shop-row').forEach(tr => tr.classList.toggle('active', Number(tr.dataset.idx) === i));
-
-  const byDay = {};
-  s.rows.forEach(r => (byDay[r.entry_date] = byDay[r.entry_date] || []).push(r));
-  const days = Object.keys(byDay).sort();
-  let running = s.opening;
-
-  const dayHtml = days.map(date => {
-    const rows = byDay[date].sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const pieces = rows.reduce((t, r) => t + (Number(r.total_pieces) || 0), 0);
-    const charged = rows.reduce((t, r) => t + (Number(r.charges) || 0), 0);
-    const paid = rows.reduce((t, r) => t + (Number(r.paid) || 0), 0);
-    running += charged - paid;
-
-    const events = [];
-    rows.forEach(r => {
-      const items = r.items || [];
-      if(items.length || Number(r.charges)){
-        const list = items.map(it => `<li><b>${escHtml(it.category)}: ${escHtml(it.qty)} pcs</b>${Number(it.rate) ? ` <span class="small">@ ${kkMoney(it.rate)} / pc</span>` : ''}${it.detail ? ` — ${escHtml(it.detail)}` : ''}</li>`).join('');
-        events.push(`<div class="kk-ev"><span class="kk-ev-time">${kkTime(r.created_at)}</span><span class="kk-ev-tag is-in">Clothes</span>
-          <div class="kk-ev-body"><div>${Number(r.total_pieces) || 0} pcs received · charged <b>${kkMoney(r.charges)}</b></div>${list ? `<ul>${list}</ul>` : ''}</div></div>`);
-      }
-      if(Number(r.paid)){
-        events.push(`<div class="kk-ev"><span class="kk-ev-time">${kkTime(r.created_at)}</span><span class="kk-ev-tag is-pay">Payment</span>
-          <div class="kk-ev-body">Paid <b>${kkMoney(r.paid)}</b></div></div>`);
-      }
-      if(r.note) events.push(`<div class="kk-ev kk-ev-note"><span class="kk-ev-time"></span><span class="small">Note: ${escHtml(r.note)}</span></div>`);
-    });
-
-    return `<div class="kk-day">
-      <div class="kk-day-head">
-        <b>${escHtml(new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }))}</b>
-        ${pieces || charged ? `<span>${pieces} pcs</span><span>Charged ${kkMoney(charged)}</span>` : ''}${paid ? `<span>Paid ${kkMoney(paid)}</span>` : ''}
-        <span class="${running > 0 ? 'is-due' : 'is-clear'}">Balance after day: ${kkMoney(running)}</span>
-      </div>
-      ${events.join('')}
-    </div>`;
-  }).join('');
-
-  const el = document.getElementById('kkShopDetail');
-  el.innerHTML = `<div class="kk-shop-detail">
-    <div class="kk-head">
-      <div><div style="font-size:17px;font-weight:700;">${escHtml(s.name)}</div><div class="small">${escHtml(s.monthLabel)} · day by day</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn-secondary" onclick="kkRecordPaymentFor(${i})">+ Record Payment</button>
-        <button class="btn-secondary" onclick="closeKkShopMonth()">Close</button>
-      </div>
-    </div>
-    <div class="kk-stats">
-      <div><span>Brought forward</span><b>${kkMoney(s.opening)}</b></div>
-      <div><span>Clothes this month</span><b>${s.pieces} pcs</b></div>
-      <div><span>Charged</span><b>${kkMoney(s.charges)}</b></div>
-      <div><span>Paid</span><b>${kkMoney(s.paid)}</b></div>
-      <div class="is-due"><span>Balance at month end</span><b>${kkMoney(running)}</b></div>
-    </div>
-    ${kkCategoryChips(s.rows)}
-    ${dayHtml}
-  </div>`;
-  if(!keepScroll) el.scrollIntoView({ behavior:'smooth', block:'start' });
-}
-function closeKkShopMonth(){
-  kkOpenShopName = null;
-  document.getElementById('kkShopDetail').innerHTML = '';
-  document.querySelectorAll('.kk-shop-row').forEach(tr => tr.classList.remove('active'));
-}
-// Shops often pay 2-3 days after handing over clothes: open that shop's
-// khata with the Money received sheet ready.
-function kkRecordPaymentFor(i){
-  const s = kkMonthShopList[i];
-  if(!s) return;
-  const key = kkShopKey(s.name);
-  if(!kkShopMap[key]) return;
-  openKkKhata(key);
-  openKkSheet('money');
-}
 
 // ---------- ADMIN DASHBOARD ----------
 function branchName(id){ return (branches.find(b => b.id === id) || {}).name || id; }
@@ -12991,7 +12888,7 @@ const I18N = {
   th_qty:              { en: 'Qty',                     ur: 'تعداد' },
   th_price:            { en: 'Price',                   ur: 'قیمت' },
   th_linetotal:        { en: 'Line Total',               ur: 'کل رقم' },
-  lbl_discount:        { en: 'Discount % (optional)',   ur: 'رعایت % (اختیاری)' },
+  lbl_discount:        { en: 'Discount % (optional)',   ur: 'ڈسکاؤنٹ % (اختیاری)' },
   lbl_advance:         { en: 'Advance Paid (Rs) — required', ur: 'ایڈوانس ادائیگی (روپے) — لازمی' },
   lbl_tendered:        { en: 'Cash Tendered (Optional)', ur: 'موصول رقم (اختیاری)' },
   btn_save:            { en: 'Save Order & Print Receipt', ur: 'آرڈر محفوظ کریں اور رسید پرنٹ کریں' },
@@ -13038,29 +12935,29 @@ const URDU_WORDS = {
   'close / dispatched':'گاہک کو دے دیا', 'notify again':'دوبارہ میسج', 'partial':'کچھ کپڑے دیں',
   'reprint booking receipt':'رسید دوبارہ', 'print bill':'بل چھاپیں', 'resend dispatch msg':'میسج دوبارہ',
   'return':'واپسی', 'note':'نوٹ', 'history':'ریکارڈ', 'same as customer (autofill)':'وہی گاہک',
-  'confirm & dispatch':'دے دیں', 'release items':'کپڑے دیں', 'exact balance':'پورا باقی',
+  'confirm & dispatch':'دے دیں', 'release items':'کپڑے دیں', 'exact balance':'پورا بقایا',
   'save return':'واپسی محفوظ کریں', 'fixed & handed back':'ٹھیک کر کے دے دیا', 'back to order':'آرڈر پر واپس',
   'save reasons & continue':'محفوظ کریں', '+ add expense':'خرچہ لکھیں', 'save expense':'خرچہ لکھیں',
   'mark urgent':'جلدی کریں', 'download image':'تصویر لیں', 'record salary payment':'تنخواہ لکھیں',
   'back to dashboard':'واپس', 'back to admin dashboard':'واپس',
   // fields and headings
   'code':'کوڈ', 'phone':'فون', 'name':'نام', 'customer':'گاہک', 'items':'کپڑے', 'item':'کپڑا', 'total':'کل رقم',
-  'advance':'ملے', 'balance due':'باقی', 'status':'حالت', 'state':'حالت', 'urgent':'جلدی', 'vip':'خاص گاہک',
+  'advance':'ایڈوانس', 'balance due':'بقایا', 'advance paid':'ایڈوانس', 'balance':'بقایا', 'status':'حالت', 'state':'حالت', 'urgent':'جلدی', 'vip':'خاص گاہک',
   'booked':'بکنگ', 'dispatched at':'کب دیا', 'received by':'کس نے لیا', 'actions':'کام', 'action':'کام',
   'collect by':'واپسی کا دن', 'overdue by':'کتنی دیر', 'last notified':'آخری میسج', 'ordered':'کل',
   'released':'دے دیے', 'remaining':'باقی', 'release now':'ابھی دیں', 'service':'سروس', 'qty':'تعداد',
   'price':'قیمت', 'price (rs)':'قیمت', 'line total':'رقم', 'amount':'رقم', 'category':'قسم', 'reason':'وجہ',
   'date':'تاریخ', 'time':'وقت', 'month':'مہینہ', 'select month':'مہینہ', 'viewing month':'مہینہ',
-  'note (optional)':'نوٹ', 'details':'تفصیل', 'type':'قسم', 'subtotal':'رقم', 'discount':'رعایت',
+  'note (optional)':'نوٹ', 'details':'تفصیل', 'type':'قسم', 'subtotal':'سب ٹوٹل', 'discount':'ڈسکاؤنٹ', 'discount %':'ڈسکاؤنٹ',
   'search by phone':'فون سے تلاش', 'search by code':'کوڈ سے تلاش', 'receiver name':'لینے والے کا نام',
   'receiver phone':'لینے والے کا فون', 'receiver phone (optional, if different from customer)':'لینے والے کا فون',
   'amount received from customer':'گاہک سے ملے', 'logged this session':'ابھی لکھے گئے خرچے',
   'browse expense history':'پرانے خرچے', 'recently fixed & handed back':'ٹھیک کر کے واپس',
   'worker':'ملازم', 'worker name':'ملازم کا نام', 'branch':'برانچ', 'expenses':'خرچے', 'salaries':'تنخواہیں',
   'rent':'کرایہ', 'gas':'گیس', 'electricity':'بجلی', 'chemicals':'کیمیکل', 'net cash':'بچت', 'total cash':'کل کیش',
-  'total cash in':'کل آمدن', 'cash collected':'وصول کیش', 'recovered':'وصول', 'balance recovered':'باقی وصول',
-  'orders':'آرڈر', 'orders booked':'آرڈر بک', 'value booked':'بکنگ کی رقم', 'pending total':'باقی رقم',
-  'pending (uncollected)':'باقی (نہیں لیے)', 'item name':'کپڑے کا نام', 'message':'میسج', 'by':'کس نے',
+  'total cash in':'کل آمدن', 'cash collected':'وصول کیش', 'recovered':'وصول', 'balance recovered':'بقایا وصول',
+  'orders':'آرڈر', 'orders booked':'آرڈر بک', 'value booked':'بکنگ کی رقم', 'pending total':'بقایا رقم',
+  'pending (uncollected)':'بقایا (نہیں لیے)', 'item name':'کپڑے کا نام', 'message':'میسج', 'by':'کس نے',
   // popup titles
   'customer return':'گاہک کی واپسی', "who's collecting the order?":'کپڑے کون لے رہا ہے؟',
   'collect payment':'پیسے لیں', 'order dispatched':'آرڈر دے دیا', 'partial dispatch':'کچھ کپڑے دیں',
@@ -13131,7 +13028,7 @@ const PAGE_HELP = {
   karkhana: {
     title: "Karkhana",
     topics: [
-      { label:"Dukaan chunein", text:"Har dukaan ka apna card hai. Laal rang = paise baqi hain, hara = hisaab kitaab barabar. Card dabayein to us dukaan ka khata khulta hai." },
+      { label:"Dukaan chunein", text:"Har dukaan ka apna card hai. Laal rang = baqaya hai, hara = hisaab kitaab barabar. Card dabayein to us dukaan ka khata khulta hai." },
       { label:"Kapray aaye", text:"Neela button dabayein. Har kapray ki tasveer ko ek dafa dabane se ek piece judta hai, ya ginti likh dein. Rate pichli dafa wala khud aa jata hai. Phir Save." },
       { label:"Paise mile", text:"Hara button dabayein, raqam likhein ya 'Full amount' dabayein, phir Save payment." },
       { label:"Nayi dukaan", text:"Pehla card 'New shop' hai. Naam likh kar khata kholein, phir kapray ya paise darj karein." },
