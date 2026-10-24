@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-2">
+<meta name="app-build" content="2026-10-24-3">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2085,6 +2085,122 @@
     .kk-total{grid-template-columns:1fr;padding:10px 12px;}
   }
 
+  /* ---- NEW ORDER for low-literacy staff (V4): three numbered steps,
+     a picture + Urdu name on every rate card, Urdu beside every label.
+     data-ur="…" puts the Urdu word in front of a label without touching
+     its text, so the EN/UR toggle keeps working; in Urdu mode a label the
+     toggle translates (data-i18n) is already Urdu, so the extra word is
+     hidden there. ---- */
+  [data-ur]::before{
+    content:attr(data-ur);font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaliq','Noto Naskh Arabic',serif;
+    font-weight:600;direction:rtl;unicode-bidi:isolate;margin-right:.45em;line-height:1.8;
+    text-transform:none;letter-spacing:0;
+  }
+  html[dir="rtl"] [data-i18n][data-ur]::before{content:none;}
+
+  /* step order on screen: 1 customer, 2 clothes, then the cart */
+  .neworder-grid{grid-template-columns:minmax(0,1fr) minmax(340px,420px);}
+  .neworder-menu{grid-column:1;grid-row:2;}
+  .neworder-left{grid-column:2;grid-row:2;}
+  @media (max-width:1150px){
+    .neworder-grid{grid-template-columns:1fr;}
+    .neworder-menu{grid-column:1;grid-row:2;}
+    .neworder-left{grid-column:1;grid-row:3;}
+  }
+
+  .no-step{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;font-size:17px;font-weight:800;color:var(--ink);margin-bottom:12px;}
+  .no-step .kk-ur{font-size:19px;line-height:1.7;margin:0;}
+  .no-step-n{
+    width:34px;height:34px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--neel);color:#fff;font-size:17px;font-weight:800;
+  }
+  .no-step-hint{font-size:13px;font-weight:500;color:var(--muted);}
+  .no-step-pay{margin-bottom:4px;font-size:14px;}
+  .no-step-pay .no-step-n{width:26px;height:26px;font-size:14px;}
+  .no-step-pay .kk-ur{font-size:15px;}
+
+  .neworder-top label, .neworder-left .panel > label{font-size:13.5px;}
+  .neworder-top label::before, .neworder-left .panel > label::before{font-size:15px;}
+  #phoneInput{font-size:18px;font-weight:700;letter-spacing:.02em;}
+
+  /* rate cards: big tappable picture on top */
+  .menu-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .menu-card{padding:8px 10px 10px;gap:6px;min-height:0;}
+  .menu-face{
+    display:grid;justify-items:center;gap:0;width:100%;font:inherit;cursor:pointer;
+    background:rgba(255,255,255,.65);border:none;border-radius:12px;padding:10px 4px 4px;color:var(--cat-text,var(--neel-2));
+    transition:transform .15s var(--spring),background-color .15s;
+  }
+  .menu-face:hover{background:#fff;}
+  .menu-face:active{transform:scale(.94);}
+  .menu-face .kk-ico{width:46px;height:46px;stroke-width:1.5;}
+  .menu-ur{font-family:'Noto Nastaliq Urdu','Noto Naskh Arabic',serif;font-size:16px;font-weight:600;line-height:1.9;color:var(--ink);direction:rtl;}
+  .menu-card .menu-name .n{font-size:13.5px;text-align:center;}
+  .menu-card .menu-name{text-align:center;}
+  .menu-price{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;font-weight:700;color:var(--muted);}
+  .menu-price .menu-price-input{flex:1;min-width:0;padding:6px 8px;font-size:15px;font-weight:700;}
+  .menu-card .qty-stepper button{width:38px;height:38px;font-size:20px;}
+  .menu-card .qty-stepper .qty-val{font-size:20px;font-weight:800;}
+  .menu-card.has-qty .menu-face{background:#fff;}
+
+  /* category headings and filter chips carry a picture too */
+  .menu-cat-heading{display:flex;align-items:center;gap:8px;text-transform:none;font-size:16px;}
+  .menu-cat-heading::before{font-size:19px;color:var(--ink);}
+  .menu-cat-heading[data-cat="wash_dryclean"]::after,
+  .menu-cat-heading[data-cat="press_only"]::after{content:"";width:22px;height:22px;order:-1;background:currentColor;-webkit-mask:var(--cat-ico) center/contain no-repeat;mask:var(--cat-ico) center/contain no-repeat;}
+  [data-cat="wash_dryclean"]{--cat-ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='2' width='18' height='20' rx='2'/><circle cx='12' cy='13' r='5'/><path d='M7 6h2'/></svg>");}
+  [data-cat="press_only"]{--cat-ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 17h18l-1-5a6 6 0 0 0-6-5H8'/><path d='M3 17v2h18v-2M10 11h6'/></svg>");}
+  .chip-btn{font-size:15px;padding:9px 16px;}
+  .chip-btn::before{font-size:16px;}
+
+  /* cart */
+  #itemsTable td{font-size:14.5px;}
+  .add-menu-item-panel{background:transparent;border:1.5px dashed var(--line-strong);padding:10px 16px;}
+  .add-menu-item-panel summary{cursor:pointer;font-size:14px;color:var(--ink-soft);}
+  .add-menu-item-panel[open]{background:var(--purple-soft);border-color:var(--purple);}
+
+  /* money bar: Urdu labels, big total + balance, big green save */
+  .payment-inputs-row label{font-size:11.5px;white-space:normal;overflow:visible;line-height:1.2;color:var(--muted);}
+  .payment-inputs-row label::before{display:block;font-size:15px;color:var(--ink);margin:0;line-height:1.7;}
+  .ledger-strip{flex-wrap:nowrap;gap:4px 18px;}
+  .ledger-stat-label::before{display:block;margin:0;}
+  .payment-inputs-row input{font-size:16px;font-weight:700;padding:7px 10px;}
+  .ledger-stat-label{font-size:12px;}
+  .ledger-stat-label::before{font-size:15px;color:var(--ink);line-height:1.7;}
+  .ledger-stat-balance .ledger-stat-value{font-size:24px;}
+  .ledger-stat-total .ledger-stat-value{font-size:30px;color:var(--ink);}
+  .ledger-stat-value{font-variant-numeric:normal;white-space:nowrap;}
+  .ledger-stat-label{white-space:nowrap;}
+  .neworder-payment #saveOrderBtn{
+    background:var(--ready);box-shadow:0 8px 18px -10px rgba(27,150,85,.8);
+    font-size:17px;font-weight:800;padding:13px 20px;margin-top:8px;border-radius:14px;
+  }
+  .neworder-payment #saveOrderBtn:hover{background:#178048;}
+  .neworder-payment #saveOrderBtn::before{display:block;font-size:19px;margin:0 0 2px;line-height:1.6;}
+  .neworder-payment #saveOrderBtn{line-height:1.25;}
+  .wd-deadline-field label::before, .press-deadline-field label::before{font-size:14px;}
+
+  /* wide screens: money bar in one row — inputs | totals | save */
+  @media (min-width:1180px){
+    .panel.neworder-payment{
+      display:grid;align-items:center;column-gap:20px;row-gap:4px;
+      grid-template-columns:minmax(0,1fr) auto minmax(200px,250px);
+      grid-template-areas:"step ledger save" "inputs ledger save" "wd press save";
+      padding:8px 22px 10px;
+    }
+    .neworder-payment .no-step-pay{grid-area:step;margin:0;}
+    .neworder-payment .payment-inputs-row{grid-area:inputs;}
+    .neworder-payment .ledger-strip{grid-area:ledger;margin:0;border:none;padding:0;justify-content:flex-end;}
+    .neworder-payment #wd-deadline-wrap{grid-area:wd;margin-top:4px;padding:5px 10px;}
+    .neworder-payment #press-deadline-wrap{grid-area:press;margin-top:4px;padding:5px 10px;}
+    .neworder-payment #saveOrderBtn{grid-area:save;margin:0;height:100%;max-height:96px;}
+  }
+  @media (max-width:640px){
+    .menu-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .no-step{font-size:15px;}
+    .ledger-stat-total .ledger-stat-value{font-size:24px;}
+  }
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -2183,26 +2299,27 @@
 
   <!-- TOP: Customer info — spans full width -->
   <div class="neworder-top panel">
+    <div class="no-step"><span class="no-step-n">1</span><span class="kk-ur">گاہک</span> Customer</div>
     <div class="row">
       <div class="field">
-        <label data-i18n="lbl_phone">Customer Phone</label>
+        <label data-i18n="lbl_phone" data-ur="فون نمبر">Customer Phone</label>
         <input type="tel" id="phoneInput" placeholder="03XXXXXXXXX" maxlength="11">
         <div id="phoneError" class="small error"></div>
       </div>
       <div class="field">
-        <label data-i18n="lbl_name">Customer Name</label>
+        <label data-i18n="lbl_name" data-ur="نام">Customer Name</label>
         <input type="text" id="nameInput" placeholder="Name">
       </div>
       <div class="field">
-        <label data-i18n="lbl_code">Order Code (auto, editable)</label>
+        <label data-i18n="lbl_code" data-ur="کوڈ">Order Code (auto, editable)</label>
         <input type="text" id="codeInput" placeholder="last 4 digits" maxlength="8" style="width:110px;">
       </div>
       <div class="field">
-        <label data-i18n="lbl_vip">VIP</label>
+        <label data-i18n="lbl_vip" data-ur="خاص گاہک">VIP</label>
         <button type="button" id="vipToggleBtn" class="btn-secondary vip-toggle-btn vip-simple" onclick="toggleVip()" disabled>Mark VIP</button>
       </div>
       <div class="field">
-        <label data-i18n="lbl_urgent">Urgent</label>
+        <label data-i18n="lbl_urgent" data-ur="جلدی">Urgent</label>
         <button type="button" id="urgentToggleBtn" class="btn-secondary urgent-toggle-btn" onclick="toggleUrgentPanel()">Mark Urgent</button>
       </div>
     </div>
@@ -2220,16 +2337,16 @@
   <!-- BOTTOM LEFT: Items table + Add New Item to Rate List + Payment -->
   <div class="neworder-left">
     <div class="panel">
-      <label data-i18n="lbl_itemsinorder">Items in this order</label>
+      <label data-i18n="lbl_itemsinorder" data-ur="آرڈر کے کپڑے">Items in this order</label>
       <table id="itemsTable">
         <thead><tr><th data-i18n="th_service">Service</th><th data-i18n="th_qty">Qty</th><th data-i18n="th_price">Price</th><th data-i18n="th_linetotal">Line Total</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
-      <div id="emptyItemsHint" class="small" style="margin-top:8px;">Nothing added yet — pick items from the rate list on the right.</div>
+      <div id="emptyItemsHint" class="small" style="margin-top:8px;">Nothing added yet. Tap a cloth picture in step 2.</div>
     </div>
 
-    <div class="add-menu-item-panel">
-      <div class="add-menu-item-heading">+ Add New Item to Rate List</div>
+    <details class="add-menu-item-panel">
+      <summary class="add-menu-item-heading">+ Add new item to rate list</summary>
       <div class="row" style="margin-top:10px;">
         <div class="field">
           <label>Item Name</label>
@@ -2248,31 +2365,32 @@
           <button class="btn-main" onclick="addMenuItemFromPanel()">+ Add to Rate List</button>
         </div>
       </div>
-    </div>
+    </details>
 
     <!-- Payment & Save -->
     <div class="panel neworder-payment">
+      <div class="no-step no-step-pay"><span class="no-step-n">3</span><span class="kk-ur">پیسے</span> Money and save</div>
       <div class="payment-inputs-row">
         <div class="field">
-          <label data-i18n="lbl_discount">Discount %</label>
+          <label data-i18n="lbl_discount" data-ur="رعایت">Discount %</label>
           <input type="number" id="discountInput" oninput="clampDiscountInput(this); renderItemsList()" value="0" min="0" max="100" step="0.5">
           <div id="discountAmountPreview" class="small"></div>
         </div>
         <div class="field">
-          <label data-i18n="lbl_advance">Advance Paid (Rs)</label>
+          <label data-i18n="lbl_advance" data-ur="ابھی ملے">Advance Paid (Rs)</label>
           <input type="number" id="advanceInput" oninput="renderItemsList()" placeholder="0" min="0">
         </div>
         <div class="field">
-          <label data-i18n="lbl_tendered">Cash Tendered</label>
+          <label data-i18n="lbl_tendered" data-ur="گاہک نے دیے">Cash Tendered</label>
           <input type="number" id="tenderedInput" oninput="renderItemsList()" placeholder="Leave blank" min="0">
         </div>
       </div>
       <div class="ledger-strip">
-        <div class="ledger-stat"><span class="ledger-stat-label">Subtotal</span><span class="ledger-stat-value" id="subtotalDisplay">Rs 0</span></div>
-        <div class="ledger-stat"><span class="ledger-stat-label">Advance Paid</span><span class="ledger-stat-value" id="advanceDisplay">Rs 0</span></div>
-        <div class="ledger-stat" id="tenderedChangeLine" style="display:none;"><span class="ledger-stat-label">Change to Give</span><span class="ledger-stat-value" id="tenderedChangeDisplay">Rs 0</span></div>
-        <div class="ledger-stat ledger-stat-balance"><span class="ledger-stat-label">Balance Due</span><span class="ledger-stat-value" id="balanceDisplay">Rs 0</span></div>
-        <div class="ledger-stat ledger-stat-total"><span class="ledger-stat-label">Total</span><span class="ledger-stat-value" id="grandTotalDisplay">Rs 0</span></div>
+        <div class="ledger-stat"><span class="ledger-stat-label" data-ur="رقم">Subtotal</span><span class="ledger-stat-value" id="subtotalDisplay">Rs 0</span></div>
+        <div class="ledger-stat"><span class="ledger-stat-label" data-ur="ملے">Advance Paid</span><span class="ledger-stat-value" id="advanceDisplay">Rs 0</span></div>
+        <div class="ledger-stat" id="tenderedChangeLine" style="display:none;"><span class="ledger-stat-label" data-ur="واپس دیں">Change to Give</span><span class="ledger-stat-value" id="tenderedChangeDisplay">Rs 0</span></div>
+        <div class="ledger-stat ledger-stat-balance"><span class="ledger-stat-label" data-ur="باقی">Balance Due</span><span class="ledger-stat-value" id="balanceDisplay">Rs 0</span></div>
+        <div class="ledger-stat ledger-stat-total"><span class="ledger-stat-label" data-ur="کل رقم">Total</span><span class="ledger-stat-value" id="grandTotalDisplay">Rs 0</span></div>
       </div>
       <!-- Only shown when the cart contains a Wash + Dry Clean item — see
            updateDeadlineVisibility(), called from renderItemsList(). A
@@ -2282,7 +2400,7 @@
            with +48h from now the moment it appears, but the worker can
            still edit it (increase or decrease) before saving. -->
       <div id="wd-deadline-wrap" class="wd-deadline-field">
-        <label for="wd-deadline">Wash + Dry Clean — Collect By Date &amp; Time</label>
+        <label for="wd-deadline" data-ur="دھلائی واپسی کا دن">Wash + Dry Clean — Collect By Date &amp; Time</label>
         <input type="datetime-local" id="wd-deadline" class="hidden" oninput="renderItemsList()">
       </div>
       <!-- Only shown when the cart contains a Press item — see
@@ -2290,19 +2408,19 @@
            Wash/Dry Clean-only orders never see this field; independent from
            the W+D field above, so a mixed order gets both deadlines. -->
       <div id="press-deadline-wrap" class="press-deadline-field">
-        <label for="press-deadline">Press Order — Custom Collect-By Date &amp; Time</label>
+        <label for="press-deadline" data-ur="استری واپسی کا دن">Press Order — Custom Collect-By Date &amp; Time</label>
         <input type="datetime-local" id="press-deadline" class="hidden" required oninput="renderItemsList()">
       </div>
-      <button id="saveOrderBtn" class="btn-main" style="width:100%;" onclick="saveAndPrint()" data-i18n="btn_save">Save Order &amp; Print Receipt</button>
+      <button id="saveOrderBtn" class="btn-main" style="width:100%;" onclick="saveAndPrint()" data-i18n="btn_save" data-ur="محفوظ کریں اور رسید چھاپیں">Save Order &amp; Print Receipt</button>
     </div>
   </div><!-- /neworder-left -->
 
   <!-- BOTTOM RIGHT: Rate list cards only -->
   <div class="neworder-menu panel">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:2px;">
-      <label style="margin:0;">Rate List — tap + / − to add or remove</label>
+      <div class="no-step"><span class="no-step-n">2</span><span class="kk-ur">کپڑے چنیں</span> Pick clothes <span class="no-step-hint">tap a picture once for each piece</span></div>
     </div>
-    <input type="text" id="menuSearchInput" placeholder="Search the rate list…" style="width:100%;margin-bottom:10px;" oninput="renderMenuPanel()">
+    <input type="text" id="menuSearchInput" placeholder="Search  /  تلاش کریں" style="width:100%;margin-bottom:10px;" oninput="renderMenuPanel()">
     <div id="menuCategoryChips" class="chip-bar"></div>
     <div id="menuListContainer" class="menu-list"></div>
   </div><!-- /neworder-menu -->
@@ -3217,23 +3335,23 @@
       </div>
       <div class="modal-body">
         <div class="piece-field">
-          <label for="pieceColorInput">Colour</label>
+          <label for="pieceColorInput" data-ur="رنگ">Colour</label>
           <div class="piece-chips" id="pieceColorChips"></div>
           <input type="text" id="pieceColorInput" maxlength="40" placeholder="Or type a colour, e.g. Off-white" autocomplete="off">
         </div>
         <div class="piece-field">
-          <label for="pieceFabricInput">Cloth type</label>
+          <label for="pieceFabricInput" data-ur="کپڑا">Cloth type</label>
           <div class="piece-chips" id="pieceFabricChips"></div>
           <input type="text" id="pieceFabricInput" maxlength="40" placeholder="Or type a cloth type, e.g. Karandi" autocomplete="off">
         </div>
         <div class="piece-field">
-          <label for="pieceNoteInput">Note <span class="small">(optional)</span></label>
+          <label for="pieceNoteInput" data-ur="نوٹ">Note <span class="small">(optional)</span></label>
           <div class="piece-chips" id="pieceNoteChips"></div>
           <textarea id="pieceNoteInput" maxlength="200" rows="2" placeholder="e.g. Stain on left sleeve"></textarea>
         </div>
         <div class="piece-actions">
-          <button type="button" class="btn-secondary" id="pieceSkipBtn" onclick="submitPieceDetails(true)">Skip details</button>
-          <button type="button" class="btn-main" id="pieceSaveBtn" onclick="submitPieceDetails(false)">Add item</button>
+          <button type="button" class="btn-secondary" id="pieceSkipBtn" data-ur="چھوڑیں" onclick="submitPieceDetails(true)">Skip details</button>
+          <button type="button" class="btn-main" id="pieceSaveBtn" data-ur="شامل کریں" onclick="submitPieceDetails(false)">Add item</button>
         </div>
       </div>
     </div>
@@ -7691,7 +7809,7 @@ function renderMenuCategoryChips(){
   const bar = document.getElementById('menuCategoryChips');
   if(bar){
     const allKeys = getDistinctCategories();
-    const chip = (key, label) => `<button type="button" class="chip-btn${menuCategoryFilter===key?' active':''}" ${key?catStyleAttr(key):''} onclick="setMenuCategoryFilter('${jsArg(key)}')">${escHtml(label)}</button>`;
+    const chip = (key, label) => `<button type="button" class="chip-btn${menuCategoryFilter===key?' active':''}" ${key?catStyleAttr(key):''} data-cat="${escHtml(key)}" ${CATEGORY_UR[key] ? `data-ur="${CATEGORY_UR[key]}"` : (key ? '' : 'data-ur="سب"')} onclick="setMenuCategoryFilter('${jsArg(key)}')">${escHtml(label)}</button>`;
     bar.innerHTML = chip('', 'All') + allKeys.map(k => chip(k, CATEGORY_LABELS[k] || k)).join('');
   }
   // Keep both "add new item" category dropdowns in sync with whatever
@@ -7731,6 +7849,31 @@ function setMenuCategoryFilter(key){
   renderMenuPanel();
 }
 
+// Picture + Urdu name for a rate-list item, guessed from words in its
+// name (display only — the item's real name is never changed). Unknown
+// items get a plain circle-plus and no Urdu. First match wins, so the
+// more specific words come first.
+const ITEM_PICTURES = [
+  [/shalwar|kameez|qameez/, 'kameez', 'شلوار قمیض'], [/kurta|kurti/, 'kameez', 'کرتا'],
+  [/sherwani/, 'sherwani', 'شیروانی'], [/waist ?coat|vest/, 'waistcoat', 'واسکٹ'],
+  [/suit/, 'coat', 'سوٹ'], [/coat|blazer/, 'coat', 'کوٹ'], [/jacket/, 'jacket', 'جیکٹ'],
+  [/sweater|jersey|cardigan/, 'sweater', 'سویٹر'], [/shirt/, 'shirt', 'شرٹ'],
+  [/trouser|pant|jeans/, 'trouser', 'پتلون'], [/dupatta/, 'drape', 'دوپٹہ'], [/shawl/, 'drape', 'شال'],
+  [/saree|sari\b/, 'drape', 'ساڑھی'], [/abaya/, 'kameez', 'عبایہ'], [/lehenga|lehnga/, 'skirt', 'لہنگا'],
+  [/frock|gown/, 'skirt', 'فراک'], [/bed ?sheet/, 'sheet', 'چادر'], [/blanket/, 'sheet', 'کمبل'],
+  [/razai|quilt|comforter|duvet/, 'sheet', 'رضائی'], [/pillow/, 'sheet', 'تکیہ'],
+  [/curtain|parda/, 'curtain', 'پردہ'], [/towel/, 'towel', 'تولیہ'], [/carpet|rug/, 'carpet', 'قالین'],
+  [/sofa/, 'sofa', 'صوفہ']
+];
+const CATEGORY_UR = { wash_dryclean: 'دھلائی', press_only: 'استری' };
+function itemPicture(name){
+  const n = String(name || '').toLowerCase();
+  const hit = ITEM_PICTURES.find(([re]) => re.test(n));
+  let svg = '';
+  try{ svg = kkIcon(hit ? hit[1] : 'other'); }catch(e){} // icons live in the Karkhana section
+  return { svg, ur: hit ? hit[2] : '' };
+}
+
 function renderMenuPanel(){
   const container = document.getElementById('menuListContainer');
   if(!container) return;
@@ -7765,20 +7908,22 @@ function renderMenuPanel(){
     if(!list || !list.length) return;
     const catLabel = CATEGORY_LABELS[catKey] || catKey;
     const catStyle = catStyleAttr(catKey);
-    html += `<div class="menu-cat-heading" ${catStyle}>${escHtml(catLabel)}</div><div class="menu-grid">`;
+    html += `<div class="menu-cat-heading" data-cat="${escHtml(catKey)}" ${CATEGORY_UR[catKey] ? `data-ur="${CATEGORY_UR[catKey]}"` : ''} ${catStyle}>${escHtml(catLabel)}</div><div class="menu-grid">`;
     list.sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
       const service = `${s.name} [${catLabel}]`;
       const searchKey = service.trim().toLowerCase();
       const hasCustomerRate = Object.prototype.hasOwnProperty.call(customerPriceMap, searchKey);
       const priceVal = hasCustomerRate ? customerPriceMap[searchKey] : (s.default_price || 0);
       const qty = currentItems.filter(it => it.service.toLowerCase() === searchKey).reduce((t, it) => t + it.qty, 0);
+      const pic = itemPicture(s.name);
       html += `
         <div class="menu-card${qty>0?' has-qty':''}" ${catStyle} id="menuCard_${s.id}">
+          <button type="button" class="menu-face" onclick="menuAdjustQty(${s.id},1)" aria-label="Add one ${escHtml(s.name)}">${pic.svg}${pic.ur ? `<span class="menu-ur">${pic.ur}</span>` : ''}</button>
           <div class="menu-name">
             <span class="n${hasCustomerRate ? ' customer-rate' : ''}">${escHtml(s.name)}</span>
             ${hasCustomerRate ? '<span class="customer-rate-tag">Usual Rate</span>' : ''}
           </div>
-          <input type="number" class="menu-price-input" id="menuPrice_${s.id}" value="${priceVal}" min="0" oninput="onMenuPriceEdited(${s.id})">
+          <label class="menu-price"><span>Rs</span><input type="number" class="menu-price-input" id="menuPrice_${s.id}" value="${priceVal}" min="0" oninput="onMenuPriceEdited(${s.id})" aria-label="Price for ${escHtml(s.name)}"></label>
           <div class="qty-stepper">
             <button type="button" class="qty-minus" onclick="menuAdjustQty(${s.id},-1)" ${qty<=0?'disabled':''}>&minus;</button>
             <span class="qty-val" id="menuQty_${s.id}">${qty}</span>
@@ -7960,6 +8105,8 @@ function openPieceDetails(opts, onDone){
   document.getElementById('pieceNoteInput').value = d.note || '';
   document.getElementById('pieceSaveBtn').textContent = opts.editing ? 'Save details' : 'Add item';
   document.getElementById('pieceSkipBtn').textContent = opts.editing ? 'Clear details' : 'Skip details';
+  document.getElementById('pieceSaveBtn').dataset.ur = opts.editing ? 'محفوظ کریں' : 'شامل کریں';
+  document.getElementById('pieceSkipBtn').dataset.ur = opts.editing ? 'مٹا دیں' : 'چھوڑیں';
   refreshPieceChips();
   document.getElementById('pieceDetailModal').classList.add('open');
   setTimeout(() => document.getElementById('pieceColorInput').focus(), 50);
@@ -10579,7 +10726,7 @@ let kkSheet = null;      // the open entry sheet's state
 function kkBalanceLabel(bal){
   if(bal > 0) return { cls:'is-due', ur:'باقی', en:'Owes you' };
   if(bal < 0) return { cls:'is-advance', ur:'ایڈوانس', en:'Paid extra' };
-  return { cls:'is-clear', ur:'حساب صاف', en:'All clear' };
+  return { cls:'is-clear', ur:'حساب کتاب', en:'All clear' };
 }
 
 async function loadKarkhanaShops(){
@@ -12786,6 +12933,7 @@ const I18N = {
   lbl_name:            { en: 'Customer Name',           ur: 'کسٹمر کا نام' },
   lbl_code:            { en: 'Order Code (auto, editable)', ur: 'آرڈر کوڈ (خودکار، تبدیل کر سکتے ہیں)' },
   lbl_vip:             { en: 'VIP',                     ur: 'وی آئی پی' },
+  lbl_urgent:          { en: 'Urgent',                  ur: 'جلدی' },
   lbl_itemsinorder:    { en: 'Items in this order',     ur: 'اس آرڈر کے آئٹمز' },
   th_service:          { en: 'Service',                 ur: 'سروس' },
   th_qty:              { en: 'Qty',                     ur: 'تعداد' },
@@ -12838,7 +12986,7 @@ const PAGE_HELP = {
   karkhana: {
     title: "Karkhana",
     topics: [
-      { label:"Dukaan chunein", text:"Har dukaan ka apna card hai. Laal rang = paise baqi hain, hara = hisaab saaf. Card dabayein to us dukaan ka khata khulta hai." },
+      { label:"Dukaan chunein", text:"Har dukaan ka apna card hai. Laal rang = paise baqi hain, hara = hisaab kitaab barabar. Card dabayein to us dukaan ka khata khulta hai." },
       { label:"Kapray aaye", text:"Neela button dabayein. Har kapray ki tasveer ko ek dafa dabane se ek piece judta hai, ya ginti likh dein. Rate pichli dafa wala khud aa jata hai. Phir Save." },
       { label:"Paise mile", text:"Hara button dabayein, raqam likhein ya 'Full amount' dabayein, phir Save payment." },
       { label:"Nayi dukaan", text:"Pehla card 'New shop' hai. Naam likh kar khata kholein, phir kapray ya paise darj karein." },
@@ -12854,6 +13002,7 @@ const PAGE_HELP = {
   neworder: {
     title: "New Order",
     topics: [
+      { label:"3 qadam", text:"1) Gahak ka phone number likhein. 2) Kapray ki tasveer ko har piece ke liye ek dafa dabayein. 3) Neeche 'Abhi mile' mein jitne paise liye woh likhein, phir hara button 'Save' dabayein — rasid chhap jayegi." },
       { label:"Customer Lookup / VIP", text:"Customer ka number ya naam likhne se purani history dikhti hai. VIP mark karne se customer khaas treat hota hai." },
       { label:"Rate List / Category Filter", text:"Neeche rate-list se items select karke order mein add karte hain. Category filter list ko chhota kar deta hai." },
       { label:"Remove Item", text:"Kisi bhi item ko current order se hata sakte hain." },
