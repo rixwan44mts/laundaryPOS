@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-7">
+<meta name="app-build" content="2026-10-24-8">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -3852,6 +3852,23 @@ function playSfx(kind){
     });
   }catch(e){}
 }
+// window.print() freezes the page while the print window is open, which
+// cuts off a sound started at the same moment — so ding first, print a
+// moment later. All four print calls are the last line of their function.
+function printWithSound(){
+  if(!sfxOn){ window.print(); return; }
+  playSfx('ok');
+  setTimeout(() => window.print(), 350);
+}
+// Browsers keep sound locked until the first tap/click on the page; unlock
+// it then, so a ding that follows a save (after the network reply) plays.
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, function unlockSfx(){
+  try{
+    sfxCtx = sfxCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if(sfxCtx.state === 'suspended') sfxCtx.resume();
+  }catch(e){}
+}, { once: true, capture: true }));
+
 function toggleSound(){
   sfxOn = !sfxOn;
   try{ localStorage.setItem('pos_sound', sfxOn ? 'on' : 'off'); }catch(e){}
@@ -6255,6 +6272,7 @@ async function markReady(orderId, phone, code, itemsJson, total, branchNameKey, 
     } else {
       await logActivity('order_ready', `Order ${code || orderId} marked Ready`);
     }
+    playSfx('ok');
   } else {
     await queueOfflineReadyMark(orderId, code, phone);
   }
@@ -6329,6 +6347,7 @@ function renderItemCheckList(){
 // modal and the underlying Open Orders row update instantly.
 async function toggleOrderItemChecked(lineId, nextChecked){
   if(itemCheckOrderId == null) return;
+  playSfx('tap');
   const orderId = itemCheckOrderId;
   const order = allOpenOrders.find(o => o.id === orderId);
 
@@ -7498,7 +7517,7 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
       </div><hr>` : ''}
       <div class="center">Thank you!</div>
     </div>`;
-  window.print();
+  printWithSound();
 }
 
 // ---------- CHANGE DUE CONFIRMATION MODAL ----------
@@ -10330,7 +10349,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
       <div class="center">Thank you!</div>
       <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
     </div>`;
-  window.print();
+  printWithSound();
 }
 
 function printReceipt(orderId, phone, name, code, subtotal, discountPct, discount, total, advancePaid, balanceDue, changeGiven, offlinePending, items, bookingDateOverride, isUrgentOrder, urgentSurcharge, wdCollectByOverride, pressCollectByOverride){
@@ -10469,7 +10488,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       <div class="center">Thank you!</div>
       <div class="center small" style="margin-top:6px;font-weight:700;" dir="rtl" lang="ur">اپنے کاروبار کے لیے جدید POS سافٹ ویئر بنوانے کے لیے رابطہ کریں: 03192335276</div>
     </div>`;
-  window.print();
+  printWithSound();
 }
 
 // ---------- EXPENSES ----------
@@ -10516,6 +10535,7 @@ async function addExpense(){
   }
 
   sessionExpenseLog.push({ amount, category, note, time: new Date().toLocaleTimeString(), queued });
+  playSfx('ok');
   renderExpenseLog();
   document.getElementById('expenseAmount').value = '';
   document.getElementById('expenseNote').value = '';
@@ -10740,7 +10760,7 @@ async function saveReturn(){
     reason
   });
   btn.disabled = false;
-  if(error){ err.textContent = 'Could not save: ' + error.message; return; }
+  if(error){ playSfx('error'); err.textContent = 'Could not save: ' + error.message; return; }
   await logActivity('order_returned', `Order ${o.code || o.id} returned by customer [oid:${o.id}] — ${picked.map(l => l.qty + '× ' + splitServiceLabel(l.service).name).join(', ')} — ${reason}`);
   closeReturnModal();
   showSimpleToast(`Return logged for order ${o.code || o.id} — see the Returns tab.`, true, '↩ Return');
@@ -12772,7 +12792,7 @@ function printAuditBill(){
       <hr>
       <div class="center">Thank you!</div>
     </div>`;
-  window.print();
+  printWithSound();
 }
 
 // ---------- DELETE EXPENSE (admin, password re-entry required) ----------
