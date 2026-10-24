@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-10">
+<meta name="app-build" content="2026-10-24-11">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -7529,7 +7529,7 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
       <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
       <div class="center small">${isFinalRelease ? 'FINAL RELEASE' : 'PARTIAL RELEASE'} — printed ${formatAppDateTime(new Date())}</div>
       <hr>
-      <div class="receipt-line">Order #${orderId} — Code: ${escHtml(code)}</div>
+      <div class="receipt-line">Code: ${escHtml(code)}</div>
       <div class="receipt-line">${escHtml(customerName) || 'Walk-in'} — ${escHtml(phone)}</div>
       ${receiverLine}
       <hr>
@@ -10193,9 +10193,8 @@ setInterval(() => { syncAllPending(true); }, 30000);
 // Same idea as reprintOrderReceipt but for an order still sitting in the
 // local offline queue (see pendingOrderRowHtml) — decodes its stored
 // items and reprints the exact receipt the customer was handed, still
-// with no offline banner or fake order id on the paper (offlinePending
-// only affects whether "Order #..." shows, and this one legitimately has
-// no real order id yet, so it's passed through as true). Shows the time
+// with no offline banner on the paper (offlinePending is passed through
+// as true since this one has no real order id yet). Shows the time
 // it was originally queued, not the time of this reprint.
 function reprintQueuedReceipt(itemsJson, phone, name, code, subtotal, discountPct, discount, total, advancePaid, balanceDue, changeGiven, queuedAt, isUrgentOrder, urgentSurcharge, wdCollectByDateStr, pressCollectByDateStr){
   let items = [];
@@ -10369,7 +10368,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
       <div class="center small">CLOSING BILL — printed ${formatAppDateTime(new Date())}</div>
       ${urgentBillLine}
       <hr>
-      <div class="receipt-line">Order #${orderId} — Code: ${escHtml(code)}</div>
+      <div class="receipt-line">Code: ${escHtml(code)}</div>
       <div class="receipt-line">Booked by: ${escHtml(name) || 'Walk-in'} — ${escHtml(phone)}</div>
       ${bookedLine ? `<div class="small receipt-line">Booked: ${bookedLine}</div>` : ''}
       <div class="small receipt-line">${releases.length > 1 ? 'Last release' : 'Dispatched'}: ${dispatchedLine ? dispatchedLine : '(not recorded)'}</div>
@@ -10518,12 +10517,10 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       ${pressCollectLine}
       <div class="receipt-row"><b>BILL EXPIRY:</b><b>${formatAppDate(expiryDate)}</b></div>
     </div>`;
-  // Offline-queued orders don't have a real server order id yet (only a
-  // local placeholder), so the paper shows just the Code in that case
-  // instead of a confusing "Order #OFFLINE-xxxxxxxx".
-  const orderIdLine = offlinePending
-    ? `Code: ${escHtml(code)}`
-    : `Order #${orderId} — Code: ${escHtml(code)}`;
+  // Only the customer's code goes on paper. The internal order number
+  // (shared by both branches) confused people next to the shop serial;
+  // the QR still carries it for scanning.
+  const orderIdLine = `Code: ${escHtml(code)}`;
   document.getElementById('receipt').innerHTML = `
     <div class="receipt-box">
       <div class="center receipt-branch-name">${branch ? escHtml(branch.name) : 'Get Smart / Brite Star'}</div>
@@ -12792,7 +12789,7 @@ function openAuditBill(orderId){
       <div class="bill-head" style="background:${headerBg};">
         <div class="bill-head-top">
           <h3>${escHtml(o.customer_name || 'Walk-in Customer')}</h3>
-          <div class="bill-code">${o.serial_no ? `Serial <b>${fmtSerial(o.serial_no)}</b> · ` : ''}Order #${o.id}${o.code ? ' · ' + escHtml(o.code) : ''}</div>
+          <div class="bill-code">${o.serial_no ? `Serial <b>${fmtSerial(o.serial_no)}</b> · ` : ''}Code ${escHtml(o.code || '')}</div>
         </div>
         <div class="bill-head-tags">
           <span class="bill-tag-chip bill-tag-status">${statusLabel}</span>
@@ -12910,7 +12907,7 @@ function printAuditBill(){
       <div class="center"><b>Dry Clean &amp; Steam Press Laundry</b></div>
       <div class="center small">${isDispatched ? 'CLOSING BILL' : 'BILL'} — printed ${formatAppDateTime(new Date())}</div>
       <hr>
-      <div class="receipt-line">Order #${o.id} — Code: ${escHtml(o.code || '')}</div>
+      <div class="receipt-line">Code: ${escHtml(o.code || '')}</div>
       <div class="receipt-line">${escHtml(o.customer_name) || 'Walk-in'} — ${escHtml(o.phone || o.customer_phone || '')}</div>
       <div class="small receipt-line">Booked: ${formatAppDateTime(o.created_at)}</div>
       ${dispatchedLine}
