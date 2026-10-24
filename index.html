@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-6">
+<meta name="app-build" content="2026-10-24-7">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2243,6 +2243,21 @@
   .exp-save{font-size:16px;padding:12px 22px;}
   .dash-tile-label[data-ur]::before{display:block;font-size:17px;margin:0;line-height:1.7;}
 
+  /* ---- Dialogs in Urdu with a picture; WhatsApp/SMS buttons; sound switch ---- */
+  .app-dialog-icon{width:60px;height:60px;}
+  .app-dialog-icon svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .app-dialog-body h3{font-size:18px;}
+  .app-dialog-body h3 .kk-ur{font-size:20px;line-height:1.6;}
+  .app-dialog-ur{font-family:'Noto Nastaliq Urdu','Noto Naskh Arabic',serif !important;direction:rtl;text-align:right;font-size:19px !important;line-height:2.1 !important;color:var(--ink) !important;margin:2px 0 6px !important;}
+  #appDialogMsg.is-secondary{font-size:12.5px;color:var(--muted);}
+  .app-dialog-actions .btn-main, .app-dialog-actions .btn-secondary{font-size:16px;padding:12px 22px;min-width:110px;}
+  .app-dialog-actions .is-whatsapp{background:#1FA855;box-shadow:0 8px 18px -10px rgba(31,168,85,.8);}
+  .app-dialog-actions .is-whatsapp::after{content:" واٹس ایپ";font-family:'Noto Nastaliq Urdu',serif;}
+  .app-dialog-actions .is-sms::after{content:" میسج";font-family:'Noto Nastaliq Urdu',serif;}
+  #soundToggleBtn{font-size:17px;padding:5px 11px;}
+  .kk-pending{font-size:12px;font-weight:700;color:var(--printed-ink);background:var(--printed-soft);border-radius:999px;padding:1px 8px;margin-inline-start:6px;}
+  .kk-pending .kk-ur{font-size:13px;line-height:1.5;}
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -2306,6 +2321,7 @@
         <button class="btn-secondary fs-btn" onclick="changeFontSize(-1)" title="Decrease font size">A−</button>
         <button class="btn-secondary fs-btn" onclick="changeFontSize(1)" title="Increase font size">A+</button>
       </div>
+      <button class="btn-secondary" id="soundToggleBtn" onclick="toggleSound()" aria-pressed="true" title="Sound on — tap to mute">🔊</button>
       <button class="btn-secondary" id="langToggleBtn" onclick="toggleLanguage()" title="Switch language">اردو</button>
       <button class="btn-secondary fullscreen-btn admin-only" id="fullscreenBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">⛶ Fullscreen</button>
       <button class="btn-secondary page-help-btn" onclick="showPageHelp()" title="Help for this page">❔ Help</button>
@@ -3609,8 +3625,9 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 // and simply routed here — every one of them is the last thing its code
 // path does before returning, so not blocking is a drop-in change.
 // Dialogs queue: a second message waits until the first is dismissed.
-// confirm() is still native where it's used synchronously; new code uses
-// appConfirm(), which returns a Promise<boolean>.
+// Yes/no questions use appConfirm(), which returns a Promise<boolean>;
+// no native confirm() is left. Each message also gets an Urdu sentence
+// and a picture (URDU_ALERTS) and a sound (playSfx).
 const appDialogQueue = [];
 let appDialogOpen = false;
 let appDialogRestoreFocus = null;
@@ -3643,6 +3660,7 @@ function ensureAppDialogEl(){
       <div class="app-dialog-icon" aria-hidden="true"></div>
       <div class="app-dialog-body">
         <h3 id="appDialogTitle"></h3>
+        <p id="appDialogUr" class="app-dialog-ur" hidden></p>
         <p id="appDialogMsg"></p>
       </div>
       <div class="app-dialog-actions">
@@ -3652,7 +3670,7 @@ function ensureAppDialogEl(){
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape'){ e.preventDefault(); closeAppDialog(false); }
+    if(e.key === 'Escape'){ e.preventDefault(); closeAppDialog(overlay._escape); }
     if(e.key === 'Tab'){
       // keep focus inside the dialog
       const btns = [...overlay.querySelectorAll('button')].filter(b => !b.hidden);
@@ -3673,11 +3691,68 @@ function ensureAppDialogEl(){
 }
 
 const APP_DIALOG_TONES = {
-  info:    { icon: 'i', title: 'Notice' },
-  success: { icon: '✓', title: 'Done' },
-  warn:    { icon: '!', title: 'Check this' },
-  error:   { icon: '✕', title: 'Something went wrong' }
+  info:    { pic: 'info',  title: 'Notice',               ur: 'اطلاع' },
+  success: { pic: 'check', title: 'Done',                 ur: 'ہو گیا' },
+  warn:    { pic: 'warn',  title: 'Check this',           ur: 'دیکھیں' },
+  error:   { pic: 'warn',  title: 'Something went wrong', ur: 'مسئلہ' }
 };
+
+// Pictures shown in the dialog circle, so the message reads at a glance.
+const DIALOG_PICS = {
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  check:'<path d="M4 12l5 5L20 6"/>',
+  warn:'<path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17v.5"/>',
+  money:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v6M18 9v6"/>',
+  phone:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  wifi:'<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><path d="M12 19.5v.5"/><path d="M3 3l18 18"/>',
+  person:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  cloth:'<path d="M9 3 4 6l2 4 2-1v11h8V9l2 1 2-4-5-3a3 3 0 0 1-6 0Z"/>',
+  chat:'<path d="M4 20l1.5-4A8 8 0 1 1 9 19.5Z"/><path d="M9 10h6M9 13h4"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'
+};
+function dialogPic(key){ return `<svg viewBox="0 0 24 24" aria-hidden="true">${DIALOG_PICS[key] || DIALOG_PICS.info}</svg>`; }
+
+// Urdu sentence + picture for the English messages the app shows through
+// alert(). First match wins, so specific patterns sit above general ones.
+// The English text is still shown underneath in small print.
+const URDU_ALERTS = [
+  [/saved offline|queued|will sync automatically/i, 'انٹرنیٹ نہیں تھا، اس لیے یہ اسی کمپیوٹر میں محفوظ ہو گیا۔ انٹرنیٹ آتے ہی خود بھیج دیا جائے گا۔', 'wifi'],
+  [/cached order list|device's cached/i, 'یہ آرڈر اس کمپیوٹر میں نہیں ملا۔ انٹرنیٹ سے آرڈر تازہ کریں، پھر دوبارہ کوشش کریں۔', 'wifi'],
+  [/internet|connection|online/i, 'انٹرنیٹ نہیں ہے۔ انٹرنیٹ آنے پر دوبارہ کوشش کریں۔', 'wifi'],
+  [/server (balance|rejected)|conflicts with what the server/i, 'ریکارڈ میں فرق ہے۔ نیا ریکارڈ لایا جا رہا ہے، دوبارہ دیکھیں۔', 'warn'],
+  [/release the last items/i, 'یہ آخری کپڑے ہیں مگر بقایا ابھی باقی ہے۔ پورے پیسے لیں۔', 'money'],
+  [/advance amount received|valid advance/i, 'ایڈوانس کی رقم لکھیں۔ اگر پیسے نہیں لیے تو 0 لکھیں۔', 'money'],
+  [/^advance \(rs/i, 'ایڈوانس کل رقم سے زیادہ نہیں ہو سکتا۔', 'money'],
+  [/cash tendered/i, 'گاہک نے جو پیسے دیے وہ صحیح لکھیں، یا خالی چھوڑ دیں۔', 'money'],
+  [/short of the/i, 'یہ رقم بقایا سے کم ہے۔', 'money'],
+  [/price before adding/i, 'پہلے کپڑے کی قیمت لکھیں۔', 'money'],
+  [/how much money the shop paid/i, 'دکان نے کتنے پیسے دیے، وہ لکھیں۔', 'money'],
+  [/valid amount|non-negative amount|amounts cannot be negative/i, 'صحیح رقم لکھیں۔', 'money'],
+  [/phone number and at least one item/i, 'فون نمبر لکھیں اور کم از کم ایک کپڑا شامل کریں۔', 'phone'],
+  [/no customer phone/i, 'اس آرڈر میں گاہک کا فون نمبر نہیں ہے۔', 'phone'],
+  [/11[- ]digit|valid phone/i, 'فون نمبر 11 ہندسوں کا لکھیں، 0 سے شروع، جیسے 03001234567', 'phone'],
+  [/collect-by/i, 'کپڑے واپس دینے کی تاریخ اور وقت چنیں۔', 'calendar'],
+  [/pick the date|select a date|select a month/i, 'تاریخ چنیں۔', 'calendar'],
+  [/order code is already in use/i, 'یہ کوڈ پہلے سے کسی کھلے آرڈر پر ہے۔ دوسرا کوڈ لکھیں۔', 'warn'],
+  [/enter an order code/i, 'آرڈر کوڈ لکھیں۔', 'warn'],
+  [/urgent is on, but no piece/i, 'ارجنٹ لگا ہے مگر کوئی کپڑا ارجنٹ نہیں چنا۔ کپڑے کے ساتھ + دبائیں۔', 'cloth'],
+  [/person collecting|receiver name/i, 'کپڑے لینے والے کا نام لکھیں۔', 'person'],
+  [/at least one item to release/i, 'کم از کم ایک کپڑا چنیں جو دینا ہے۔', 'cloth'],
+  [/pieces under "other"/i, '"کچھ اور" میں کپڑے ڈالے ہیں، اس کپڑے کا نام لکھیں۔', 'cloth'],
+  [/at least one piece/i, 'کم از کم ایک کپڑا شامل کریں۔ کپڑے کی تصویر دبائیں۔', 'cloth'],
+  [/no clothes from this order have left/i, 'اس آرڈر کا کوئی کپڑا ابھی دکان سے نہیں گیا۔', 'cloth'],
+  [/shop name/i, 'دکان کا نام لکھیں۔', 'person'],
+  [/type a note|write what was done/i, 'پہلے نوٹ لکھیں۔', 'warn'],
+  [/^(failed|could not|couldn't)/i, 'کام نہیں ہوا۔ انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔', 'warn'],
+  [/branch/i, 'پہلے برانچ چنیں۔', 'warn'],
+  [/only admins/i, 'نئی قسم صرف مالک بنا سکتا ہے۔ پرانی قسم چنیں۔', 'warn'],
+  [/name/i, 'نام لکھیں۔', 'warn']
+];
+function urduForAlert(text){
+  const hit = URDU_ALERTS.find(([re]) => re.test(text));
+  return hit ? { ur: hit[1], pic: hit[2] } : {};
+}
 
 function showNextAppDialog(){
   const next = appDialogQueue.shift();
@@ -3685,21 +3760,30 @@ function showNextAppDialog(){
   const overlay = ensureAppDialogEl();
   const { opts } = next;
   const tone = APP_DIALOG_TONES[opts.tone] ? opts.tone : 'info';
+  const t = APP_DIALOG_TONES[tone];
   appDialogOpen = true;
   appDialogRestoreFocus = document.activeElement;
   overlay.dataset.tone = tone;
-  overlay.querySelector('.app-dialog-icon').textContent = APP_DIALOG_TONES[tone].icon;
-  document.getElementById('appDialogTitle').textContent = opts.title || APP_DIALOG_TONES[tone].title;
+  overlay.querySelector('.app-dialog-icon').innerHTML = dialogPic(opts.pic || t.pic);
+  document.getElementById('appDialogTitle').innerHTML = `<span class="kk-ur">${escHtml(opts.urTitle || t.ur)}</span> ${escHtml(opts.title || t.title)}`;
+  const urEl = document.getElementById('appDialogUr');
+  urEl.textContent = opts.ur || '';
+  urEl.hidden = !opts.ur;
   document.getElementById('appDialogMsg').textContent = opts.message || '';
+  document.getElementById('appDialogMsg').classList.toggle('is-secondary', !!opts.ur);
   const ok = document.getElementById('appDialogOk');
   const cancel = document.getElementById('appDialogCancel');
   ok.textContent = opts.okText || 'OK';
   cancel.textContent = opts.cancelText || '';
   cancel.hidden = !opts.cancelText;
+  ok.className = 'btn-main' + (opts.okClass ? ' ' + opts.okClass : '');
+  cancel.className = 'btn-secondary' + (opts.cancelClass ? ' ' + opts.cancelClass : '');
   ok.onclick = () => closeAppDialog(true);
   cancel.onclick = () => closeAppDialog(false);
   overlay._resolve = next.resolve;
+  overlay._escape = opts.escapeValue !== undefined ? opts.escapeValue : false;
   overlay.hidden = false;
+  playSfx(tone === 'error' || tone === 'warn' ? 'error' : tone === 'success' ? 'ok' : 'tap');
   ok.focus();
 }
 
@@ -3721,8 +3805,66 @@ function closeAppDialog(result){
 
 window.alert = function(msg){
   const text = String(msg == null ? '' : msg);
-  appDialog({ message: text, tone: guessDialogTone(text) });
+  appDialog(Object.assign({ message: text, tone: guessDialogTone(text) }, urduForAlert(text)));
 };
+
+// WhatsApp or SMS, as two picture buttons instead of "OK = WhatsApp,
+// Cancel = SMS". The chosen button's own click opens WhatsApp, so the
+// browser treats it as a user action and doesn't block the new tab.
+// Escape / closing does nothing (the old confirm() sent an SMS).
+function chooseWhatsAppOrSms(formattedPhone, msg, what){
+  appDialog({
+    tone: 'info', pic: 'chat', urTitle: 'گاہک کو میسج', title: what || 'Message the customer',
+    ur: 'میسج کیسے بھیجیں؟', message: 'Choose how to send the message.',
+    okText: 'WhatsApp', cancelText: 'SMS', okClass: 'is-whatsapp', cancelClass: 'is-sms', escapeValue: null
+  }).then(choice => {
+    if(choice === true) window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
+    else if(choice === false) sendSms(formattedPhone, msg);
+  });
+}
+
+// ---------- SOUND FEEDBACK ----------
+// Short tones made in the browser (no sound files): a rising "ding" when
+// something is saved, a low double "buzz" for a problem, a soft tick when
+// a piece is added. The speaker button in the header turns them off.
+let sfxCtx = null;
+let sfxOn = (() => { try{ return localStorage.getItem('pos_sound') !== 'off'; }catch(e){ return true; } })();
+function playSfx(kind){
+  if(!sfxOn) return;
+  try{
+    sfxCtx = sfxCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if(sfxCtx.state === 'suspended') sfxCtx.resume();
+    const now = sfxCtx.currentTime;
+    const notes = kind === 'ok' ? [[880, 0, .14], [1318, .12, .22]]
+      : kind === 'error' ? [[196, 0, .16], [165, .2, .24]]
+      : [[1046, 0, .06]];
+    notes.forEach(([freq, at, len]) => {
+      const osc = sfxCtx.createOscillator(), gain = sfxCtx.createGain();
+      osc.type = kind === 'error' ? 'square' : 'sine';
+      osc.frequency.value = freq;
+      const peak = kind === 'error' ? .07 : kind === 'tap' ? .08 : .2;
+      gain.gain.setValueAtTime(.0001, now + at);
+      gain.gain.exponentialRampToValueAtTime(peak, now + at + .015);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + at + len);
+      osc.connect(gain).connect(sfxCtx.destination);
+      osc.start(now + at);
+      osc.stop(now + at + len + .02);
+    });
+  }catch(e){}
+}
+function toggleSound(){
+  sfxOn = !sfxOn;
+  try{ localStorage.setItem('pos_sound', sfxOn ? 'on' : 'off'); }catch(e){}
+  updateSoundBtn();
+  if(sfxOn) playSfx('ok');
+}
+function updateSoundBtn(){
+  const b = document.getElementById('soundToggleBtn');
+  if(!b) return;
+  b.textContent = sfxOn ? '🔊' : '🔇';
+  b.title = sfxOn ? 'Sound on — tap to mute' : 'Sound off — tap to turn on';
+  b.setAttribute('aria-pressed', sfxOn ? 'true' : 'false');
+}
 
 // ---------- REAL CONNECTIVITY PROBE ----------
 // navigator.onLine ONLY reflects whether the OS thinks *some* network
@@ -5535,11 +5677,7 @@ function notifyPartialRelease(phone, code, items, releasedPairs, remainingByLine
   const msg = buildPartialReleaseMessage(code, branchFull, releasedText, remainingText);
   const formattedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^0/, '92');
 
-  if(confirm('Send partial-release update via WhatsApp? (Cancel for standard SMS)')){
-    window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
-  } else {
-    sendSms(formattedPhone, msg);
-  }
+  chooseWhatsAppOrSms(formattedPhone, msg, 'Partial release update');
 }
 
 // Formats a Pakistani local number (03XXXXXXXXX) into international
@@ -5549,11 +5687,7 @@ function notifyCustomer(phone, code, status, receiverName, receiverPhone, dispat
   const formattedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^0/, '92');
   const msg = buildUrduMessage(status, code, receiverName, receiverPhone, dispatchedAt);
 
-  if(confirm('Send via WhatsApp? (Cancel for standard SMS)')){
-    window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
-  } else {
-    sendSms(formattedPhone, msg);
-  }
+  chooseWhatsAppOrSms(formattedPhone, msg);
 }
 
 // Lets a worker re-send the dispatch notification for an already
@@ -6081,11 +6215,7 @@ function sendBookingMessage(phone, code, branchNameKey, items, total, advancePai
   const msg = buildBookingMessage(code, branchInfo, items, total, advancePaid, balanceDue, isUrgentOrder, wdCollectByDate, pressCollectByDate, expiryDate);
   const formattedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^0/, '92');
 
-  if(confirm('Send booking confirmation via WhatsApp? (Cancel for standard SMS)')){
-    window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
-  } else {
-    sendSms(formattedPhone, msg);
-  }
+  chooseWhatsAppOrSms(formattedPhone, msg, 'Booking confirmation');
 }
 
 // Builds the "order ready" message. Deliberately readiness-only — no
@@ -6141,11 +6271,7 @@ async function markReady(orderId, phone, code, itemsJson, total, branchNameKey, 
   const msg = buildReadyMessage(code, branchInfo);
   const formattedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^0/, '92');
 
-  if(confirm('Send via WhatsApp? (Cancel for standard SMS)')){
-    window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
-  } else {
-    sendSms(formattedPhone, msg);
-  }
+  chooseWhatsAppOrSms(formattedPhone, msg);
 
   loadOpenOrders();
 }
@@ -7989,6 +8115,7 @@ function renderMenuPanel(){
 function menuAdjustQty(serviceId, delta){
   const s = services.find(x => x.id === serviceId);
   if(!s) return;
+  playSfx('tap');
   const catLabel = CATEGORY_LABELS[s.category] || 'Wash + Dry Clean';
   const service = `${s.name} [${catLabel}]`;
   const priceInput = document.getElementById('menuPrice_' + serviceId);
@@ -9052,7 +9179,7 @@ const OFFLINE_DB_NAME = 'laundry_pos_offline';
 // v7 adds pendingOrderNotes (offline queue for internal order notes —
 // see saveOrderNote/syncPendingNotes). Notes written offline are queued
 // here and pushed to the order_notes Supabase table on reconnect.
-const OFFLINE_DB_VERSION = 7;
+const OFFLINE_DB_VERSION = 8;
 const OFFLINE_STORE = 'pendingOrders';
 const OFFLINE_STORE_DISPATCH = 'pendingDispatches';
 const OFFLINE_STORE_READY = 'pendingReady';
@@ -9061,6 +9188,7 @@ const OFFLINE_STORE_NOTIFY = 'pendingNotifies';
 const OFFLINE_STORE_PARTIAL_DISPATCH = 'pendingPartialDispatches';
 const OFFLINE_STORE_ITEM_CHECK = 'pendingItemChecks';
 const OFFLINE_STORE_NOTE = 'pendingOrderNotes';
+const OFFLINE_STORE_KARKHANA = 'pendingKarkhana';
 
 function openOfflineDb(){
   return new Promise((resolve, reject) => {
@@ -9090,6 +9218,9 @@ function openOfflineDb(){
       }
       if(!db.objectStoreNames.contains(OFFLINE_STORE_NOTE)){
         db.createObjectStore(OFFLINE_STORE_NOTE, { keyPath: 'localId' });
+      }
+      if(!db.objectStoreNames.contains(OFFLINE_STORE_KARKHANA)){
+        db.createObjectStore(OFFLINE_STORE_KARKHANA, { keyPath: 'localId' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -9919,6 +10050,7 @@ async function syncAllPending(silent){
   await syncPendingExpenses(silent);
   await syncPendingNotifies(silent);
   await syncPendingNotes(silent);
+  await syncPendingKarkhana(silent);
 }
 
 // Minimal one-off toast for offline/sync status — reuses the existing
@@ -9927,6 +10059,7 @@ async function syncAllPending(silent){
 function showSimpleToast(message, isAlert, title){
   const container = document.getElementById('toastContainer');
   if(!container) return;
+  playSfx(isAlert ? 'error' : 'ok');
   const el = document.createElement('div');
   el.className = 'toast' + (isAlert ? ' toast-alert' : '');
   el.innerHTML = `<b>${escHtml(title || (isAlert ? '⚠ Sync' : '🔄 Sync'))}</b> — ${escHtml(message)}`;
@@ -9937,7 +10070,8 @@ function showSimpleToast(message, isAlert, title){
 
 async function countAllPending(){
   const counts = await Promise.all([
-    idbCountPendingOrders(), idbCountPendingDispatches(), idbCountPendingPartialDispatches(), idbCountPendingReady(), idbCountPendingItemChecks(), idbCountPendingExpenses(), idbCountPendingNotifies()
+    idbCountPendingOrders(), idbCountPendingDispatches(), idbCountPendingPartialDispatches(), idbCountPendingReady(), idbCountPendingItemChecks(), idbCountPendingExpenses(), idbCountPendingNotifies(),
+    idbGetAllRecords(OFFLINE_STORE_KARKHANA).then(r => r.length).catch(() => 0)
   ]);
   return counts.reduce((s, n) => s + (Number(n) || 0), 0);
 }
@@ -10773,13 +10907,27 @@ function kkBalanceLabel(bal){
 async function loadKarkhanaShops(){
   const branchId = kkBranchId();
   if(!branchId) return;
-  const { data, error } = await sb.from('karkhana_entries').select('*')
-    .eq('branch_id', branchId).order('created_at', { ascending: true });
-  if(error){
-    document.getElementById('kkShopGrid').innerHTML = `<div class="kk-empty is-error">Couldn't load the shops: ${escHtml(error.message)}. Check the internet, then tap Refresh.</div>`;
-    return;
+  const cacheKey = 'kk_cache_' + branchId;
+  let data = null, error = null;
+  if(isReallyOnline()){
+    try{
+      ({ data, error } = await sb.from('karkhana_entries').select('*')
+        .eq('branch_id', branchId).order('created_at', { ascending: true }));
+    }catch(networkErr){ error = networkErr; }
   }
-  kkAll = data || [];
+  if(data && !error){
+    try{ localStorage.setItem(cacheKey, JSON.stringify(data)); }catch(e){} // too big for storage: just skip the cache
+  } else {
+    try{ data = JSON.parse(localStorage.getItem(cacheKey) || 'null'); }catch(e){ data = null; }
+    if(!data){
+      document.getElementById('kkShopGrid').innerHTML = `<div class="kk-empty is-error">Couldn't load the shops${error ? ': ' + escHtml(error.message) : ''}. Connect to the internet once, then tap Refresh.</div>`;
+      return;
+    }
+  }
+  const pendingKk = await idbGetAllRecords(OFFLINE_STORE_KARKHANA).catch(() => []);
+  kkAll = (data || []).concat(pendingKk
+    .filter(r => r.row.branch_id === branchId)
+    .map(r => Object.assign({}, r.row, { id: null, created_at: r.queuedAt, _pending: true, _localId: r.localId })));
   kkBuildShops();
   renderKkHome();
   if(kkOpenKey) renderKkKhata();
@@ -10875,8 +11023,8 @@ function renderKkKhata(){
   const shown = lines.slice(0, kkKhataLimit);
 
   const lineHtml = shown.map(({ r, kind, amount, bal }) => {
-    const when = `${escHtml(formatAppDate(r.entry_date + 'T00:00:00'))} <span>${kkTime(r.created_at)}</span>`;
-    const del = isAdmin ? `<button type="button" class="kk-del" title="Delete this entry" aria-label="Delete this entry" onclick="deleteKarkhanaEntry(${Number(r.id)})">×</button>` : '';
+    const when = `${escHtml(formatAppDate(r.entry_date + 'T00:00:00'))} <span>${kkTime(r.created_at)}</span>${r._pending ? ' <b class="kk-pending">⏳ <span class="kk-ur">انٹرنیٹ کا انتظار</span> waiting to send</b>' : ''}`;
+    const del = isAdmin && r.id ? `<button type="button" class="kk-del" title="Delete this entry" aria-label="Delete this entry" onclick="deleteKarkhanaEntry(${Number(r.id)})">×</button>` : '';
     const after = kkBalanceLabel(bal);
     const afterHtml = `<span class="kk-line-after ${after.cls}">${after.ur} ${bal ? kkMoney(Math.abs(bal)) : ''}</span>`;
     if(kind === 'pay'){
@@ -11015,7 +11163,7 @@ function closeKkSheet(){
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && kkSheet) closeKkSheet(); });
 
-function kkStep(i, d){ kkSetQty(i, Math.max(0, (kkSheet.qty[i] || 0) + d), true); }
+function kkStep(i, d){ playSfx('tap'); kkSetQty(i, Math.max(0, (kkSheet.qty[i] || 0) + d), true); }
 function kkSetQty(i, v, fromButton){
   const n = Math.max(0, parseInt(v) || 0);
   kkSheet.qty[i] = n;
@@ -11081,12 +11229,10 @@ async function saveKkSheet(){
   if(!branchId) return alert('No branch selected.');
   if(!date) return alert('Pick the date.');
   if(charges < 0 || paid < 0) return alert('Amounts cannot be negative.');
-  if(!isReallyOnline()) return alert('Karkhana entries need the internet. Try again when you are online.');
-
   const btn = document.getElementById('kkSaveBtn');
   btn.disabled = true;
   const pieces = items.reduce((t, l) => t + l.qty, 0);
-  const { error } = await sb.from('karkhana_entries').insert({
+  const row = {
     branch_id: branchId,
     entry_date: date,
     shop_name: s.name,
@@ -11096,13 +11242,25 @@ async function saveKkSheet(){
     charges,
     paid,
     note
-  });
+  };
+  let error = null, queued = false;
+  if(isReallyOnline()){
+    try{ ({ error } = await sb.from('karkhana_entries').insert(row)); }catch(networkErr){ error = networkErr; }
+  }
+  if(!isReallyOnline() || (error && isNetworkError(error))){
+    // No internet: keep it on this computer; syncAllPending() sends it later.
+    await idbPutRecord(OFFLINE_STORE_KARKHANA, { localId: newLocalId(), row, queuedAt: new Date().toISOString(), attempts: 0, lastError: null });
+    await updateOfflineBadge();
+    error = null;
+    queued = true;
+  }
   btn.disabled = false;
   if(error) return alert('Could not save: ' + error.message);
 
-  showSimpleToast(items.length
+  const summary = items.length
     ? `${s.name}: ${pieces} pcs, ${kkMoney(charges)} charged${paid ? `, ${kkMoney(paid)} paid` : ''}`
-    : `${s.name}: ${kkMoney(paid)} received`, false, '✓ Saved');
+    : `${s.name}: ${kkMoney(paid)} received`;
+  showSimpleToast(queued ? summary + ' — saved on this computer, will send when the internet is back' : summary, false, queued ? '✓ Saved offline' : '✓ Saved');
   delete kkNewShops[kkOpenKey];
   closeKkSheet();
   document.getElementById('kkViewDate').value = date;
@@ -11110,8 +11268,38 @@ async function saveKkSheet(){
   loadKarkhanaAll();
 }
 
+let offlineKarkhanaSyncInProgress = false;
+async function syncPendingKarkhana(silent){
+  if(offlineKarkhanaSyncInProgress || !isReallyOnline()) return;
+  const pending = await idbGetAllRecords(OFFLINE_STORE_KARKHANA).catch(() => []);
+  if(!pending.length) return;
+  offlineKarkhanaSyncInProgress = true;
+  let synced = 0, failed = 0;
+  for(const record of pending){
+    let error;
+    try{ ({ error } = await sb.from('karkhana_entries').insert(record.row)); }catch(networkErr){ error = networkErr; }
+    if(error && isNetworkError(error)) break; // connection dropped again; the rest stay queued
+    if(error){
+      record.attempts = (record.attempts || 0) + 1;
+      record.lastError = error.message;
+      await idbPutRecord(OFFLINE_STORE_KARKHANA, record);
+      failed++;
+      console.warn('Offline Karkhana entry failed to sync (kept in queue):', record.row, error.message);
+      continue;
+    }
+    await idbDeleteRecord(OFFLINE_STORE_KARKHANA, record.localId);
+    synced++;
+  }
+  offlineKarkhanaSyncInProgress = false;
+  await updateOfflineBadge();
+  if(!silent && (synced || failed)){
+    showSimpleToast(`Karkhana: ${synced} sent${failed ? `, ⚠ ${failed} stuck — see console` : ''}`, !!failed);
+  }
+  if(synced && document.getElementById('kkSearch')) loadKarkhanaAll();
+}
+
 async function deleteKarkhanaEntry(id){
-  if(!confirm('Delete this Karkhana entry? This cannot be undone.')) return;
+  if(!await appConfirm({ tone: 'warn', pic: 'trash', urTitle: 'مٹائیں؟', title: 'Delete entry?', ur: 'یہ اندراج ہمیشہ کے لیے مٹ جائے گا۔', message: 'Delete this Karkhana entry? This cannot be undone.', okText: 'Delete' })) return;
   const { error } = await sb.from('karkhana_entries').delete().eq('id', id);
   if(error) return alert('Could not delete: ' + error.message);
   loadKarkhanaAll();
@@ -11590,9 +11778,9 @@ async function toggleMonthClosed(monthStr, isClosed){
     const msg = pendingAmt > 0
       ? `This branch still has Rs ${pendingAmt} pending/uncollected on open orders. Mark the month closed anyway?`
       : 'Mark this month as closed?';
-    if(!confirm(msg)) return;
+    if(!await appConfirm({ tone: 'warn', pic: 'calendar', urTitle: 'مہینہ بند کریں؟', title: 'Close month?', ur: pendingAmt > 0 ? `ابھی Rs ${pendingAmt} بقایا ہے۔ پھر بھی مہینہ بند کریں؟` : 'یہ مہینہ بند کریں؟', message: msg, okText: 'Close month' })) return;
   } else {
-    if(!confirm('Reopen this month for edits?')) return;
+    if(!await appConfirm({ tone: 'info', pic: 'calendar', urTitle: 'مہینہ کھولیں؟', title: 'Reopen month?', ur: 'تبدیلی کے لیے یہ مہینہ دوبارہ کھولیں؟', message: 'Reopen this month for edits?', okText: 'Reopen' })) return;
   }
   const { error } = await sb.rpc('set_month_closed', { p_branch_id: currentBranchId, p_month: monthStr, p_closed: newState });
   if(error){ alert('Failed: ' + error.message); return; }
@@ -11635,7 +11823,7 @@ async function loadSalaryLog(){
 }
 
 async function deleteSalaryPayment(id){
-  if(!confirm('Delete this salary payment record?')) return;
+  if(!await appConfirm({ tone: 'warn', pic: 'trash', urTitle: 'مٹائیں؟', title: 'Delete payment?', ur: 'تنخواہ کا یہ ریکارڈ مٹا دیں؟', message: 'Delete this salary payment record?', okText: 'Delete' })) return;
   const { error } = await sb.rpc('delete_salary_payment', { p_id: id });
   if(error){ alert('Failed: ' + error.message); return; }
   await logActivity('salary_payment_deleted', `Deleted salary payment #${id}`);
@@ -12919,6 +13107,7 @@ function toggleLanguage(){
 }
 
 applyLanguage(currentLang); // restore saved language on page load
+updateSoundBtn();
 
 // ---------- URDU HELPERS (for staff who read little English) ----------
 // Every button / label / table heading / popup title whose English text
