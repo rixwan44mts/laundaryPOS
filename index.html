@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-3">
+<meta name="app-build" content="2026-10-24-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -1741,7 +1741,7 @@
      ===================================================================== */
   :root{
     --font-ui:'Schibsted Grotesk','Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-    --rail-w:232px;
+    --rail-w:256px;
 
     --neel:#222C74; --neel-deep:#18205A; --neel-2:#3443A8; --neel-soft:#E7EAF8;
     --ink:#171B34; --ink-soft:#454B66; --muted:#6C7290;
@@ -1880,7 +1880,8 @@
   /* ---- KARKHANA khata (V4). Clothes = indigo, money = green, owed = red.
      Urdu sits next to every English label in Nastaliq, which is what
      shop signs and newspapers use, so it is the most familiar script. ---- */
-  .kk-ur{font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaliq','Noto Naskh Arabic',serif;direction:rtl;unicode-bidi:isolate;font-weight:600;line-height:1.9;margin-inline-end:.4em;}
+  .kk-ur{font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaliq','Noto Naskh Arabic',serif;direction:rtl;unicode-bidi:isolate;font-weight:600;line-height:1.9;margin-right:.4em;}
+  html[dir="rtl"] .kk-ur{margin-right:0;margin-left:.4em;}
   .kk-en{font-weight:600;}
   .kk-ico{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
   /* proportional digits: tabular commas open wide gaps in big amounts */
@@ -2201,6 +2202,47 @@
     .ledger-stat-total .ledger-stat-value{font-size:24px;}
   }
 
+  /* ---- Urdu everywhere (V4): side menu, table headings, row actions,
+     expense picture tiles. Words come from URDU_WORDS / data-ur-nav. ---- */
+  nav button[data-ur-nav]::after{
+    content:attr(data-ur-nav);font-family:'Noto Nastaliq Urdu','Noto Naskh Arabic',serif;font-size:13px;font-weight:500;
+    direction:rtl;unicode-bidi:isolate;line-height:1.6;opacity:.75;margin-left:auto;
+  }
+  nav button .overdue-nav-badge{order:3;margin-left:6px;}
+  nav button[data-ur-nav] .overdue-nav-badge{margin-left:6px;}
+  html[dir="rtl"] nav button[data-i18n][data-ur-nav]::after{content:none;}
+  @media (max-width:1179px){ nav button[data-ur-nav]::after{margin-left:6px;} }
+
+  th[data-ur]::before{display:block;margin:0;font-size:13px;color:var(--ink-soft);line-height:1.6;white-space:nowrap;}
+  .items-mini-table th[data-ur]::before{content:none;}
+  h2[data-ur]::before{font-size:1.05em;}
+  button[data-ur]::before{font-size:1.08em;}
+  .st-name .kk-ur{font-size:18px;line-height:1.6;}
+
+  /* row actions: bigger, and the main ones colour-coded */
+  #openOrdersBody td:last-child, #overdueBody td:last-child{min-width:230px;}
+  #openOrdersBody td:last-child button, #overdueBody td:last-child button{padding:7px 11px;font-size:12.5px;margin:2px 0;}
+  button[data-act="check-items"]:not(:disabled){background:var(--neel-2);border-color:var(--neel-2);color:#fff;}
+  button[data-act="close-dispatched"]:not(:disabled), button[data-act="confirm-dispatch"]:not(:disabled), button[data-act="release-items"]:not(:disabled){background:var(--dispatched);border-color:var(--dispatched);color:#fff;}
+  button[data-act="notify-again"]:not(:disabled), button[data-act="resend-dispatch-msg"]:not(:disabled){background:var(--ready-soft);border-color:var(--ready);color:var(--ready-ink);}
+  button[data-act="print-bill"]:not(:disabled), button[data-act="reprint-booking-receipt"]:not(:disabled){border-color:var(--ink-soft);}
+  button[data-act="fixed-handed-back"]{background:var(--ready);}
+
+  /* expenses */
+  .exp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-bottom:14px;}
+  .exp-tile{
+    display:grid;justify-items:center;gap:0;font:600 12.5px var(--font-ui);color:var(--ink-soft);cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 6px 8px;
+    transition:transform .15s var(--spring),border-color .15s,background-color .15s;
+  }
+  .exp-tile:active{transform:scale(.95);}
+  .exp-tile .kk-ico{width:34px;height:34px;color:var(--accent-2);stroke-width:1.6;}
+  .exp-tile .kk-ur{font-size:16px;color:var(--ink);margin:0;}
+  .exp-tile.active{border-color:var(--accent-2);background:var(--accent-2-soft);box-shadow:0 0 0 1px var(--accent-2);}
+  .exp-amount{font-size:20px;font-weight:800;}
+  .exp-save{font-size:16px;padding:12px 22px;}
+  .dash-tile-label[data-ur]::before{display:block;font-size:17px;margin:0;line-height:1.7;}
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -2278,17 +2320,17 @@
 
   <div class="app-body">
   <nav>
-    <button class="tabbtn worker-only active" data-tab="neworder" data-i18n="nav_neworder">New Order</button>
-    <button class="tabbtn worker-only" data-tab="openorders" data-i18n="nav_openorders">Open Orders</button>
-    <button class="tabbtn worker-only" data-tab="overdue">Overdue <span id="overdueNavBadge" class="overdue-nav-badge">0</span></button>
-    <button class="tabbtn" data-tab="returns">Returns <span id="returnsNavBadge" class="overdue-nav-badge">0</span></button>
-    <button class="tabbtn worker-only" data-tab="expenses" data-i18n="nav_expenses">Expenses</button>
-    <button class="tabbtn" data-tab="karkhana" data-i18n="nav_karkhana">KARKHANA</button>
-    <button class="tabbtn" data-tab="promo" data-i18n="nav_promo">Promo</button>
-    <button class="tabbtn admin-only" data-tab="dashboard" data-i18n="nav_dashboard">Admin Dashboard</button>
-    <button class="tabbtn admin-only" data-tab="monthlyregister" data-i18n="nav_monthlyregister">Monthly Register</button>
-    <button class="tabbtn admin-only" data-tab="services" data-i18n="nav_services">Manage Services</button>
-    <button class="tabbtn admin-only" data-tab="staff" data-i18n="nav_staff">Staff</button>
+    <button class="tabbtn worker-only active" data-tab="neworder" data-ur-nav="نیا آرڈر" data-i18n="nav_neworder">New Order</button>
+    <button class="tabbtn worker-only" data-tab="openorders" data-ur-nav="آرڈر" data-i18n="nav_openorders">Open Orders</button>
+    <button class="tabbtn worker-only" data-tab="overdue" data-ur-nav="دیر والے">Overdue <span id="overdueNavBadge" class="overdue-nav-badge">0</span></button>
+    <button class="tabbtn" data-tab="returns" data-ur-nav="واپسی">Returns <span id="returnsNavBadge" class="overdue-nav-badge">0</span></button>
+    <button class="tabbtn worker-only" data-tab="expenses" data-ur-nav="خرچے" data-i18n="nav_expenses">Expenses</button>
+    <button class="tabbtn" data-tab="karkhana" data-ur-nav="کارخانہ" data-i18n="nav_karkhana">KARKHANA</button>
+    <button class="tabbtn" data-tab="promo" data-ur-nav="اشتہار" data-i18n="nav_promo">Promo</button>
+    <button class="tabbtn admin-only" data-tab="dashboard" data-ur-nav="حساب" data-i18n="nav_dashboard">Admin Dashboard</button>
+    <button class="tabbtn admin-only" data-tab="monthlyregister" data-ur-nav="ماہانہ رجسٹر" data-i18n="nav_monthlyregister">Monthly Register</button>
+    <button class="tabbtn admin-only" data-tab="services" data-ur-nav="ریٹ لسٹ" data-i18n="nav_services">Manage Services</button>
+    <button class="tabbtn admin-only" data-tab="staff" data-ur-nav="عملہ" data-i18n="nav_staff">Staff</button>
   </nav>
 
   <div id="mainContent">
@@ -2435,13 +2477,13 @@
          are filled in by updateStatusTabCounts(). -->
     <div class="status-tabs" role="tablist" aria-label="Order status">
       <button type="button" class="status-tab st-printed active" id="statusFilterPrinted" role="tab" aria-selected="true" onclick="setOpenOrdersStatusTab('printed')">
-        <span class="st-name">Printed</span><span class="st-hint">Booked, still in the shop</span><b class="st-count" id="statusCountPrinted">0</b>
+        <span class="st-name"><span class="kk-ur">دکان میں</span> Printed</span><span class="st-hint">Booked, still in the shop</span><b class="st-count" id="statusCountPrinted">0</b>
       </button>
       <button type="button" class="status-tab st-ready" id="statusFilterReady" role="tab" aria-selected="false" onclick="setOpenOrdersStatusTab('ready')">
-        <span class="st-name">Ready</span><span class="st-hint">Checked, waiting for pickup</span><b class="st-count" id="statusCountReady">0</b>
+        <span class="st-name"><span class="kk-ur">تیار</span> Ready</span><span class="st-hint">Checked, waiting for pickup</span><b class="st-count" id="statusCountReady">0</b>
       </button>
       <button type="button" class="status-tab st-dispatched" id="statusFilterDispatched" role="tab" aria-selected="false" onclick="setOpenOrdersStatusTab('dispatched')">
-        <span class="st-name">Dispatched</span><span class="st-hint">Handed over to the customer</span><b class="st-count" id="statusCountDispatched">0</b>
+        <span class="st-name"><span class="kk-ur">دے دیے</span> Dispatched</span><span class="st-hint">Handed over to the customer</span><b class="st-count" id="statusCountDispatched">0</b>
       </button>
     </div>
     <div class="panel">
@@ -2502,10 +2544,24 @@
   <!-- EXPENSES -->
   <div id="tab-expenses" class="tab">
     <div class="panel">
+      <div class="no-step"><span class="kk-ur">خرچہ لکھیں</span> Add an expense <span class="no-step-hint">tap what the money was for, then type the amount</span></div>
+      <div class="exp-tiles">
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Detergent', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M9 2h6v3H9z"/><path d="M8 5h8l1 4v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9z"/><path d="M7 13h10"/></svg><span class="kk-ur">صابن</span><span>Detergent</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Electricity', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span class="kk-ur">بجلی</span><span>Electricity</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Gas', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-4-3-6-4-10-2 3-3 4-3 6-1-1-2-2-2-4-3 3-5 5-5 8a7 7 0 0 0 7 7z"/></svg><span class="kk-ur">گیس</span><span>Gas</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Water', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M12 3s7 7.5 7 12a7 7 0 0 1-14 0c0-4.5 7-12 7-12z"/></svg><span class="kk-ur">پانی</span><span>Water</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Rent', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v11h14V10"/><path d="M10 21v-6h4v6"/></svg><span class="kk-ur">کرایہ</span><span>Rent</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Salary', this)"><svg class="kk-ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v6M18 9v6"/></svg><span class="kk-ur">تنخواہ</span><span>Salary</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Tea / Food', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M4 9h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"/><path d="M17 11h1a3 3 0 0 1 0 6h-1M8 2v3M12 2v3"/></svg><span class="kk-ur">چائے کھانا</span><span>Tea / Food</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Transport', this)"><svg class="kk-ico" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="10" rx="1"/><path d="M15 9h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="kk-ur">گاڑی کرایہ</span><span>Transport</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Repair', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M15 4a5 5 0 0 0-4.6 7L3 18.4 5.6 21l7.4-7.4A5 5 0 0 0 20 9l-3 1-2-2 1-3z"/></svg><span class="kk-ur">مرمت</span><span>Repair</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Hangers / Shoppers', this)"><svg class="kk-ico" viewBox="0 0 24 24"><path d="M12 7a2 2 0 1 1 2-2"/><path d="M12 7v2L3 16h18l-9-7"/></svg><span class="kk-ur">ہینگر شاپر</span><span>Hangers / Shoppers</span></button>
+        <button type="button" class="exp-tile" onclick="pickExpenseCategory('Other', this)"><svg class="kk-ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span class="kk-ur">کچھ اور</span><span>Other</span></button>
+      </div>
       <div class="row">
         <div class="field">
           <label>Amount</label>
-          <input type="number" id="expenseAmount" style="width:120px;">
+          <input type="number" id="expenseAmount" class="exp-amount" inputmode="numeric" placeholder="Rs" style="width:150px;">
         </div>
         <div class="field">
           <label>Category</label>
@@ -2516,7 +2572,7 @@
           <input type="text" id="expenseNote" style="width:220px;">
         </div>
         <div class="field">
-          <button class="btn-secondary" onclick="addExpense()">+ Add Expense</button>
+          <button class="btn-main exp-save" onclick="addExpense()">+ Add Expense</button>
         </div>
       </div>
       <label style="margin-top:14px;">Logged this session</label>
@@ -2562,10 +2618,6 @@
     </div>
   </div>
 
-  <!-- KARKHANA — other shops send their clothes to our washing facility.
-       Logs what came in from each shop per day (cloth type, qty, rate,
-       details), what we charged, and what the shop owner paid. Stored in
-       the karkhana_entries table (RLS: own branch, admin sees all). -->
   <!-- KARKHANA — built around the khata (ledger book): pick a shop, then
        record "Clothes came" or "Money received". Every label carries Urdu,
        English and a picture so workers who read little can still use it.
@@ -2704,28 +2756,28 @@
     <div class="dash-tiles" id="dashTiles">
       <button type="button" class="dash-tile active" data-section="cashregister" onclick="showAdminSection('cashregister')">
         <span class="dash-tile-icon">🧾</span>
-        <span class="dash-tile-label">Daily Cash Register</span>
+        <span class="dash-tile-label" data-ur="روزانہ کیش">Daily Cash Register</span>
         <span class="dash-tile-sub">Per-branch daily totals &amp; audit</span>
       </button>
       <button type="button" class="dash-tile" data-section="notifications" onclick="showAdminSection('notifications')">
         <span class="dash-tile-icon">🔔</span>
-        <span class="dash-tile-label">Notifications</span>
+        <span class="dash-tile-label" data-ur="میسج ریکارڈ">Notifications</span>
         <span class="dash-tile-sub">Live activity &amp; audit log</span>
         <span class="dash-tile-badge" id="notifTileBadge">0</span>
       </button>
       <button type="button" class="dash-tile" data-section="monthlyreport" onclick="showAdminSection('monthlyreport')">
         <span class="dash-tile-icon">📊</span>
-        <span class="dash-tile-label">Monthly Report</span>
+        <span class="dash-tile-label" data-ur="ماہانہ حساب">Monthly Report</span>
         <span class="dash-tile-sub">Register, salaries &amp; expenses</span>
       </button>
       <button type="button" class="dash-tile" data-section="cameras" onclick="showAdminSection('cameras')">
         <span class="dash-tile-icon">📹</span>
-        <span class="dash-tile-label">Camera Recording — Live</span>
+        <span class="dash-tile-label" data-ur="کیمرہ">Camera Recording — Live</span>
         <span class="dash-tile-sub">View both shops</span>
       </button>
       <button type="button" class="dash-tile" data-section="editworker" onclick="showAdminSection('editworker')">
         <span class="dash-tile-icon">🛠️</span>
-        <span class="dash-tile-label">Edit Worker Dashboard</span>
+        <span class="dash-tile-label" data-ur="ریٹ لسٹ بدلیں">Edit Worker Dashboard</span>
         <span class="dash-tile-sub">Add / remove rate-list items</span>
       </button>
     </div>
@@ -3155,13 +3207,13 @@
       </div>
       <div class="modal-body">
         <div class="row" style="justify-content:space-between;margin-bottom:6px;">
-          <span class="small">Order Total</span><strong id="dcTotal">Rs 0</strong>
+          <span class="small" data-ur="کل رقم">Order Total</span><strong id="dcTotal">Rs 0</strong>
         </div>
         <div class="row" style="justify-content:space-between;margin-bottom:6px;">
-          <span class="small">Advance Already Paid</span><strong id="dcAdvance">Rs 0</strong>
+          <span class="small" data-ur="پہلے ملے">Advance Already Paid</span><strong id="dcAdvance">Rs 0</strong>
         </div>
         <div class="row" style="justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border,#ddd);">
-          <span class="small">Balance Due</span><strong id="dcBalanceDue" style="color:var(--warn);font-size:18px;">Rs 0</strong>
+          <span class="small" data-ur="باقی">Balance Due</span><strong id="dcBalanceDue" style="color:var(--warn);font-size:18px;">Rs 0</strong>
         </div>
 
         <div class="field">
@@ -3180,7 +3232,7 @@
         </div>
 
         <div class="row" style="justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#ddd);align-items:center;">
-          <span>Change to Give Back</span>
+          <span data-ur="واپس دیں">Change to Give Back</span>
           <strong id="dcChange" style="font-size:22px;">Rs 0</strong>
         </div>
         <p id="dcWarning" class="small" style="color:var(--warn);display:none;margin-top:8px;"></p>
@@ -3201,7 +3253,7 @@
       <div class="modal-body" style="text-align:center;">
         <p class="small" id="dcgOrderLine" style="margin-top:0;"></p>
         <div style="background:#fbe0d4;border:1px solid var(--warn);border-radius:10px;padding:18px;margin:14px 0;">
-          <div class="small" style="margin-bottom:6px;">Change to give back to customer</div>
+          <div class="small" style="margin-bottom:6px;" data-ur="گاہک کو واپس دیں">Change to give back to customer</div>
           <div style="font-size:32px;font-weight:800;color:var(--warn);" id="dcgChangeAmount">Rs 0</div>
         </div>
         <button class="btn-main" style="width:100%;" onclick="closeDispatchChangeModal()">Done</button>
@@ -3224,11 +3276,11 @@
         <!-- Balance + remaining summary banner -->
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;background:var(--accent-2-soft);border:1px solid var(--accent-2);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:3px;">Balance Due</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:3px;" data-ur="باقی">Balance Due</div>
             <strong id="pdBalanceDue" style="font-size:20px;color:var(--warn);">Rs 0</strong>
           </div>
           <div style="flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:3px;">Items Still in Shop</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:3px;" data-ur="دکان میں کپڑے">Items Still in Shop</div>
             <strong id="pdTotalRemaining" style="font-size:20px;">—</strong>
           </div>
         </div>
@@ -3267,11 +3319,11 @@
           </div>
           <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line);">
             <div>
-              <div style="font-size:12px;color:var(--muted);">New Balance After</div>
+              <div style="font-size:12px;color:var(--muted);" data-ur="نیا باقی">New Balance After</div>
               <strong id="pdNewBalance" style="font-size:17px;color:var(--warn);">—</strong>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:12px;color:var(--muted);">Change to Give Back</div>
+              <div style="font-size:12px;color:var(--muted);" data-ur="واپس دیں">Change to Give Back</div>
               <strong id="pdChange" style="font-size:17px;color:var(--good);">—</strong>
             </div>
           </div>
@@ -5037,7 +5089,7 @@ async function renderOpenOrdersRows(list){
 
     if(isTerminal){
       const resendArgs = `${o.id}, '${jsArg(o.customer_phone)}', '${jsArg(o.code || '')}', ${o.dispatched_at ? `'${jsArg(o.dispatched_at)}'` : 'null'}, '${jsArg(o.receiverName || '')}', '${jsArg(o.receiverPhone || '')}'`;
-      actions = `${returnBtn} <button class="btn-secondary" disabled>Ready</button> <button class="btn-secondary" disabled>Close / Dispatched</button> <button class="btn-secondary" onclick="printFinalBill(${printBillArgs})">Print Bill</button> <button class="btn-secondary" onclick="resendDispatchMessage(${resendArgs})" title="Use this if the WhatsApp/SMS notification failed the first time (e.g. the customer's number has no WhatsApp account)">Resend Dispatch Msg</button> ${noteBtn}`;
+      actions = `${returnBtn} <button class="btn-secondary" onclick="printFinalBill(${printBillArgs})">Print Bill</button> <button class="btn-secondary" onclick="resendDispatchMessage(${resendArgs})" title="Use this if the WhatsApp/SMS notification failed the first time (e.g. the customer's number has no WhatsApp account)">Resend Dispatch Msg</button> ${noteBtn}`;
     } else if(isReady || isPartiallyDispatchedAndChecked){
       // Partially dispatched orders don't need "Notify Again" (not relevant
       // mid-release), so that button is suppressed for them.
@@ -12970,6 +13022,99 @@ function toggleLanguage(){
 }
 
 applyLanguage(currentLang); // restore saved language on page load
+
+// ---------- URDU HELPERS (for staff who read little English) ----------
+// Every button / label / table heading / popup title whose English text
+// is in URDU_WORDS gets data-ur="…", which the V4 CSS draws in front of
+// the English. Runs on load and on every DOM change, so rows re-drawn by
+// the 6-second refresh pick it up too. Elements with a hand-written
+// data-ur (no data-ur-auto) are left alone. data-act carries a short key
+// so the main row actions can be colour-coded in CSS.
+const URDU_WORDS = {
+  // actions
+  'refresh':'تازہ کریں', 'clear':'صاف کریں', 'cancel':'واپس', 'close':'بند کریں', 'done':'ٹھیک ہے', 'ok':'ٹھیک',
+  'save':'محفوظ کریں', 'delete':'مٹائیں', 'edit':'بدلیں', 'print':'چھاپیں', '+ add':'شامل کریں',
+  'check items':'کپڑے چیک کریں', 'mark ok':'ٹھیک ہے', 'ready':'تیار',
+  'close / dispatched':'گاہک کو دے دیا', 'notify again':'دوبارہ میسج', 'partial':'کچھ کپڑے دیں',
+  'reprint booking receipt':'رسید دوبارہ', 'print bill':'بل چھاپیں', 'resend dispatch msg':'میسج دوبارہ',
+  'return':'واپسی', 'note':'نوٹ', 'history':'ریکارڈ', 'same as customer (autofill)':'وہی گاہک',
+  'confirm & dispatch':'دے دیں', 'release items':'کپڑے دیں', 'exact balance':'پورا باقی',
+  'save return':'واپسی محفوظ کریں', 'fixed & handed back':'ٹھیک کر کے دے دیا', 'back to order':'آرڈر پر واپس',
+  'save reasons & continue':'محفوظ کریں', '+ add expense':'خرچہ لکھیں', 'save expense':'خرچہ لکھیں',
+  'mark urgent':'جلدی کریں', 'download image':'تصویر لیں', 'record salary payment':'تنخواہ لکھیں',
+  'back to dashboard':'واپس', 'back to admin dashboard':'واپس',
+  // fields and headings
+  'code':'کوڈ', 'phone':'فون', 'name':'نام', 'customer':'گاہک', 'items':'کپڑے', 'item':'کپڑا', 'total':'کل رقم',
+  'advance':'ملے', 'balance due':'باقی', 'status':'حالت', 'state':'حالت', 'urgent':'جلدی', 'vip':'خاص گاہک',
+  'booked':'بکنگ', 'dispatched at':'کب دیا', 'received by':'کس نے لیا', 'actions':'کام', 'action':'کام',
+  'collect by':'واپسی کا دن', 'overdue by':'کتنی دیر', 'last notified':'آخری میسج', 'ordered':'کل',
+  'released':'دے دیے', 'remaining':'باقی', 'release now':'ابھی دیں', 'service':'سروس', 'qty':'تعداد',
+  'price':'قیمت', 'price (rs)':'قیمت', 'line total':'رقم', 'amount':'رقم', 'category':'قسم', 'reason':'وجہ',
+  'date':'تاریخ', 'time':'وقت', 'month':'مہینہ', 'select month':'مہینہ', 'viewing month':'مہینہ',
+  'note (optional)':'نوٹ', 'details':'تفصیل', 'type':'قسم', 'subtotal':'رقم', 'discount':'رعایت',
+  'search by phone':'فون سے تلاش', 'search by code':'کوڈ سے تلاش', 'receiver name':'لینے والے کا نام',
+  'receiver phone':'لینے والے کا فون', 'receiver phone (optional, if different from customer)':'لینے والے کا فون',
+  'amount received from customer':'گاہک سے ملے', 'logged this session':'ابھی لکھے گئے خرچے',
+  'browse expense history':'پرانے خرچے', 'recently fixed & handed back':'ٹھیک کر کے واپس',
+  'worker':'ملازم', 'worker name':'ملازم کا نام', 'branch':'برانچ', 'expenses':'خرچے', 'salaries':'تنخواہیں',
+  'rent':'کرایہ', 'gas':'گیس', 'electricity':'بجلی', 'chemicals':'کیمیکل', 'net cash':'بچت', 'total cash':'کل کیش',
+  'total cash in':'کل آمدن', 'cash collected':'وصول کیش', 'recovered':'وصول', 'balance recovered':'باقی وصول',
+  'orders':'آرڈر', 'orders booked':'آرڈر بک', 'value booked':'بکنگ کی رقم', 'pending total':'باقی رقم',
+  'pending (uncollected)':'باقی (نہیں لیے)', 'item name':'کپڑے کا نام', 'message':'میسج', 'by':'کس نے',
+  // popup titles
+  'customer return':'گاہک کی واپسی', "who's collecting the order?":'کپڑے کون لے رہا ہے؟',
+  'collect payment':'پیسے لیں', 'order dispatched':'آرڈر دے دیا', 'partial dispatch':'کچھ کپڑے دیں',
+  'dispatch history':'دینے کا ریکارڈ', 'why a different price?':'قیمت مختلف کیوں؟',
+  'customer order history':'گاہک کا ریکارڈ', 'dispatched':'دے دیے', 'collect now (rs)':'ابھی کتنے لیے',
+  'receiver phone (optional)':'لینے والے کا فون',
+};
+const URDU_SCAN = 'button, label, th, h2, h3, summary';
+function urduKey(el){
+  return (el.textContent || '')
+    .replace(/[←-⇿⌀-⯿\u{1F000}-\u{1FAFF}️]/gu, '') // arrows, emoji, symbols
+    .split(' — ')[0]                        // "Check Items — 1234"
+    .replace(/\(\d+(\/\d+)?\)/g, '')        // "(2/5)" counters
+    .replace(/[\s*:→]+$/g, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function applyUrduWord(el){
+  if(el.closest('#receipt, .receipt-box, nav, .kk-sheet, #tab-karkhana .kk-shop')) return;
+  if(el.hasAttribute('data-ur') && !el.hasAttribute('data-ur-auto')) return;
+  const key = urduKey(el);
+  const ur = URDU_WORDS[key];
+  if(ur){
+    if(el.getAttribute('data-ur') !== ur){ el.setAttribute('data-ur', ur); el.setAttribute('data-ur-auto', ''); }
+    el.dataset.act = key.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+  } else if(el.hasAttribute('data-ur-auto')){
+    el.removeAttribute('data-ur'); el.removeAttribute('data-ur-auto'); delete el.dataset.act;
+  }
+}
+function scanUrduWords(root){
+  if(root.nodeType !== 1) root = root.parentElement;
+  if(!root) return;
+  if(root.matches(URDU_SCAN)) applyUrduWord(root);
+  root.querySelectorAll(URDU_SCAN).forEach(applyUrduWord);
+  const owner = root.closest(URDU_SCAN); // text changed inside a button
+  if(owner) applyUrduWord(owner);
+}
+scanUrduWords(document.body);
+new MutationObserver(muts => {
+  const seen = new Set();
+  muts.forEach(m => {
+    if(m.type === 'characterData'){ if(m.target.parentElement) seen.add(m.target.parentElement); return; }
+    seen.add(m.target);
+    m.addedNodes.forEach(n => { if(n.nodeType === 1) seen.add(n); });
+  });
+  seen.forEach(scanUrduWords);
+}).observe(document.body, { childList: true, subtree: true, characterData: true });
+
+// Picture tiles for the usual expenses: tapping one fills the Category box.
+function pickExpenseCategory(name, btn){
+  document.getElementById('expenseCategory').value = name;
+  document.querySelectorAll('.exp-tile').forEach(b => b.classList.toggle('active', b === btn));
+  document.getElementById('expenseAmount').focus();
+}
+
 
 // ---------- PAGE HELP (Roman Urdu) ----------
 // One "Help" button, always visible, that explains everything relevant to
