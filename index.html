@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-11">
+<meta name="app-build" content="2026-10-24-12">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -6624,7 +6624,7 @@ async function openPartialDispatchModal(orderId, phone, code, customerName){
 
   // Show modal immediately in loading state so the worker knows something is happening.
   pendingPartialDispatch = { orderId, phone, code, customerName, order, state: null };
-  document.getElementById('pdOrderLine').textContent = `Order ${orderRef(orderId, code)} — ${customerName || phone || ''}`;
+  document.getElementById('pdOrderLine').textContent = `${orderRef(orderId, code)} — ${customerName || phone || ''}`;
   document.getElementById('pdBalanceDue').textContent = '…';
   document.getElementById('pdTotalRemaining').textContent = '…';
   document.getElementById('pdItemsBody').innerHTML =
@@ -7134,7 +7134,7 @@ function invalidatePartialDispatchCache(orderId){
 // job is to be a trustworthy audit trail, so it never just assumes the
 // optimistic cache is complete); falls back to whatever's cached offline.
 async function openDispatchHistoryModal(orderId, code, customerName){
-  document.getElementById('dhOrderLine').textContent = `Order ${orderRef(orderId, code)}${customerName ? ' — ' + customerName : ''}`;
+  document.getElementById('dhOrderLine').textContent = `${orderRef(orderId, code)}${customerName ? ' — ' + customerName : ''}`;
   document.getElementById('dhTimelineBody').innerHTML = '<p style="color:var(--muted);">Loading…</p>';
   document.getElementById('dispatchHistoryModal').classList.add('open');
 
@@ -7556,7 +7556,7 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
 
 // ---------- CHANGE DUE CONFIRMATION MODAL ----------
 function showDispatchChangeModal(code, orderId, change){
-  document.getElementById('dcgOrderLine').textContent = `Order ${orderRef(orderId, code)}`;
+  document.getElementById('dcgOrderLine').textContent = `${orderRef(orderId, code)}`;
   document.getElementById('dcgChangeAmount').textContent = 'Rs ' + change.toFixed(2);
   document.getElementById('dispatchChangeModal').classList.add('open');
 }
@@ -10573,10 +10573,10 @@ function serialTagHtml(serial){
 function serialCodeCell(serial, code){
   return `${serialTagHtml(serial)}<span class="code-sub">${escHtml(code || '')}</span>`;
 }
-// "#0427 · Code 1234" for popup titles; just the code if no serial yet.
+// "Serial 0427 · Code 1234" for popup titles; just the code if no serial yet.
 function orderRef(orderId, code){
   const sn = serialOf(orderId);
-  return (sn ? '#' + fmtSerial(sn) + ' · ' : '') + 'Code ' + (code || orderId);
+  return (sn ? 'Serial ' + fmtSerial(sn) + ' · ' : '') + 'Code ' + (code || orderId);
 }
 
 // ---------- RECEIPT QR SCANS ----------
@@ -10839,7 +10839,7 @@ async function openReturnModal(orderId){
     .filter(l => l.max > 0);
   if(!lines.length){ alert('No clothes from this order have left the shop yet.'); return; }
   returnCtx = { order, lines };
-  document.getElementById('returnOrderLine').textContent = `Order ${orderRef(order.id, order.code)} — ${order.customer_name || 'Walk-in'} ${order.customer_phone || ''}`;
+  document.getElementById('returnOrderLine').textContent = `${orderRef(order.id, order.code)} — ${order.customer_name || 'Walk-in'} ${order.customer_phone || ''}`;
   document.getElementById('returnReason').value = '';
   document.getElementById('returnError').textContent = '';
   document.getElementById('returnReasonChips').innerHTML = RETURN_REASONS.map(r => `<button type="button" class="chip-btn" onclick="pickReturnReason(this)">${escHtml(r)}</button>`).join('');
@@ -10921,7 +10921,7 @@ async function loadReturnsTab(){
   openEl.innerHTML = open.length ? open.map(r => `
     <div class="return-card">
       <div class="kk-entry-head">
-        <div><span class="return-badge">↩ NEEDS ATTENTION</span> ${serialTagHtml(serialOf(r.order_id))} <b>Order ${escHtml(r.order_code || r.order_id)}</b> · ${escHtml(r.customer_phone || '')}${isAdmin ? ` · ${escHtml(branchName(r.branch_id))}` : ''}</div>
+        <div><span class="return-badge">↩ NEEDS ATTENTION</span> ${serialTagHtml(serialOf(r.order_id))} <b>Code ${escHtml(r.order_code || r.order_id)}</b> · ${escHtml(r.customer_phone || '')}${isAdmin ? ` · ${escHtml(branchName(r.branch_id))}` : ''}</div>
         <div class="small">Returned ${formatAppDateTime(r.created_at)} · <b>${ageText(r.created_at)}</b></div>
       </div>
       <ul class="return-items">${returnItemsHtml(r.items)}</ul>
@@ -10934,7 +10934,7 @@ async function loadReturnsTab(){
   const done = doneRes.data || [];
   doneEl.innerHTML = done.length ? done.map(r => `
     <div class="return-done">
-      <div>${serialTagHtml(serialOf(r.order_id))} <b>Order ${escHtml(r.order_code || r.order_id)}</b> · ${escHtml(r.customer_phone || '')} — ${escHtml(r.reason)}</div>
+      <div>${serialTagHtml(serialOf(r.order_id))} <b>Code ${escHtml(r.order_code || r.order_id)}</b> · ${escHtml(r.customer_phone || '')} — ${escHtml(r.reason)}</div>
       <ul class="return-items">${returnItemsHtml(r.items)}</ul>
       <div class="small">Returned ${formatAppDateTime(r.created_at)} → fixed ${r.resolved_at ? formatAppDateTime(r.resolved_at) : ''}${r.resolution_note ? ` — ${escHtml(r.resolution_note)}` : ''}</div>
     </div>`).join('') : '<div class="small">Nothing yet.</div>';
@@ -12956,7 +12956,7 @@ function openClearUrgentModal(orderId, code){
   pendingAdminAction = { type: 'urgent', id: orderId };
   document.getElementById('deleteConfirmTitle').textContent = 'Remove Urgent Flag';
   document.getElementById('deleteConfirmSubmitBtn').textContent = 'Remove Urgent Flag';
-  document.getElementById('deleteConfirmLabel').textContent = `Remove the Urgent flag from order ${orderRef(orderId, code)}? This cannot be undone from the app.`;
+  document.getElementById('deleteConfirmLabel').textContent = `Remove the Urgent flag from ${orderRef(orderId, code)}? This cannot be undone from the app.`;
   document.getElementById('deleteConfirmPassword').value = '';
   document.getElementById('deleteConfirmError').textContent = '';
   document.getElementById('deleteConfirmModal').classList.add('open');
