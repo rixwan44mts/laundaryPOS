@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-13">
+<meta name="app-build" content="2026-10-24-14">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -7518,7 +7518,11 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
   // already contains this release; offline it's added here by hand.
   let history = await fetchReleaseHistory(orderId);
   const nowIso = new Date().toISOString();
-  const sameItems = r => JSON.stringify(r.items_released) === JSON.stringify(releasingItems);
+  // Compare by line and qty, not raw JSON: the server's jsonb comes back
+  // with its keys reordered ({"qty","line_id"}), which never matched and
+  // printed this release twice.
+  const itemsKey = list => (list || []).map(x => `${Number(x.line_id)}:${Number(x.qty)}`).sort().join(',');
+  const sameItems = r => itemsKey(r.items_released) === itemsKey(releasingItems);
   const hasThis = isFinalRelease
     ? history.some(r => r.event_type === 'final')
     : history.some(r => sameItems(r) && Date.now() - new Date(r.created_at) < 10 * 60000);
