@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-24-5">
+<meta name="app-build" content="2026-10-24-6">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2361,7 +2361,7 @@
         <button type="button" id="vipToggleBtn" class="btn-secondary vip-toggle-btn vip-simple" onclick="toggleVip()" disabled>Mark VIP</button>
       </div>
       <div class="field">
-        <label data-i18n="lbl_urgent" data-ur="جلدی">Urgent</label>
+        <label data-i18n="lbl_urgent" data-ur="ارجنٹ">Urgent</label>
         <button type="button" id="urgentToggleBtn" class="btn-secondary urgent-toggle-btn" onclick="toggleUrgentPanel()">Mark Urgent</button>
       </div>
     </div>
@@ -12882,7 +12882,7 @@ const I18N = {
   lbl_name:            { en: 'Customer Name',           ur: 'کسٹمر کا نام' },
   lbl_code:            { en: 'Order Code (auto, editable)', ur: 'آرڈر کوڈ (خودکار، تبدیل کر سکتے ہیں)' },
   lbl_vip:             { en: 'VIP',                     ur: 'وی آئی پی' },
-  lbl_urgent:          { en: 'Urgent',                  ur: 'جلدی' },
+  lbl_urgent:          { en: 'Urgent',                  ur: 'ارجنٹ' },
   lbl_itemsinorder:    { en: 'Items in this order',     ur: 'اس آرڈر کے آئٹمز' },
   th_service:          { en: 'Service',                 ur: 'سروس' },
   th_qty:              { en: 'Qty',                     ur: 'تعداد' },
@@ -12938,11 +12938,11 @@ const URDU_WORDS = {
   'confirm & dispatch':'دے دیں', 'release items':'کپڑے دیں', 'exact balance':'پورا بقایا',
   'save return':'واپسی محفوظ کریں', 'fixed & handed back':'ٹھیک کر کے دے دیا', 'back to order':'آرڈر پر واپس',
   'save reasons & continue':'محفوظ کریں', '+ add expense':'خرچہ لکھیں', 'save expense':'خرچہ لکھیں',
-  'mark urgent':'جلدی کریں', 'download image':'تصویر لیں', 'record salary payment':'تنخواہ لکھیں',
+  'mark urgent':'ارجنٹ', 'download image':'تصویر لیں', 'record salary payment':'تنخواہ لکھیں',
   'back to dashboard':'واپس', 'back to admin dashboard':'واپس',
   // fields and headings
   'code':'کوڈ', 'phone':'فون', 'name':'نام', 'customer':'گاہک', 'items':'کپڑے', 'item':'کپڑا', 'total':'کل رقم',
-  'advance':'ایڈوانس', 'balance due':'بقایا', 'advance paid':'ایڈوانس', 'balance':'بقایا', 'status':'حالت', 'state':'حالت', 'urgent':'جلدی', 'vip':'خاص گاہک',
+  'advance':'ایڈوانس', 'balance due':'بقایا', 'advance paid':'ایڈوانس', 'balance':'بقایا', 'status':'حالت', 'state':'حالت', 'urgent':'ارجنٹ', 'vip':'خاص گاہک',
   'booked':'بکنگ', 'dispatched at':'کب دیا', 'received by':'کس نے لیا', 'actions':'کام', 'action':'کام',
   'collect by':'واپسی کا دن', 'overdue by':'کتنی دیر', 'last notified':'آخری میسج', 'ordered':'کل',
   'released':'دے دیے', 'remaining':'باقی', 'release now':'ابھی دیں', 'service':'سروس', 'qty':'تعداد',
