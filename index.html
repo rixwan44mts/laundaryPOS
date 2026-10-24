@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-18-4">
+<meta name="app-build" content="2026-10-24-1">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Inter = all on-screen UI text. Space Mono is kept only for the
      printed thermal receipt (.receipt-box), which needs fixed-width digits. -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Schibsted+Grotesk:wght@400..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <!-- Urdu-script fonts for the Promo Poster's "Urdu Script" mode (Nastaliq
      for large display text, Naskh for smaller/body text — Nastaliq gets
      hard to read at small sizes, Naskh is the more legible workhorse). -->
@@ -1731,6 +1731,152 @@
   .dmy-input::-webkit-datetime-edit{opacity:0;}
   .dmy-text{position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;white-space:nowrap;overflow:hidden;color:var(--ink);font:inherit;}
   .dmy-text.is-empty{color:var(--muted);}
+  /* =====================================================================
+     V4 NEEL LAYER
+     Named after neel, the indigo bluing a dhobi adds to the last rinse.
+     Deep indigo side rail for navigation, cool white working surface,
+     Schibsted Grotesk throughout, and one fixed colour per order stage:
+     Printed = marigold, Ready = green, Dispatched = violet. Overrides V3
+     only; delete this block to roll back to V3. Receipt still Space Mono.
+     ===================================================================== */
+  :root{
+    --font-ui:'Schibsted Grotesk','Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --rail-w:232px;
+
+    --neel:#222C74; --neel-deep:#18205A; --neel-2:#3443A8; --neel-soft:#E7EAF8;
+    --ink:#171B34; --ink-soft:#454B66; --muted:#6C7290;
+    --paper:#ECEEF4; --paper-2:#F3F4F9; --panel:#FFFFFF;
+    --line:#DFE2EC; --line-strong:#C6CBDA; --hover:#F1F2F8;
+
+    --printed:#E39500; --printed-soft:#FFF1D3; --printed-ink:#6B4500;
+    --ready:#1B9655;   --ready-soft:#DDF3E6;   --ready-ink:#0B5130;
+    --dispatched:#7647C2; --dispatched-soft:#EFE7FB; --dispatched-ink:#45237E;
+
+    --accent:var(--neel-2); --accent-dim:rgba(52,67,168,.18); --accent-soft:var(--neel-soft);
+    --accent-2:#DB4A2E; --accent-2-soft:#FCE4DC;
+    --amber:var(--printed); --amber-soft:var(--printed-soft);
+    --good:var(--ready); --warn:#DB4A2E;
+    --grad-accent:var(--neel-2);
+    --shadow-accent:0 8px 18px -10px rgba(34,44,116,.8);
+    --shadow-md:0 1px 2px rgba(23,27,52,.05), 0 8px 20px -12px rgba(23,27,52,.18);
+  }
+  html[dir="rtl"]{--font-ui:'Schibsted Grotesk','Noto Naskh Arabic',system-ui,sans-serif;}
+
+  body{background:var(--paper);background-image:none;font-size:14.5px;}
+  h1,h2,h3,h4,h5,h6{letter-spacing:-.01em;}
+  :focus-visible{outline:2px solid var(--neel-2);outline-offset:2px;}
+
+  /* ---- Header: brand moves into the rail on wide screens ---- */
+  header h1{font-weight:800;letter-spacing:-.02em;}
+  header .tagline{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:500;}
+
+  /* ---- Navigation: indigo strip (narrow) / indigo rail (wide) ---- */
+  nav{
+    background:var(--neel);border:none;border-radius:14px;box-shadow:none;
+    backdrop-filter:none;-webkit-backdrop-filter:none;
+    flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:6px;gap:2px;
+  }
+  nav::-webkit-scrollbar{display:none;}
+  nav button{flex:0 0 auto;color:#C3C9EE;font-weight:600;font-size:14px;border-radius:10px;}
+  nav button:hover{background:rgba(255,255,255,.09);color:#fff;}
+  nav button.active,
+  nav button.active:hover{background:#fff;color:var(--neel);box-shadow:none;}
+  .tabbtn .overdue-nav-badge{box-shadow:none;}
+
+  @media (min-width:1180px){
+    body{padding-left:var(--rail-w);}
+    nav{
+      position:fixed;left:0;top:0;bottom:0;z-index:40;width:var(--rail-w);
+      flex-direction:column;align-items:stretch;overflow-y:auto;overflow-x:hidden;
+      border-radius:0;margin:0;padding:22px 12px 20px;gap:2px;background:var(--neel);
+    }
+    nav::before{
+      content:"Laundry POS";display:block;color:#fff;font:800 19px/1.1 var(--font-ui);
+      letter-spacing:-.02em;padding:2px 12px 20px;margin-bottom:8px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    nav button{justify-content:flex-start;text-align:left;padding:11px 12px;font-size:14.5px;}
+    nav button .overdue-nav-badge{margin-left:auto;}
+    header{justify-content:flex-end;}
+    header .brandmark{display:none;}
+    .neworder-payment{left:var(--rail-w);}
+  }
+  @media print{ body{padding-left:0 !important;} }
+
+  /* ---- Surfaces & controls ---- */
+  .panel{border-radius:16px;border-color:var(--line);}
+  .btn-main{background:var(--neel-2);box-shadow:var(--shadow-accent);}
+  .btn-main:hover{background:var(--neel);box-shadow:var(--shadow-accent);}
+  .filter-toggle-btn.active{background:var(--neel-2);border-color:var(--neel-2);color:#fff;}
+  .chip-btn.active{box-shadow:none;}
+  th{background:var(--paper-2);color:var(--muted);}
+  .toast{box-shadow:inset 3px 0 0 #8D9BF0, var(--shadow-lg);}
+  #loginScreen::before{background:linear-gradient(90deg,var(--printed) 0 33.3%,var(--ready) 0 66.6%,var(--dispatched) 0);}
+
+  /* ---- Status colours, used everywhere a status appears ---- */
+  .status-tag{color:#fff;}
+  .status-tag.live, .status-tag.printed{background:var(--printed);color:#3A2600;}
+  .status-tag.ready{background:var(--ready);}
+  .status-tag.archived, .status-tag.closed, .status-tag.dispatched{background:var(--dispatched);}
+
+  /* ---- Open Orders: Printed / Ready / Dispatched hang tags ---- */
+  .status-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 12px;}
+  .status-tab{
+    --c:var(--printed);--soft:var(--printed-soft);--cink:var(--printed-ink);
+    position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:12px;
+    text-align:left;font:inherit;color:var(--cink);cursor:pointer;
+    background:var(--soft);border:none;border-radius:6px 14px 14px 6px;
+    padding:14px 20px 14px 46px;min-height:72px;
+    /* the pointed end of a garment tag */
+    clip-path:polygon(16px 0,100% 0,100% 100%,16px 100%,0 50%);
+    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),transform .18s var(--spring);
+  }
+  .status-tab.st-ready{--c:var(--ready);--soft:var(--ready-soft);--cink:var(--ready-ink);}
+  .status-tab.st-dispatched{--c:var(--dispatched);--soft:var(--dispatched-soft);--cink:var(--dispatched-ink);}
+  /* punched hole the string goes through */
+  .status-tab::before{
+    content:"";position:absolute;left:24px;top:50%;width:11px;height:11px;margin-top:-5.5px;
+    border-radius:50%;background:var(--paper);box-shadow:inset 0 0 0 2px var(--c);
+  }
+  .status-tab:hover{background:color-mix(in srgb, var(--soft) 70%, var(--c) 30%);}
+  .status-tab:active{transform:scale(.98);}
+  .status-tab:focus-visible{outline:none;box-shadow:inset 0 0 0 3px var(--ink);}
+  .status-tab.active{background:var(--c);color:#fff;}
+  .status-tab.st-printed.active{color:#2E1E00;}
+  .status-tab.active::before{box-shadow:none;}
+  .st-name{grid-column:1;font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.15;}
+  .st-hint{grid-column:1;font-size:12.5px;font-weight:500;opacity:.8;line-height:1.3;}
+  .st-count{grid-column:2;grid-row:1 / span 2;font-size:32px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;}
+
+  /* the orders panel takes the colour of the open tag */
+  #tab-openorders .panel{border-top:4px solid var(--printed);}
+  #tab-openorders[data-status="ready"] .panel{border-top-color:var(--ready);}
+  #tab-openorders[data-status="dispatched"] .panel{border-top-color:var(--dispatched);}
+
+  /* rows tinted by stage, with a solid stripe down the code column */
+  #openOrdersBody tr.row-printed td{background:var(--printed-soft);}
+  #openOrdersBody tr.row-ready td{background:var(--ready-soft);}
+  #openOrdersBody tr.row-dispatched td{background:var(--dispatched-soft);}
+  #openOrdersBody tr.row-printed td:first-child{box-shadow:inset 4px 0 0 var(--printed);}
+  #openOrdersBody tr.row-ready td:first-child{box-shadow:inset 4px 0 0 var(--ready);}
+  #openOrdersBody tr.row-dispatched td:first-child{box-shadow:inset 4px 0 0 var(--dispatched);}
+  #openOrdersBody tr.zebra-b{filter:brightness(.975);}
+  #openOrdersBody tr td:first-child{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;}
+  #openOrdersBody tr.section-heading-row td{
+    background:var(--paper-2);color:var(--ink);font-size:14px;font-weight:800;
+    text-transform:none;letter-spacing:-.005em;box-shadow:inset 4px 0 0 var(--neel-2);
+  }
+  #openOrdersBody tr.section-heading-row.sh-printed td{background:var(--printed);color:#2E1E00;box-shadow:none;}
+  #openOrdersBody tr.section-heading-row.sh-ready td{background:var(--ready);color:#fff;box-shadow:none;}
+  #openOrdersBody tr.section-heading-row.sh-dispatched td{background:var(--dispatched);color:#fff;box-shadow:none;}
+
+  @media (max-width:760px){
+    .status-tabs{grid-template-columns:1fr;gap:6px;}
+    .status-tab{min-height:56px;padding:10px 16px 10px 42px;}
+    .st-hint{display:none;}
+    .st-count{font-size:24px;grid-row:1;}
+  }
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -1957,14 +2103,25 @@
   </div>
 
   <!-- OPEN ORDERS -->
-  <div id="tab-openorders" class="tab">
+  <div id="tab-openorders" class="tab" data-status="printed">
+    <!-- Printed / Ready / Dispatched: one colour each (marigold / green /
+         violet), shaped like the hang tags clipped onto garments. Counts
+         are filled in by updateStatusTabCounts(). -->
+    <div class="status-tabs" role="tablist" aria-label="Order status">
+      <button type="button" class="status-tab st-printed active" id="statusFilterPrinted" role="tab" aria-selected="true" onclick="setOpenOrdersStatusTab('printed')">
+        <span class="st-name">Printed</span><span class="st-hint">Booked, still in the shop</span><b class="st-count" id="statusCountPrinted">0</b>
+      </button>
+      <button type="button" class="status-tab st-ready" id="statusFilterReady" role="tab" aria-selected="false" onclick="setOpenOrdersStatusTab('ready')">
+        <span class="st-name">Ready</span><span class="st-hint">Checked, waiting for pickup</span><b class="st-count" id="statusCountReady">0</b>
+      </button>
+      <button type="button" class="status-tab st-dispatched" id="statusFilterDispatched" role="tab" aria-selected="false" onclick="setOpenOrdersStatusTab('dispatched')">
+        <span class="st-name">Dispatched</span><span class="st-hint">Handed over to the customer</span><b class="st-count" id="statusCountDispatched">0</b>
+      </button>
+    </div>
     <div class="panel">
       <div class="row" style="justify-content:space-between;">
-        <label style="margin:0;">Open orders at this branch (not yet dispatched)</label>
+        <label style="margin:0;">Search looks in all three tabs at once</label>
         <div class="row" style="gap:6px;">
-          <button type="button" class="btn-secondary status-filter-btn active" id="statusFilterPrinted" onclick="setOpenOrdersStatusTab('printed')"><span class="sfb-icon">🖨️</span> <span class="sfb-label">Printed</span></button>
-          <button type="button" class="btn-secondary status-filter-btn" id="statusFilterReady" onclick="setOpenOrdersStatusTab('ready')"><span class="sfb-icon">✅</span> <span class="sfb-label">Ready</span></button>
-          <button type="button" class="btn-secondary status-filter-btn" id="statusFilterDispatched" onclick="setOpenOrdersStatusTab('dispatched')"><span class="sfb-icon">📦</span> <span class="sfb-label">Dispatched</span></button>
           <button type="button" class="btn-secondary filter-toggle-btn" id="urgentFilterBtn" onclick="toggleUrgentFilter()"><span class="sfb-icon">🔥</span> <span class="sfb-label">Urgent</span></button>
           <button type="button" class="btn-secondary filter-toggle-btn" id="vipFilterBtn" onclick="toggleVipFilter()"><span class="sfb-icon">★</span> <span class="sfb-label">VIP</span></button>
           <button class="btn-secondary" onclick="loadOpenOrders()">Refresh</button>
@@ -4614,6 +4771,8 @@ async function renderOpenOrdersRows(list){
       rowClass = isDormant ? 'row-dormant' : 'row-ready';
     } else if(status === 'printed' || isPartiallyDispatched){
       rowClass = 'row-printed';
+    } else if(isTerminal){
+      rowClass = 'row-dispatched';
     }
 
     return `<tr class="${rowClass}${urgentRowClass}${openReturn ? ' row-returned' : ''}${idx % 2 === 1 ? ' zebra-b' : ''}">
@@ -4668,16 +4827,16 @@ async function renderOpenOrdersRows(list){
   readyGroup.sort(byDateDesc('created_at'));
   archivedGroup.sort(byDateDesc('dispatched_at'));
 
-  function sectionHtml(label, orders){
+  function sectionHtml(label, orders, key){
     if(!orders.length) return '';
-    return `<tr class="section-heading-row"><td colspan="13">${label} (${orders.length})</td></tr>`
+    return `<tr class="section-heading-row sh-${key}"><td colspan="13">${label} (${orders.length})</td></tr>`
       + orders.map((o, idx) => rowHtml(o, idx)).join('');
   }
 
   body.innerHTML = noticeRow + pendingSection + dispatchConflictSection + dispatchPendingSection + partialConflictSection + partialPendingSection
-    + sectionHtml('PRINTED', printedGroup)
-    + sectionHtml('READY', readyGroup)
-    + sectionHtml('ARCHIVED', archivedGroup);
+    + sectionHtml('Printed', printedGroup, 'printed')
+    + sectionHtml('Ready', readyGroup, 'ready')
+    + sectionHtml('Dispatched', archivedGroup, 'dispatched');
 }
 
 // Filters by phone and/or code. Either box can be left empty — whichever
@@ -4713,6 +4872,11 @@ function setOpenOrdersStatusTab(key){
     document.getElementById(id).classList.remove('active');
   });
   document.getElementById(OPEN_ORDERS_STATUS_TAB_IDS[key]).classList.add('active');
+  Object.entries(OPEN_ORDERS_STATUS_TAB_IDS).forEach(([k, id]) => {
+    document.getElementById(id).setAttribute('aria-selected', k === key ? 'true' : 'false');
+  });
+  // drives the status colour on the orders panel below the tabs
+  document.getElementById('tab-openorders').dataset.status = key;
   filterOpenOrders();
 }
 
@@ -4760,12 +4924,31 @@ async function filterOpenOrders(){
   });
 
   await renderOpenOrdersRows(filtered);
+  updateStatusTabCounts();
   // Kept in lockstep with Open Orders deliberately: every place that
   // already calls filterOpenOrders() (initial load, search, after
   // markReady/dispatch, offline sync, updateOfflineBadge) now also
   // refreshes the Overdue tab + its nav badge, with no separate fetch and
   // no separate list of call sites to maintain.
   renderOverdueTab();
+}
+
+// Live counts on the Printed / Ready / Dispatched tabs. Uses the same
+// bucket rules as filterOpenOrders() and honours the Urgent/VIP toggles,
+// so each number matches what that tab will list when opened.
+function updateStatusTabCounts(){
+  const counts = { printed: 0, ready: 0, dispatched: 0 };
+  allOpenOrders.forEach(o => {
+    if(activeUrgentOnly && !o.is_urgent) return;
+    if(activeVipOnly && !o.is_vip) return;
+    const status = o.status || 'live';
+    if(TERMINAL_STATUSES.includes(status)) counts.dispatched++;
+    else if(status === 'ready' || (status === 'partially_dispatched' && orderItemsAllChecked(o))) counts.ready++;
+    else counts.printed++;
+  });
+  document.getElementById('statusCountPrinted').textContent = counts.printed;
+  document.getElementById('statusCountReady').textContent = counts.ready;
+  document.getElementById('statusCountDispatched').textContent = counts.dispatched;
 }
 
 // ---------- OVERDUE TRACKING (Ready, not yet Dispatched, past collect-by) ----------
