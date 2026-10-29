@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-4">
+<meta name="app-build" content="2026-10-29-5">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2340,6 +2340,39 @@
   .receipt-row > :last-child, .receipt-row span:last-child, .receipt-row b:last-child{flex-shrink:0;white-space:nowrap;}
   .receipt-line, .receipt-item .item-name{white-space:normal;overflow-wrap:anywhere;}
 
+  /* Phones: the fixed money bar covered almost half the screen and pushed
+     Save off the bottom. Below 640px it sits at the end of the page like
+     any other card, so everything is reached by scrolling. */
+  @media (max-width:640px){
+    .panel.neworder-payment{
+      position:static;max-height:none;overflow:visible;animation:none;
+      border-radius:14px;border-bottom:1px solid var(--line);margin-top:12px;
+      box-shadow:none;background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;
+    }
+    #tab-neworder{padding-bottom:16px;}
+    .ledger-strip{flex-wrap:wrap;}
+    .payment-inputs-row{flex-wrap:wrap;}
+    .payment-inputs-row .field{flex:1 1 30%;}
+  }
+
+  /* Tap-to-pick answer chips */
+  .pick-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .pick-chip{min-height:40px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;}
+  .pick-chip.active{background:var(--neel);color:#fff;border-color:var(--neel);}
+  .pick-chip .kk-ur{font-size:14px;line-height:1.5;}
+
+  /* Order card at the top of the release popups */
+  .order-id-card{border:2px solid var(--neel);border-radius:12px;padding:10px 12px;margin-bottom:12px;background:#fff;}
+  .order-id-card:empty{display:none;}
+  .oic-ids{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;}
+  .oic-id{font-size:14px;color:var(--ink-soft);}
+  .oic-id b{font-family:var(--font-mono);font-size:26px;color:var(--neel);letter-spacing:.06em;margin-left:4px;}
+  .oic-pieces{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;}
+  .oic-piece{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--line);border-radius:10px;}
+  .oic-piece svg{width:30px;height:30px;}
+  .oic-piece b{font-size:16px;}
+  .oic-total{font-size:14px;font-weight:700;margin-left:auto;}
+
   /* Open Orders / Overdue are wider than a 1366 till, which left the
      Actions buttons off-screen behind a sideways scroll. Pin that column
      to the right edge; it keeps its row colour (row rules are more
@@ -2553,6 +2586,11 @@
       <div id="wd-deadline-wrap" class="wd-deadline-field">
         <label for="wd-deadline" data-ur="دھلائی واپسی کا دن">Wash + Dry Clean — Collect By Date &amp; Time</label>
         <input type="datetime-local" id="wd-deadline" class="hidden" oninput="renderItemsList()">
+        <div class="pick-chips deadline-picks">
+          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',1)"><span class="kk-ur">کل</span> Tomorrow</button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',2)"><span class="kk-ur">پرسوں</span> 2 days</button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',3)"><span class="kk-ur">3 دن</span> 3 days</button>
+        </div>
       </div>
       <!-- Only shown when the cart contains a Press item — see
            updateDeadlineVisibility(), called from renderItemsList().
@@ -2561,6 +2599,11 @@
       <div id="press-deadline-wrap" class="press-deadline-field">
         <label for="press-deadline" data-ur="استری واپسی کا دن">Press Order — Custom Collect-By Date &amp; Time</label>
         <input type="datetime-local" id="press-deadline" class="hidden" required oninput="renderItemsList()">
+        <div class="pick-chips deadline-picks">
+          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',1)"><span class="kk-ur">کل</span> Tomorrow</button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',2)"><span class="kk-ur">پرسوں</span> 2 days</button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',3)"><span class="kk-ur">3 دن</span> 3 days</button>
+        </div>
       </div>
       <button id="saveOrderBtn" class="btn-main" style="width:100%;" onclick="saveAndPrint()" data-i18n="btn_save" data-ur="محفوظ کریں اور رسید چھاپیں">Save Order &amp; Print Receipt</button>
     </div>
@@ -3262,6 +3305,7 @@
         <h2>Who's Collecting the Order?</h2>
       </div>
       <div class="modal-body">
+        <div class="order-id-card" id="drOrderCard"></div>
         <p class="small" style="margin-top:0;">Record who is physically taking the clothes back — this name/number is added to the dispatch WhatsApp/SMS message and printed on the closing bill.</p>
 
         <button class="btn-secondary" style="width:100%;margin-bottom:12px;" onclick="fillReceiverSameAsCustomer()">Same as Customer (autofill)</button>
@@ -3310,6 +3354,7 @@
         <h2>Collect Payment</h2>
       </div>
       <div class="modal-body">
+        <div class="order-id-card" id="dcOrderCard"></div>
         <div class="row" style="justify-content:space-between;margin-bottom:6px;">
           <span class="small" data-ur="کل رقم">Order Total</span><strong id="dcTotal">Rs 0</strong>
         </div>
@@ -3375,6 +3420,7 @@
         </div>
       </div>
       <div class="modal-body">
+        <div class="order-id-card" id="pdOrderCard"></div>
 
         <!-- Balance + remaining summary banner -->
         <div style="display:flex;gap:12px;margin-bottom:16px;">
@@ -3873,6 +3919,7 @@ const URDU_ALERTS = [
   [/BALANCE_DUE|still owed/i, 'بقایا ابھی باقی ہے۔ پہلے پورے پیسے لیں، پھر آرڈر بند کریں۔', 'money'],
   [/INVALID_QTY|EVENT_ORDER_MISMATCH/, 'کپڑوں کی تعداد درست نہیں۔ آرڈر دوبارہ کھولیں اور پھر کوشش کریں۔', 'cloth'],
   [/what the money was spent on/i, 'پہلے تصویر دبا کر چنیں کہ پیسے کس چیز پر خرچ ہوئے۔', 'money'],
+  [/too slow to answer/i, 'سرور نے دیر سے جواب دیا، شاید یہ محفوظ ہو چکا ہے۔ دوبارہ لکھنے سے پہلے نیچے والی فہرست دیکھیں۔', 'wifi'],
   [/fullscreen was blocked/i, 'پوری اسکرین نہیں کھل سکی۔ دوبارہ دبائیں۔', 'warn'],
   [/camera link must start/i, 'کیمرے کا لنک http:// یا https:// سے شروع ہونا چاہیے۔', 'warn'],
   [/saved locally but failed to sync/i, 'یہ اسی کمپیوٹر میں محفوظ ہو گیا مگر سرور پر نہیں گیا۔ انٹرنیٹ آنے پر دوبارہ کریں۔', 'wifi'],
@@ -5218,7 +5265,7 @@ function pendingPartialDispatchRowHtml(record){
       <td class="oo-items-cell">${escHtml(releasedNames || '—')}</td>
       <td>—</td>
       <td>—</td>
-      <td class="amt-good">Rs ${Number(record.amountCollected || 0).toFixed(2)}</td>
+      <td class="amt-good">Rs ${fmtMoney(Number(record.amountCollected || 0))}</td>
       <td>${statusBadge}${errorNote}</td>
       <td></td>
       <td>${formatAppDateTime(record.queuedAt)}</td>
@@ -6649,8 +6696,31 @@ const orderReceivers = {};
 // confirmDispatchReceiver() knows which order to dispatch.
 let pendingDispatchOrder = null;
 
+// Big serial + code + cloth pictures at the top of every release popup, so
+// the worker can match the order to the clothes on the counter before
+// handing anything over. Built from the cached order; nothing is fetched.
+function fillOrderIdCard(elId, orderId, code){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const o = allOpenOrders.find(x => x.id === orderId);
+  const serial = (o && o.serial_no) || serialOf(orderId);
+  const pieces = ((o && o.items) || []).map(it => {
+    const { name } = splitServiceLabel(it.service || '');
+    const pic = itemPicture(name);
+    return `<span class="oic-piece" title="${escHtml(name)}">${pic.svg}<b>${Number(it.qty) || 0}</b></span>`;
+  }).join('');
+  const total = ((o && o.items) || []).reduce((n, it) => n + (Number(it.qty) || 0), 0);
+  el.innerHTML = `
+    <div class="oic-ids">
+      ${serial ? `<span class="oic-id"><span class="kk-ur">سیریل</span> Serial <b>${fmtSerial(serial)}</b></span>` : ''}
+      <span class="oic-id"><span class="kk-ur">کوڈ</span> Code <b>${escHtml(code || (o && o.code) || '')}</b></span>
+    </div>
+    ${pieces ? `<div class="oic-pieces">${pieces}<span class="oic-total"><span class="kk-ur">کل کپڑے</span> ${total} pcs</span></div>` : ''}`;
+}
+
 function openDispatchReceiverModal(orderId, phone, code, customerName){
   pendingDispatchOrder = { orderId, phone, code, customerName };
+  fillOrderIdCard('drOrderCard', orderId, code);
   document.getElementById('dispatchReceiverName').value = '';
   document.getElementById('dispatchReceiverPhone').value = '';
   document.getElementById('dispatchReceiverModal').classList.add('open');
@@ -6665,7 +6735,8 @@ function closeDispatchReceiverModal(){
 // their own order up — using the name/phone already on the order.
 function fillReceiverSameAsCustomer(){
   if(!pendingDispatchOrder) return;
-  document.getElementById('dispatchReceiverName').value = pendingDispatchOrder.customerName || '';
+  // A walk-in with no name on file still needs a receiver name to save.
+  document.getElementById('dispatchReceiverName').value = pendingDispatchOrder.customerName || 'Customer (گاہک)';
   document.getElementById('dispatchReceiverPhone').value = pendingDispatchOrder.phone || '';
 }
 
@@ -6700,6 +6771,7 @@ let pendingCashDispatch = null;
 
 function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue){
   pendingCashDispatch = { orderId, phone, code, receiverName, receiverPhone, balanceDue };
+  fillOrderIdCard('dcOrderCard', orderId, code);
   document.getElementById('dcTotal').textContent = 'Rs ' + (cachedOrder ? cachedOrder.total : '—');
   document.getElementById('dcAdvance').textContent = 'Rs ' + (cachedOrder ? cachedOrder.advance_paid : '—');
   document.getElementById('dcBalanceDue').textContent = 'Rs ' + balanceDue;
@@ -6749,13 +6821,13 @@ function updateDispatchChangeDisplay(){
   const warnEl = document.getElementById('dcWarning');
   const confirmBtn = document.getElementById('dcConfirmBtn');
   if(change < 0){
-    changeEl.textContent = `Short by Rs ${Math.abs(change).toFixed(2)}`;
+    changeEl.textContent = `Short by Rs ${fmtMoney(Math.abs(change))}`;
     changeEl.style.color = 'var(--warn)';
     warnEl.style.display = 'block';
-    warnEl.textContent = `Rs ${Math.abs(change).toFixed(2)} short of the Rs ${pendingCashDispatch.balanceDue} balance due. Full balance must be collected before dispatch.`;
+    warnEl.textContent = `Rs ${fmtMoney(Math.abs(change))} short of the Rs ${pendingCashDispatch.balanceDue} balance due. Full balance must be collected before dispatch.`;
     confirmBtn.disabled = true;
   } else {
-    changeEl.textContent = `Rs ${change.toFixed(2)}`;
+    changeEl.textContent = `Rs ${fmtMoney(change)}`;
     changeEl.style.color = 'var(--good)';
     warnEl.style.display = 'none';
     confirmBtn.disabled = false;
@@ -6798,6 +6870,7 @@ async function openPartialDispatchModal(orderId, phone, code, customerName){
   // Show modal immediately in loading state so the worker knows something is happening.
   pendingPartialDispatch = { orderId, phone, code, customerName, order, state: null };
   document.getElementById('pdOrderLine').textContent = `${orderRef(orderId, code)} — ${customerName || phone || ''}`;
+  fillOrderIdCard('pdOrderCard', orderId, code);
   document.getElementById('pdBalanceDue').textContent = '…';
   document.getElementById('pdTotalRemaining').textContent = '…';
   document.getElementById('pdItemsBody').innerHTML =
@@ -6817,7 +6890,7 @@ async function openPartialDispatchModal(orderId, phone, code, customerName){
   order._pdRemaining = state.totalRemaining; // seeds the Open Orders row's "pcs left" note (Step 6)
 
   // Populate the banner.
-  document.getElementById('pdBalanceDue').textContent = 'Rs ' + Number(state.effectiveBalance).toFixed(2);
+  document.getElementById('pdBalanceDue').textContent = 'Rs ' + fmtMoney(Number(state.effectiveBalance));
   document.getElementById('pdTotalRemaining').textContent = state.totalRemaining + ' pcs';
 
   // Build the per-line rows.
@@ -6911,8 +6984,8 @@ function updatePdSummary(){
   const newBalance = Math.max(0, state.effectiveBalance - collected);
   const change = Math.max(0, collected - state.effectiveBalance);
 
-  document.getElementById('pdNewBalance').textContent = 'Rs ' + newBalance.toFixed(2);
-  document.getElementById('pdChange').textContent = 'Rs ' + change.toFixed(2);
+  document.getElementById('pdNewBalance').textContent = 'Rs ' + fmtMoney(newBalance);
+  document.getElementById('pdChange').textContent = 'Rs ' + fmtMoney(change);
 
   // Validation: order matters — check most critical first.
   const warnEl = document.getElementById('pdWarning');
@@ -6925,7 +6998,7 @@ function updatePdSummary(){
   } else if(isFinalRelease && newBalance > 0){
     // Client-side mirror of the server's BALANCE_DUE_ON_FINAL_RELEASE guard.
     warnEl.textContent =
-      `This releases all remaining items (final release). Rs ${newBalance.toFixed(2)} ` +
+      `This releases all remaining items (final release). Rs ${fmtMoney(newBalance)} ` +
       `balance must be cleared first — collect the full amount before releasing the last items.`;
     warnEl.style.display = 'block';
     confirmBtn.disabled = true;
@@ -6939,13 +7012,13 @@ function updatePdSummary(){
 function pdSetExact(){
   if(!pendingPartialDispatch || !pendingPartialDispatch.state) return;
   document.getElementById('pdAmountCollected').value =
-    Number(pendingPartialDispatch.state.effectiveBalance).toFixed(2);
+    fmtMoney(pendingPartialDispatch.state.effectiveBalance);
   document.getElementById('pdAmountCollected').dataset.autofill = '1';
   updatePdSummary();
 }
 function pdAddNote(amount){
   const inp = document.getElementById('pdAmountCollected');
-  inp.value = (noteTapBase(inp) + amount).toFixed(2);
+  inp.value = fmtMoney(noteTapBase(inp) + amount);
   updatePdSummary();
 }
 function pdClearAmount(){
@@ -6977,7 +7050,7 @@ function confirmPartialDispatch(){
   const newBalance = Math.max(0, state.effectiveBalance - collected);
 
   if(isFinalRelease && newBalance > 0){
-    alert(`This would release the last items while Rs ${newBalance.toFixed(2)} is still owed. Collect the full balance first.`);
+    alert(`This would release the last items while Rs ${fmtMoney(newBalance)} is still owed. Collect the full balance first.`);
     return;
   }
 
@@ -7352,7 +7425,7 @@ async function openDispatchHistoryModal(orderId, code, customerName){
       </div>
       <div style="margin-top:4px;">${itemsLine}</div>
       <div style="margin-top:2px;color:var(--muted);font-size:13px;">
-        Collected: Rs ${Number(row.amount_collected || 0).toFixed(2)}${Number(row.change_given || 0) > 0 ? ` · Change given: Rs ${Number(row.change_given).toFixed(2)}` : ''}
+        Collected: Rs ${fmtMoney(Number(row.amount_collected || 0))}${Number(row.change_given || 0) > 0 ? ` · Change given: Rs ${fmtMoney(Number(row.change_given))}` : ''}
       </div>
       ${row.receiver_name ? `<div style="margin-top:2px;font-size:13px;">Received by: <b>${escHtml(row.receiver_name)}</b>${row.receiver_phone ? ' — ' + escHtml(row.receiver_phone) : ''}</div>` : ''}
     </div>`;
@@ -7650,7 +7723,7 @@ function releaseHistoryReceiptHtml(rows, items){
       <div class="receipt-row"><b>${row.event_type === 'final' ? 'FINAL' : 'RELEASE ' + (i + 1)}</b><b>${row.created_at ? formatAppDateTime(row.created_at) : 'time not recorded'}</b></div>
       ${lines}
       <div class="small">Collected by: <b>${row.receiver_name ? escHtml(row.receiver_name) + (row.receiver_phone ? ' — ' + escHtml(row.receiver_phone) : '') : 'not recorded'}</b></div>
-      <div class="receipt-row small"><span>Paid at this release</span><span>Rs ${Number(row.amount_collected || 0).toFixed(2)}</span></div>
+      <div class="receipt-row small"><span>Paid at this release</span><span>Rs ${fmtMoney(Number(row.amount_collected || 0))}</span></div>
     </div>`;
   }).join('');
 }
@@ -7718,9 +7791,9 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
       ${remainingRows}
       ${historyBlock}
       <hr>
-      <div class="receipt-row"><b>COLLECTED NOW</b><b>Rs ${Number(collected || 0).toFixed(2)}</b></div>
-      ${Number(changeGiven || 0) > 0 ? `<div class="receipt-row"><span>CHANGE GIVEN</span><span>Rs ${Number(changeGiven).toFixed(2)}</span></div>` : ''}
-      <div class="receipt-row"><b>BALANCE REMAINING</b><b>Rs ${Number(newBalanceDue || 0).toFixed(2)}</b></div>
+      <div class="receipt-row"><b>COLLECTED NOW</b><b>Rs ${fmtMoney(Number(collected || 0))}</b></div>
+      ${Number(changeGiven || 0) > 0 ? `<div class="receipt-row"><span>CHANGE GIVEN</span><span>Rs ${fmtMoney(Number(changeGiven))}</span></div>` : ''}
+      <div class="receipt-row"><b>BALANCE REMAINING</b><b>Rs ${fmtMoney(Number(newBalanceDue || 0))}</b></div>
       <hr>
       ${isFinalRelease ? `<div style="text-align:center;margin:14px 0;">
         <span style="display:inline-block;border:3px solid #000;color:#000;padding:4px 16px;font-weight:700;letter-spacing:2px;transform:rotate(-8deg);font-size:15px;">
@@ -7735,7 +7808,7 @@ async function printPartialReleaseBill(orderId, code, phone, customerName, relea
 // ---------- CHANGE DUE CONFIRMATION MODAL ----------
 function showDispatchChangeModal(code, orderId, change){
   document.getElementById('dcgOrderLine').textContent = `${orderRef(orderId, code)}`;
-  document.getElementById('dcgChangeAmount').textContent = 'Rs ' + change.toFixed(2);
+  document.getElementById('dcgChangeAmount').textContent = 'Rs ' + fmtMoney(change);
   document.getElementById('dispatchChangeModal').classList.add('open');
 }
 function closeDispatchChangeModal(){
@@ -9078,7 +9151,7 @@ function renderItemsList(){
   const changeLine = document.getElementById('tenderedChangeLine');
   if(tenderedRaw.trim() !== '' && !isNaN(tendered) && hasAdvance && tendered > advance){
     changeLine.style.display = '';
-    document.getElementById('tenderedChangeDisplay').textContent = 'Rs ' + (tendered - advance).toFixed(2);
+    document.getElementById('tenderedChangeDisplay').textContent = 'Rs ' + fmtMoney((tendered - advance));
   } else {
     changeLine.style.display = 'none';
   }
@@ -9149,16 +9222,43 @@ function linesNeedingPriceNote(){
     return reasons.length ? { i, it, std, reasons } : null;
   }).filter(Boolean);
 }
+// Tap-to-pick answers for workers who can't type English: each chip
+// fills the text box in the same .pick-host (still editable afterwards).
+const PRICE_NOTE_PICKS = [['Silk / delicate','ریشم / نازک'],['Heavy embroidery','بھاری کڑھائی'],['Bridal / fancy','عروسی / فینسی'],
+  ['Big size','بڑا سائز'],['Regular customer','پرانا گاہک'],['Owner said so','مالک نے کہا']];
+const RETURN_FIX_PICKS = [['Re-washed','دوبارہ دھلائی'],['Stain removed','داغ صاف'],['Re-pressed','دوبارہ استری'],
+  ['Repaired','مرمت'],['Money returned','پیسے واپس']];
+function pickChipsHtml(list){
+  return `<div class="pick-chips">${list.map(([en, ur]) =>
+    `<button type="button" class="pick-chip" data-value="${escHtml(en)}" onclick="pickChip(this)"><span class="kk-ur">${ur}</span> ${escHtml(en)}</button>`).join('')}</div>`;
+}
+function pickChip(btn){
+  const host = btn.closest('.pick-host');
+  const input = host && host.querySelector('input[type="text"], textarea');
+  if(!input) return;
+  input.value = btn.dataset.value;
+  host.querySelectorAll('.pick-chip').forEach(b => b.classList.toggle('active', b === btn));
+}
+// "Tomorrow / 2 days / 3 days" for the collect-by boxes, same time of day.
+function pickDeadline(inputId, days){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  input.value = localDateTimeInputStr(new Date(Date.now() + days * 86400000));
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 let priceNoteResolve = null;
 // Resolves true once every required note is filled in, false if cancelled.
 function askPriceNotes(){
   const need = linesNeedingPriceNote();
   if(!need.length || need.every(n => (n.it.price_note || '').trim())) return Promise.resolve(true);
   document.getElementById('priceNoteBody').innerHTML = need.map(n => `
-    <div class="price-note-row">
+    <div class="price-note-row pick-host">
       <div><b>${escHtml(n.it.service)}</b> — charging <b>Rs ${n.it.price}</b> × ${n.it.qty}
         <div class="small">${n.std !== null ? `Rate list Rs ${n.std} · ` : ''}${escHtml(n.reasons.join(' · '))}</div></div>
       <input type="text" maxlength="300" data-line="${n.i}" placeholder="Why Rs ${n.it.price}? e.g. silk shirt, heavy embroidery" value="${escHtml(n.it.price_note || '')}">
+      ${pickChipsHtml(PRICE_NOTE_PICKS)}
     </div>`).join('');
   document.getElementById('priceNoteError').textContent = '';
   document.getElementById('priceNoteModal').classList.add('open');
@@ -9594,6 +9694,13 @@ function isNetworkError(err){
          msg.includes('err_internet') || msg.includes('err_connection');
 }
 
+// Our 30s timeout means the server got the request but answered late, so
+// the save may already be stored. Expenses and Karkhana entries have no
+// duplicate check on the server, so they are NOT queued for a retry in
+// that case (a dropped connection, where nothing arrived, still queues).
+function isServerSlowError(err){ return /network timeout/i.test(String((err && err.message) || err || '')); }
+const SERVER_SLOW_SAVE_MSG = 'The server was too slow to answer, so this may already be saved. Check the list below before entering it again.';
+
 function newLocalId(){
   return (crypto && crypto.randomUUID) ? crypto.randomUUID()
     : 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2);
@@ -9606,10 +9713,23 @@ function newLocalId(){
 // operations aren't blocked by a connectivity outage, then updates the
 // header badge and the Open Orders "QUEUED (OFFLINE)" section so staff
 // can track pending-sync orders from inside the app instead.
+// Offline bookings get their real serial only after they sync, so the
+// tags got nothing written on them. A short temporary tag (T01…T99, per
+// device) is written instead; after sync the worker is told which real
+// serial replaces it.
+function nextTempTag(){
+  let n = 0;
+  try{ n = (parseInt(localStorage.getItem('pos_temp_tag_n'), 10) || 0) % 99 + 1; localStorage.setItem('pos_temp_tag_n', n); }
+  catch(e){ n = Math.floor(Math.random() * 99) + 1; }
+  return 'T' + String(n).padStart(2, '0');
+}
+
 async function queueOfflineOrder(bookPayload, printArgs){
   const localId = newLocalId();
+  const tempTag = nextTempTag();
   const record = {
     localId,
+    tempTag,
     payload: bookPayload,
     printArgs,
     queuedAt: new Date().toISOString(),
@@ -9621,6 +9741,12 @@ async function queueOfflineOrder(bookPayload, printArgs){
     printArgs.subtotal, printArgs.discountPct, printArgs.discount, printArgs.total,
     printArgs.advancePaid, printArgs.balanceDue, printArgs.changeGiven, true, null, null,
     printArgs.isUrgent, printArgs.urgentSurcharge, printArgs.wdCollectByDate, printArgs.pressCollectByDate);
+  appDialog({
+    tone: 'info', pic: 'tag', urTitle: 'عارضی ٹیگ نمبر',
+    title: 'Temporary tag number', big: tempTag,
+    ur: `انٹرنیٹ نہیں ہے۔ ابھی ہر کپڑے کے ٹیگ پر ${tempTag} لکھیں۔ انٹرنیٹ آنے پر اصل سیریل نمبر بتایا جائے گا۔`,
+    message: `No internet, so there is no serial yet. Write ${tempTag} on every cloth tag; the real serial is shown when the order syncs. Customer code: ${printArgs.code}.`
+  });
   await updateOfflineBadge();
   filterOpenOrders();
 }
@@ -9641,6 +9767,7 @@ async function syncPendingOrders(silent){
   offlineSyncInProgress = true;
   await updateOfflineBadge('syncing');
   let synced = 0, failed = 0;
+  const retagged = []; // { tempTag, orderId, code } — real serial shown after the list reloads
 
   for(const record of pending){
     let orderId, error;
@@ -9672,6 +9799,7 @@ async function syncPendingOrders(silent){
     // this is the only place a queued order is ever deleted.
     await idbDeletePendingOrder(record.localId);
     synced++;
+    if(record.tempTag) retagged.push({ tempTag: record.tempTag, orderId, code: record.payload.p_code });
     sb.rpc('mark_order_printed', { p_order_id: orderId }).catch(()=>{});
     logActivity('order_booked', `New order booked — code ${record.payload.p_code}, Rs ${record.payload.p_total}${record.payload.p_is_urgent ? ' (Urgent)' : ''} [synced from offline queue]`, record.payload.p_branch_id).catch(()=>{});
     flagRateMismatches(record.payload.p_code, record.payload.p_items).catch(()=>{});
@@ -9686,7 +9814,21 @@ async function syncPendingOrders(silent){
     if(failed) parts.push(`⚠ ${failed} order${failed>1?'s':''} still stuck — see console`);
     showSimpleToast(parts.join(' · '), !!failed);
   }
-  if(synced && typeof loadOpenOrders === 'function' && currentBranchId) loadOpenOrders();
+  if(synced && typeof loadOpenOrders === 'function' && currentBranchId){
+    await loadOpenOrders(); // returns serial_no with the list, so no extra request per order
+    const lines = retagged.map(r => {
+      const serial = serialOf(r.orderId);
+      return serial ? `${r.tempTag} → ${fmtSerial(serial)} (code ${r.code})` : null;
+    }).filter(Boolean);
+    if(lines.length){
+      appDialog({
+        tone: 'success', pic: 'tag', urTitle: 'ٹیگ بدلیں', title: 'Change the temporary tags',
+        big: lines.length === 1 ? lines[0].split(' (')[0] : '',
+        ur: 'انٹرنیٹ والے آرڈر محفوظ ہو گئے۔ عارضی ٹیگ کاٹ کر اصل سیریل نمبر لکھیں:',
+        message: lines.join('\n')
+      });
+    }
+  }
 }
 
 // ============================================================================
@@ -10521,7 +10663,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
     : null;
   const discountLines = (discount != null && Number(discount) > 0)
     ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${subtotal}</span></div>
-       <div class="receipt-row"><span>DISCOUNT (${discountPct}%)</span><span>-Rs ${Number(discount).toFixed(2)}</span></div>`
+       <div class="receipt-row"><span>DISCOUNT (${discountPct}%)</span><span>-Rs ${fmtMoney(Number(discount))}</span></div>`
     : '';
 
   // Only dispatch-time change belongs on the closing bill — booking-time
@@ -10535,7 +10677,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
   // change was actually given; otherwise it's identical to Balance
   // Recovered above.
   const cashPaidLine = Number(dispatchChangeGiven) > 0
-    ? `<div class="receipt-row"><span>CASH PAID (DISPATCH)</span><span>Rs ${(Number(balanceRecovered) + Number(dispatchChangeGiven)).toFixed(2)}</span></div>`
+    ? `<div class="receipt-row"><span>CASH PAID (DISPATCH)</span><span>Rs ${fmtMoney((Number(balanceRecovered) + Number(dispatchChangeGiven)))}</span></div>`
     : '';
   // BUG FIX: this used to fall back to `new Date()` (the current print
   // time) whenever dispatchedAt was missing — which, combined with
@@ -10570,7 +10712,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
         <div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${advancePaid}</b></div>
         <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${balanceRecovered}</b></div>
         <div style="border-top:1px dashed #000;margin:4px 0;"></div>
-        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${(Number(advancePaid) + Number(balanceRecovered)).toFixed(2)}</b></div>
+        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${fmtMoney((Number(advancePaid) + Number(balanceRecovered)))}</b></div>
       </div>
       ${cashPaidLine}
       ${changeLine}
@@ -10621,7 +10763,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
   const urgentPcsLabel = isUrgentOrder && itemsHaveUrgentInfo(items || currentItems)
     ? ` ON ${urgentPiecesOf(items || currentItems)} PC${urgentPiecesOf(items || currentItems) === 1 ? '' : 'S'}` : '';
   const urgentReceiptLine = isUrgentOrder
-    ? `<div class="receipt-row receipt-urgent-line"><span>🔥 URGENT (2x RATE${urgentPcsLabel})</span><span>+Rs ${effectiveUrgentSurcharge.toFixed(2)}</span></div>`
+    ? `<div class="receipt-row receipt-urgent-line"><span>🔥 URGENT (2x RATE${urgentPcsLabel})</span><span>+Rs ${fmtMoney(effectiveUrgentSurcharge)}</span></div>`
     : '';
   // `items` lets a reprint (see reprintOrderReceipt) pass the ORIGINAL
   // order's item list explicitly. Without this, a reprint would silently
@@ -10645,7 +10787,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
   const discountLines = (Number(discount) > 0 || isUrgentOrder)
     ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${subtotal}</span></div>` +
       (Number(discount) > 0
-        ? `<div class="receipt-row"><span>DISCOUNT (${discountPct}%)</span><span>-Rs ${Number(discount).toFixed(2)}</span></div>`
+        ? `<div class="receipt-row"><span>DISCOUNT (${discountPct}%)</span><span>-Rs ${fmtMoney(Number(discount))}</span></div>`
         : '')
     : '';
   const balanceLine = balanceDue > 0
@@ -10656,10 +10798,10 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
   // shown when change was actually given; otherwise it's identical to
   // Advance Paid and would just be a redundant line.
   const cashPaidLine = Number(changeGiven) > 0
-    ? `<div class="receipt-row"><span>CASH PAID (ADVANCE)</span><span>Rs ${(Number(advancePaid) + Number(changeGiven)).toFixed(2)}</span></div>`
+    ? `<div class="receipt-row"><span>CASH PAID (ADVANCE)</span><span>Rs ${fmtMoney((Number(advancePaid) + Number(changeGiven)))}</span></div>`
     : '';
   const changeLine = Number(changeGiven) > 0
-    ? `<div class="receipt-row"><span>CHANGE GIVEN (ADVANCE)</span><span>Rs ${changeGiven.toFixed(2)}</span></div>`
+    ? `<div class="receipt-row"><span>CHANGE GIVEN (ADVANCE)</span><span>Rs ${fmtMoney(changeGiven)}</span></div>`
     : '';
   // Bill is valid for pickup for 30 days from the ORIGINAL booking time,
   // not from whenever a reprint happens to be printed — bookingDateOverride
@@ -10751,6 +10893,12 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
 // and is only for checking the customer at pickup. Serials are remembered
 // by order id so popups that only get (orderId, code) can show them too.
 const orderSerials = {};
+// One money format everywhere: whole rupees print with no ".00" (most
+// screens and the receipt already did); paisa still show when present.
+function fmtMoney(n){
+  const v = Math.round((Number(n) || 0) * 100) / 100;
+  return Number.isInteger(v) ? String(v) : v.toFixed(2);
+}
 function fmtSerial(n){ return n ? String(n).padStart(4, '0') : ''; }
 function rememberSerials(list){ (list || []).forEach(o => { if(o && o.id && o.serial_no) orderSerials[o.id] = o.serial_no; }); }
 function serialOf(orderId){ return orderSerials[orderId] || null; }
@@ -10897,7 +11045,9 @@ async function addExpense(){
       ({ error } = await sb.rpc('add_expense', payload));
     }catch(networkErr){ error = networkErr; }
 
-    if(error && isNetworkError(error)){
+    if(error && isServerSlowError(error)){
+      alert(SERVER_SLOW_SAVE_MSG); return;
+    } else if(error && isNetworkError(error)){
       await queueOfflineExpense(payload);
       queued = true;
     } else if(error){
@@ -11199,8 +11349,9 @@ async function loadReturnsTab(){
       </div>
       <ul class="return-items">${returnItemsHtml(r.items)}</ul>
       <div class="return-reason">😟 ${escHtml(r.reason)}</div>
-      <div class="return-resolve">
+      <div class="return-resolve pick-host">
         <input type="text" id="returnFix_${r.id}" maxlength="500" placeholder="What was done? e.g. re-washed, stain removed">
+        ${pickChipsHtml(RETURN_FIX_PICKS)}
         <button class="btn-main" onclick="resolveReturn(${r.id})">✓ Fixed &amp; handed back</button>
       </div>
     </div>`).join('') : '<div class="small">No open returns. 👍</div>';
@@ -11669,6 +11820,7 @@ async function saveKkSheet(){
   if(isReallyOnline()){
     try{ ({ error } = await sb.from('karkhana_entries').insert(row)); }catch(networkErr){ error = networkErr; }
   }
+  if(error && isServerSlowError(error)){ btn.disabled = false; return alert(SERVER_SLOW_SAVE_MSG); }
   if(!isReallyOnline() || (error && isNetworkError(error))){
     // No internet: keep it on this computer; syncAllPending() sends it later.
     await idbPutRecord(OFFLINE_STORE_KARKHANA, { localId: newLocalId(), row, queuedAt: new Date().toISOString(), attempts: 0, lastError: null });
@@ -13053,7 +13205,7 @@ function openAuditBill(orderId){
   const paymentRows = isDispatched
     ? `<div class="ledger-line"><span>Advance Paid (at booking)</span><span>Rs ${advancePaid}</span></div>
        <div class="ledger-line"><span>Balance Recovered (at dispatch)</span><span>Rs ${balanceRecovered}</span></div>
-       <div class="ledger-total" style="font-size:15px;"><span>Total Received</span><span>Rs ${(advancePaid + balanceRecovered).toFixed(2)}</span></div>`
+       <div class="ledger-total" style="font-size:15px;"><span>Total Received</span><span>Rs ${fmtMoney((advancePaid + balanceRecovered))}</span></div>`
     : `<div class="ledger-line"><span>Advance Paid</span><span>Rs ${advancePaid}</span></div>
        <div class="ledger-line"><span>Balance Due</span><span class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</span></div>`;
 
@@ -13170,7 +13322,7 @@ function printAuditBill(){
   const paymentLines = isDispatched
     ? `<div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${advancePaid}</b></div>
        <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${balanceRecovered}</b></div>
-       <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${(advancePaid + balanceRecovered).toFixed(2)}</b></div>`
+       <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${fmtMoney((advancePaid + balanceRecovered))}</b></div>`
     : `<div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${advancePaid}</span></div>
        <div class="receipt-row"><b>BALANCE DUE</b><b>Rs ${balanceDue}</b></div>`;
 
