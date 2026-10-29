@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-2">
+<meta name="app-build" content="2026-10-29-3">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2278,6 +2278,7 @@
   .app-dialog .serial-tag.app-dialog-big::before{left:11px;width:10px;height:10px;margin-top:-6px;}
   .app-dialog-big[hidden]{display:none;}
   .app-dialog-ur{font-family:'Noto Nastaliq Urdu','Noto Naskh Arabic',serif !important;direction:rtl;text-align:right;font-size:19px !important;line-height:2.1 !important;color:var(--ink) !important;margin:2px 0 6px !important;}
+  #appDialogMsg{white-space:pre-line;}
   #appDialogMsg.is-secondary{font-size:12.5px;color:var(--muted);}
   .app-dialog-actions .btn-main, .app-dialog-actions .btn-secondary{font-size:16px;padding:12px 22px;min-width:110px;}
   .app-dialog-actions .is-whatsapp{background:#1FA855;box-shadow:0 8px 18px -10px rgba(31,168,85,.8);}
@@ -3304,7 +3305,7 @@
 
         <div class="field">
           <label for="dcAmountReceived">Amount Received From Customer</label>
-          <input type="number" id="dcAmountReceived" style="width:100%;font-size:20px;" inputmode="decimal" oninput="updateDispatchChangeDisplay()">
+          <input type="number" id="dcAmountReceived" style="width:100%;font-size:20px;" inputmode="decimal" oninput="this.dataset.autofill='';updateDispatchChangeDisplay()">
         </div>
 
         <div class="row" style="gap:6px;margin:10px 0 4px;flex-wrap:wrap;">
@@ -3392,7 +3393,7 @@
             <label style="font-weight:700;" for="pdAmountCollected">Collect Now (Rs) — enter 0 to hand over clothes without payment</label>
             <input type="number" id="pdAmountCollected" min="0" inputmode="decimal"
               style="width:100%;font-size:20px;margin-top:6px;" placeholder="0"
-              oninput="updatePdSummary()">
+              oninput="this.dataset.autofill='';updatePdSummary()">
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
             <button type="button" class="btn-secondary" onclick="pdAddNote(100)">+Rs 100</button>
@@ -3855,7 +3856,7 @@ const URDU_ALERTS = [
   [/saved locally but failed to sync/i, 'یہ اسی کمپیوٹر میں محفوظ ہو گیا مگر سرور پر نہیں گیا۔ انٹرنیٹ آنے پر دوبارہ کریں۔', 'wifi'],
   [/log book first/i, 'پہلے کاریگر کا کھاتہ کھولیں۔', 'person'],
   [/missing an id/i, 'یہ خرچہ یہاں سے نہیں مٹ سکتا۔ مالک کو بتائیں۔', 'warn'],
-  [/^(failed|could not|couldn't)/i, 'کام نہیں ہوا۔ انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔', 'warn'],
+  [/^(failed|could not|couldn't)/i, 'کام نہیں ہوا۔ دوبارہ کوشش کریں۔ پھر بھی نہ ہو تو مالک کو بتائیں۔', 'warn'],
   [/branch/i, 'پہلے برانچ چنیں۔', 'warn'],
   [/only admins/i, 'نئی قسم صرف مالک بنا سکتا ہے۔ پرانی قسم چنیں۔', 'warn'],
   [/name/i, 'نام لکھیں۔', 'warn']
@@ -3936,14 +3937,18 @@ function friendlyServerError(text){
   const m = text.match(/^((?:failed|could not|couldn't)[^:]*):\s*(.+)$/is);
   if(!m) return null;
   const kind = SERVER_ERROR_KINDS.find(k => k.re.test(m[2]));
-  if(kind) return { message: `${m[1]}. ${kind.en}`, ur: kind.ur, pic: kind.pic };
-  return { ur: 'کام نہیں ہوا۔ دوبارہ کوشش کریں۔ پھر بھی نہ ہو تو مالک کو بتائیں۔', pic: 'warn' };
+  if(kind) return { message: `${m[1]}. ${kind.en}`, ur: kind.ur, pic: kind.pic, details: m[2] };
+  return null; // URDU_ALERTS has the specific hint ("type a different code"…) or the generic one
 }
 
 window.alert = function(msg){
   const text = String(msg == null ? '' : msg);
   const friendly = friendlyServerError(text);
-  if(friendly && friendly.message) console.warn('Server error shown to staff as a plain message:', text);
+  if(friendly){
+    console.warn('Server error shown to staff as a plain message:', text);
+    // The owner still gets the raw text, which is what's needed to fix it.
+    if(typeof profile !== 'undefined' && profile && profile.role === 'admin') friendly.message += `\n\nDetails: ${friendly.details}`;
+  }
   appDialog(Object.assign({ message: text, tone: guessDialogTone(text) }, urduForAlert(text), friendly || {}));
 };
 
@@ -4194,7 +4199,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   authRecordSuccess('login');
   document.getElementById('loginPassword').value = '';
   try{ await afterLogin(data.user); }
-  catch(err){ errBox.textContent = "📡 Couldn't reach the server — check the connection and try again."; }
+  catch(err){
+    console.error('afterLogin failed:', err);
+    errBox.textContent = isNetworkError(err)
+      ? "📡 Couldn't reach the server — check the connection and try again."
+      : 'Something went wrong while opening the app. Try again; if it keeps happening, tell the owner.';
+  }
   finally{ setLoginBusy(false); }
 });
 
@@ -6658,6 +6668,7 @@ function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone
   document.getElementById('dcAdvance').textContent = 'Rs ' + (cachedOrder ? cachedOrder.advance_paid : '—');
   document.getElementById('dcBalanceDue').textContent = 'Rs ' + balanceDue;
   document.getElementById('dcAmountReceived').value = balanceDue;
+  document.getElementById('dcAmountReceived').dataset.autofill = '1';
   document.getElementById('dcWarning').style.display = 'none';
   document.getElementById('dcConfirmBtn').disabled = false;
   document.getElementById('dispatchCashModal').classList.add('open');
@@ -6671,16 +6682,22 @@ function closeDispatchCashModal(){
 
 // Quick-add buttons: tap the denomination the customer physically handed
 // over (supports multiple notes — a customer paying with two Rs 5000
-// notes just taps that button twice).
+// notes just taps that button twice). The box opens pre-filled with the
+// balance; the first note tap replaces that instead of adding to it, or
+// a Rs 650 balance paid with a Rs 1000 note showed Rs 1000 change.
+function noteTapBase(input){
+  if(input.dataset.autofill === '1'){ input.dataset.autofill = ''; return 0; }
+  return parseFloat(input.value) || 0;
+}
 function dcAddNote(amount){
   const input = document.getElementById('dcAmountReceived');
-  const current = parseFloat(input.value) || 0;
-  input.value = current + amount;
+  input.value = noteTapBase(input) + amount;
   updateDispatchChangeDisplay();
 }
 function dcSetExact(){
   if(!pendingCashDispatch) return;
   document.getElementById('dcAmountReceived').value = pendingCashDispatch.balanceDue;
+  document.getElementById('dcAmountReceived').dataset.autofill = '1';
   updateDispatchChangeDisplay();
 }
 function dcClearAmount(){
@@ -6887,11 +6904,12 @@ function pdSetExact(){
   if(!pendingPartialDispatch || !pendingPartialDispatch.state) return;
   document.getElementById('pdAmountCollected').value =
     Number(pendingPartialDispatch.state.effectiveBalance).toFixed(2);
+  document.getElementById('pdAmountCollected').dataset.autofill = '1';
   updatePdSummary();
 }
 function pdAddNote(amount){
   const inp = document.getElementById('pdAmountCollected');
-  inp.value = ((parseFloat(inp.value) || 0) + amount).toFixed(2);
+  inp.value = (noteTapBase(inp) + amount).toFixed(2);
   updatePdSummary();
 }
 function pdClearAmount(){
@@ -9527,6 +9545,7 @@ function isNetworkError(err){
   const msg = String(err.message || err).toLowerCase();
   return msg.includes('failed to fetch') || msg.includes('network') ||
          msg.includes('load failed') || msg.includes('timeout') ||
+         msg.includes('abort') || // older browsers drop our timeout reason: "AbortError: signal is aborted without reason"
          msg.includes('err_internet') || msg.includes('err_connection');
 }
 
@@ -10503,8 +10522,8 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
       ${discountLines}
       <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
       <div style="border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
-        <div class="receipt-row"><b>ADVANCE PAID (AT BOOKING)</b><b>Rs ${advancePaid}</b></div>
-        <div class="receipt-row"><b>BALANCE RECOVERED (AT DISPATCH)</b><b>Rs ${balanceRecovered}</b></div>
+        <div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${advancePaid}</b></div>
+        <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${balanceRecovered}</b></div>
         <div style="border-top:1px dashed #000;margin:4px 0;"></div>
         <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${(Number(advancePaid) + Number(balanceRecovered)).toFixed(2)}</b></div>
       </div>
@@ -10585,7 +10604,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
         : '')
     : '';
   const balanceLine = balanceDue > 0
-    ? `<div class="receipt-row"><b>CASH AWAITED ON DISPATCH</b><b>Rs ${balanceDue}</b></div>`
+    ? `<div class="receipt-row"><b>DUE AT PICKUP</b><b>Rs ${balanceDue}</b></div>`
     : `<div class="center"><b>PAID IN FULL</b></div>`;
   // Cash actually handed over at the counter, tendered — this is the
   // amount change was calculated from (advancePaid + changeGiven). Only
@@ -10629,10 +10648,10 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
   // pickup deadline with the fixed 30-day bill expiry; now each category
   // present in the order gets its own line, and Bill Expiry always shows.
   const wdCollectLine = wdCollectByDate
-    ? `<div class="receipt-row"><b>WASH &amp; DRY COLLECT:</b><b>${formatAppDateTime(wdCollectByDate)}</b></div>`
+    ? `<div class="receipt-row"><b>WASH/DRY READY:</b><b>${formatAppDateTime(wdCollectByDate)}</b></div>`
     : '';
   const pressCollectLine = pressCollectByDate
-    ? `<div class="receipt-row"><b>PRESS COLLECT:</b><b>${formatAppDateTime(pressCollectByDate)}</b></div>`
+    ? `<div class="receipt-row"><b>PRESS READY:</b><b>${formatAppDateTime(pressCollectByDate)}</b></div>`
     : '';
   const expiryLine = `
     <div style="border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
@@ -13099,8 +13118,8 @@ function printAuditBill(){
     ? `<div class="small receipt-line">${o.is_urgent ? '🔥 URGENT ' : ''}${o.is_vip ? '★ VIP' : ''}</div>`
     : '';
   const paymentLines = isDispatched
-    ? `<div class="receipt-row"><b>ADVANCE PAID (AT BOOKING)</b><b>Rs ${advancePaid}</b></div>
-       <div class="receipt-row"><b>BALANCE RECOVERED (AT DISPATCH)</b><b>Rs ${balanceRecovered}</b></div>
+    ? `<div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${advancePaid}</b></div>
+       <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${balanceRecovered}</b></div>
        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${(advancePaid + balanceRecovered).toFixed(2)}</b></div>`
     : `<div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${advancePaid}</span></div>
        <div class="receipt-row"><b>BALANCE DUE</b><b>Rs ${balanceDue}</b></div>`;
