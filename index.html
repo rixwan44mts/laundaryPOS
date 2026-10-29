@@ -2316,6 +2316,18 @@
     nav button{font-size:13px;min-height:44px;}
   }
 
+  /* ---- Readability floor: nothing the counter reads below 12–13px ---- */
+  .small{font-size:13px;}
+  label{font-size:13px;}
+  .receipt-row, .receipt-item{font-size:12px;}
+  .receipt-row.receipt-total{font-size:14px;}
+  .receipt-items-table th{font-size:11px;}
+  .receipt-items-table td{font-size:12px;}
+  /* Bigger text must still fit 80mm on one line: the label (span or b)
+     shrinks with an ellipsis, the amount never does. */
+  .receipt-row > :first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .receipt-row > :last-child{flex-shrink:0;}
+
 </style>
 </head>
 <body>
@@ -8207,9 +8219,9 @@ function renderMenuPanel(){
 // to the customer's own previous rate if one is on record, otherwise the
 // shop's default price). "−" removes one unit, dropping the line
 // entirely once it reaches zero.
-// "+" on a rate card no longer adds straight away: it opens the piece
-// details popup (colour / cloth type / note) and the piece is added when
-// the worker confirms or skips. "−" removes the most recent piece along
+// "+" adds the piece straight away with blank details; tapping its
+// "+ details" tag in the order table opens the piece details popup
+// (colour / cloth type / note). "−" removes the most recent piece along
 // with its details. See PIECE DETAILS below.
 function menuAdjustQty(serviceId, delta){
   const s = services.find(x => x.id === serviceId);
@@ -8226,23 +8238,21 @@ function menuAdjustQty(serviceId, delta){
   const idx = currentItems.findIndex(it => sameSvc(it) && Number(it.price) === price);
   if(delta > 0){
     if(price <= 0){ alert('Set a valid price before adding this item.'); return; }
-    const pieceNo = (idx >= 0 ? currentItems[idx].qty : 0) + 1;
-    openPieceDetails({ title: s.name, sub: `${catLabel} · piece ${pieceNo} · Rs ${price}` }, detail => {
-      // Re-find the line: the cart may have changed while the popup was open.
-      const i = currentItems.findIndex(it => sameSvc(it) && Number(it.price) === price);
-      if(i >= 0){
-        const line = currentItems[i];
-        line.details = padPieceDetails(line.details, line.qty);
-        line.qty += 1;
-        line.line_total = line.qty * price;
-        line.details.push(detail);
-        // While Urgent is on, a newly added piece is urgent by default.
-        if(isUrgent) line.urgent_qty = lineUrgentQty(line) + 1;
-      } else {
-        currentItems.push({ service, qty: 1, price, line_total: price, details: [detail], urgent_qty: isUrgent ? 1 : 0 });
-      }
-      renderItemsList();
-    });
+    // Adds straight away with no popup — colour/cloth/note go on later from
+    // the piece's "+ details" tag in the order table (editPieceDetails).
+    const detail = emptyPieceDetail();
+    if(idx >= 0){
+      const line = currentItems[idx];
+      line.details = padPieceDetails(line.details, line.qty);
+      line.qty += 1;
+      line.line_total = line.qty * price;
+      line.details.push(detail);
+      // While Urgent is on, a newly added piece is urgent by default.
+      if(isUrgent) line.urgent_qty = lineUrgentQty(line) + 1;
+    } else {
+      currentItems.push({ service, qty: 1, price, line_total: price, details: [detail], urgent_qty: isUrgent ? 1 : 0 });
+    }
+    renderItemsList();
     return;
   }
   // "−": take a piece off the line at this price, else the last line of this item.
@@ -10425,8 +10435,8 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
       <hr>
       ${releaseBlock}
       ${discountLines}
-      <div class="receipt-row"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
-      <div style="background:#f2f2f2;border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
+      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
+      <div style="border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
         <div class="receipt-row"><b>ADVANCE PAID (AT BOOKING)</b><b>Rs ${advancePaid}</b></div>
         <div class="receipt-row"><b>BALANCE RECOVERED (AT DISPATCH)</b><b>Rs ${balanceRecovered}</b></div>
         <div style="border-top:1px dashed #000;margin:4px 0;"></div>
@@ -10581,7 +10591,7 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       <hr>
       ${urgentReceiptLine}
       ${discountLines}
-      <div class="receipt-row"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
+      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
       <div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${advancePaid}</span></div>
       ${cashPaidLine}
       ${changeLine}
@@ -13045,7 +13055,7 @@ function printAuditBill(){
       ${receiptItemsGrid(items)}
       <hr>
       ${discountLines}
-      <div class="receipt-row"><b>TOTAL BILL</b><b>Rs ${o.total}</b></div>
+      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${o.total}</b></div>
       ${paymentLines}
       <hr>
       <div class="center">Thank you!</div>
