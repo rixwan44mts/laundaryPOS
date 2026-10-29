@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-5">
+<meta name="app-build" content="2026-10-29-6">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -288,7 +288,7 @@
   }
   .vip-toggle-btn.vip-active:hover{background:var(--amber-soft);filter:brightness(0.97);}
   .vip-toggle-btn.vip-simple{
-    background:transparent;border-color:transparent;color:var(--muted);font-weight:400;box-shadow:none;
+    background:#fff;border:1px dashed var(--line);color:var(--ink-soft);font-weight:600;box-shadow:none;
   }
   .vip-toggle-btn.vip-simple:hover{background:var(--hover);border-color:var(--line);color:var(--ink);}
 
@@ -2355,6 +2355,25 @@
     .payment-inputs-row .field{flex:1 1 30%;}
   }
 
+  /* "+ details" tags were 23px tall: an invisible ring widens the tap area */
+  .piece-tag{position:relative;}
+  .piece-tag::after{content:'';position:absolute;inset:-8px -2px;}
+
+  /* Karkhana search row: let the box shrink and the row wrap on phones */
+  .kk-find{display:flex;flex-wrap:wrap;gap:8px;}
+  .kk-find input{flex:1 1 180px;min-width:0;}
+  .kk-find button{flex:0 0 auto;white-space:nowrap;}
+
+  /* Partial release: picture + big −/+ per line */
+  .pd-pic svg{width:28px;height:28px;vertical-align:middle;margin-right:6px;}
+  .pd-step{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:700;line-height:1;cursor:pointer;vertical-align:middle;}
+  .pd-step:disabled{opacity:.4;cursor:default;}
+  .pd-qty-input{width:48px !important;vertical-align:middle;}
+  @media (max-width:640px){
+    #partialDispatchModal table th:nth-child(2), #partialDispatchModal table td:nth-child(2),
+    #partialDispatchModal table th:nth-child(3), #partialDispatchModal table td:nth-child(3){display:none;}
+  }
+
   /* Tap-to-pick answer chips */
   .pick-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
   .pick-chip{min-height:40px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;}
@@ -2444,19 +2463,19 @@
     </div>
     <div class="headerRight">
       <div class="fontSizeControls">
-        <button class="btn-secondary fs-btn" onclick="changeFontSize(-1)" title="Decrease font size">A−</button>
-        <button class="btn-secondary fs-btn" onclick="changeFontSize(1)" title="Increase font size">A+</button>
+        <button class="btn-secondary fs-btn" onclick="changeFontSize(-1)" title="Decrease font size" aria-label="Smaller text" data-ur="چھوٹا">A−</button>
+        <button class="btn-secondary fs-btn" onclick="changeFontSize(1)" title="Increase font size" aria-label="Bigger text" data-ur="بڑا">A+</button>
       </div>
       <button class="btn-secondary" id="soundToggleBtn" onclick="toggleSound()" aria-pressed="true" title="Sound on — tap to mute">🔊</button>
       <button class="btn-secondary" id="langToggleBtn" onclick="toggleLanguage()" title="Switch language">اردو</button>
       <button class="btn-secondary fullscreen-btn admin-only" id="fullscreenBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">⛶ Fullscreen</button>
-      <button class="btn-secondary page-help-btn" onclick="showPageHelp()" title="Help for this page">❔ Help</button>
+      <button class="btn-secondary page-help-btn" onclick="showPageHelp()" title="Help for this page" data-ur="مدد">❔ Help</button>
       <span class="badge" id="connBadge" style="display:none;"></span>
       <button class="btn-secondary" id="syncNowBtn" style="display:none;" onclick="syncAllPending(false)" title="Push offline-booked orders, dispatches, and ready-marks to the server now">🔄 Sync Now (<span id="pendingCount">0</span>)</button>
       <span class="badge" id="userBadge"></span>
       <select id="branchSelect" style="display:none;"></select>
       <span class="badge" id="branchNameFixed"></span>
-      <button class="btn-secondary" onclick="logout()" data-i18n="btn_logout">Log Out</button>
+      <button class="btn-secondary" onclick="logout()" data-i18n="btn_logout" data-ur="لاگ آؤٹ">Log Out</button>
     </div>
   </header>
 
@@ -2500,7 +2519,7 @@
       </div>
       <div class="field">
         <label data-i18n="lbl_vip" data-ur="خاص گاہک">VIP</label>
-        <button type="button" id="vipToggleBtn" class="btn-secondary vip-toggle-btn vip-simple" onclick="toggleVip()" disabled>Mark VIP</button>
+        <button type="button" id="vipToggleBtn" class="btn-secondary vip-toggle-btn vip-simple" onclick="toggleVip()" disabled data-ur="خاص گاہک">Mark VIP</button>
       </div>
       <div class="field">
         <label data-i18n="lbl_urgent" data-ur="ارجنٹ">Urgent</label>
@@ -2546,7 +2565,7 @@
           <input type="number" id="menuNewItemPrice" placeholder="Rs" style="width:90px;">
         </div>
         <div class="field">
-          <button class="btn-main" onclick="addMenuItemFromPanel()">+ Add to Rate List</button>
+          <button class="btn-main" onclick="addMenuItemFromPanel()" data-ur="ریٹ لسٹ میں ڈالیں">+ Add to Rate List</button>
         </div>
       </div>
     </details>
@@ -2566,7 +2585,7 @@
         </div>
         <div class="field">
           <label data-i18n="lbl_tendered" data-ur="گاہک نے دیے" for="tenderedInput">Cash Tendered</label>
-          <input type="number" id="tenderedInput" oninput="renderItemsList()" placeholder="Leave blank" min="0">
+          <input type="number" id="tenderedInput" oninput="renderItemsList()" placeholder="—" min="0">
         </div>
       </div>
       <div class="ledger-strip">
@@ -2782,7 +2801,7 @@
         <select id="kkBranchSelect" class="admin-only" onchange="onKkBranchChange()" style="width:auto;" aria-label="Branch"></select>
       </div>
       <div class="kk-find">
-        <input type="search" id="kkSearch" placeholder="Find a shop — name or phone  /  دکان تلاش کریں" oninput="renderKkHome()" aria-label="Find a shop">
+        <input type="search" id="kkSearch" placeholder="Shop name or phone / دکان تلاش کریں" oninput="renderKkHome()" aria-label="Find a shop">
         <button type="button" class="btn-secondary" onclick="loadKarkhanaAll()">Refresh</button>
       </div>
       <div id="kkShopGrid" class="kk-shop-grid"><div class="kk-empty">Loading shops…</div></div>
@@ -3371,7 +3390,7 @@
         </div>
 
         <div class="row" style="gap:6px;margin:10px 0 4px;flex-wrap:wrap;">
-          <span class="small" style="width:100%;">Quick add — tap the note the customer handed over:</span>
+          <span class="small" style="width:100%;" data-ur="گاہک نے جو نوٹ دیا وہ دبائیں">Quick add — tap the note the customer handed over:</span>
           <button type="button" class="btn-secondary" onclick="dcAddNote(100)">+Rs 100</button>
           <button type="button" class="btn-secondary" onclick="dcAddNote(500)">+Rs 500</button>
           <button type="button" class="btn-secondary" onclick="dcAddNote(1000)">+Rs 1000</button>
@@ -3386,7 +3405,7 @@
         </div>
         <p id="dcWarning" class="small" style="color:var(--warn);display:none;margin-top:8px;"></p>
 
-        <div class="row" style="margin-top:16px;justify-content:flex-end;gap:8px;">
+        <div class="row" style="margin-top:16px;justify-content:flex-end;gap:8px;align-items:stretch;">
           <button class="btn-secondary" onclick="closeDispatchCashModal()">Cancel</button>
           <button class="btn-main" id="dcConfirmBtn" onclick="confirmDispatchCash()">Confirm &amp; Dispatch</button>
         </div>
@@ -6924,13 +6943,15 @@ function renderPdItemsTable(items, remainingByLine){
     const remaining = remainingByLine[it.line_id] ?? ordered;
     const released = ordered - remaining;
     const isDone = remaining === 0;
+    const pic = itemPicture(name);
     return `<tr style="${isDone ? 'opacity:0.45;' : ''}">
-      <td style="padding:8px 10px;font-weight:600;">${escHtml(name)}${pieceDetailsSummary(it) ? `<div class="dh-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td>
+      <td style="padding:8px 10px;font-weight:600;"><span class="pd-pic">${pic.svg}</span>${pic.ur ? `<span class="kk-ur">${pic.ur}</span> ` : ''}${escHtml(name)}${pieceDetailsSummary(it) ? `<div class="dh-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td>
       <td style="text-align:center;padding:8px 6px;">${ordered}</td>
       <td style="text-align:center;padding:8px 6px;color:var(--muted);">${released}</td>
       <td style="text-align:center;padding:8px 6px;font-weight:700;
         color:${remaining > 0 ? 'var(--accent)' : 'var(--muted)'};">${remaining}</td>
-      <td style="text-align:center;padding:6px 6px;">
+      <td style="text-align:center;padding:6px 6px;white-space:nowrap;">
+        <button type="button" class="pd-step" aria-label="One less" onclick="stepPdQty(this,-1)" ${isDone ? 'disabled' : ''}>−</button>
         <input type="number" class="pd-qty-input"
           data-line-id="${it.line_id}" data-max="${remaining}"
           min="0" max="${remaining}" value="0"
@@ -6939,6 +6960,7 @@ function renderPdItemsTable(items, remainingByLine){
           style="width:64px;text-align:center;padding:4px 6px;font-size:15px;
             border:1px solid var(--line);border-radius:6px;background:var(--paper);
             font-family:var(--font-mono);">
+        <button type="button" class="pd-step" aria-label="One more" onclick="stepPdQty(this,1)" ${isDone ? 'disabled' : ''}>+</button>
       </td>
     </tr>`;
   }).join('');
@@ -6950,6 +6972,14 @@ function renderPdItemsTable(items, remainingByLine){
     : '';
 
   body.innerHTML = itemRows + legacyNote;
+}
+
+// Big − / + beside each release box, so nobody has to type a number.
+function stepPdQty(btn, delta){
+  const input = btn.parentElement.querySelector('.pd-qty-input');
+  if(!input || input.disabled) return;
+  input.value = (parseInt(input.value, 10) || 0) + delta;
+  onPdQtyChange(input);
 }
 
 // Clamps input to [0, max] on every keystroke, then recalculates the summary.
@@ -9096,7 +9126,7 @@ function renderItemsList(){
     const details = padPieceDetails(it.details, it.qty);
     return `<div class="piece-tags">${details.map((d, p) => {
       const text = formatPieceDetail(d);
-      return `<button type="button" class="piece-tag${text ? '' : ' is-empty'}" onclick="editPieceDetails(${idx},${p})" title="Edit piece ${p + 1}">${details.length > 1 ? `<b>${p + 1}</b>` : ''}${text ? escHtml(text) : '+ details'}</button>`;
+      return `<button type="button" class="piece-tag${text ? '' : ' is-empty'}" onclick="editPieceDetails(${idx},${p})" title="Edit piece ${p + 1}">${details.length > 1 ? `<b>${p + 1}</b>` : ''}${text ? escHtml(text) : '+ details <span class="kk-ur">تفصیل</span>'}</button>`;
     }).join('')}</div>`;
   };
   // While Urgent is on, each line gets a "🔥 urgent n/qty" stepper.
@@ -11109,7 +11139,7 @@ function renderExpMonthToggle(){
   const bar = document.getElementById('expMonthToggle');
   bar.innerHTML = MR_MONTH_ABBR.map((label, idx) => {
     const m = idx + 1;
-    return `<button type="button" class="chip-btn${m===expSelMonth?' active':''}" onclick="onExpMonthToggle(${m})">${label}</button>`;
+    return `<button type="button" class="chip-btn${m===expSelMonth?' active':''}" onclick="onExpMonthToggle(${m})" data-ur="${MONTH_UR[idx]}">${label}</button>`;
   }).join('');
 }
 
@@ -12221,6 +12251,7 @@ let mrSelYear = null;
 let mrSelMonth = null; // 1-12
 let mrRows = []; // cached monthly_register rows for the currently loaded branch
 const MR_MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_UR = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
 const MR_MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 // ---------- MONTHLY REGISTER ----------
@@ -12287,7 +12318,7 @@ function renderMrMonthToggle(){
   const bar = document.getElementById('mrMonthToggle');
   bar.innerHTML = MR_MONTH_ABBR.map((label, idx) => {
     const m = idx + 1;
-    return `<button type="button" class="chip-btn${m===mrSelMonth?' active':''}" onclick="onMrMonthToggle(${m})">${label}</button>`;
+    return `<button type="button" class="chip-btn${m===mrSelMonth?' active':''}" onclick="onMrMonthToggle(${m})" data-ur="${MONTH_UR[idx]}">${label}</button>`;
   }).join('');
 }
 
@@ -13808,11 +13839,12 @@ const PAGE_HELP = {
   neworder: {
     title: "New Order",
     topics: [
-      { label:"3 qadam", text:"1) Gahak ka phone number likhein. 2) Kapray ki tasveer ko har piece ke liye ek dafa dabayein. 3) Neeche 'Abhi mile' mein jitne paise liye woh likhein, phir hara button 'Save' dabayein — rasid chhap jayegi." },
+      { label:"3 qadam", text:"1) Gahak ka phone number likhein. 2) Kapray ki tasveer ko har piece ke liye ek dafa dabayein ('+'). Rang/kapra/note ke liye order table mein '+ details' dabayein. 3) Neeche 'Advance' mein jitne paise liye woh likhein (na liye hon to 0), phir hara button 'Save Order & Print Receipt' dabayein — rasid chhap jayegi aur bara Serial number dikhega, woh har kapre ke tag par likhein." },
       { label:"Customer Lookup / VIP", text:"Customer ka number ya naam likhne se purani history dikhti hai. VIP mark karne se customer khaas treat hota hai." },
       { label:"Rate List / Category Filter", text:"Neeche rate-list se items select karke order mein add karte hain. Category filter list ko chhota kar deta hai." },
       { label:"Remove Item", text:"Kisi bhi item ko current order se hata sakte hain." },
-      { label:"Urgent Panel", text:"Order ko 'Urgent' mark karke deadline (kitne din mein chahiye) set ki ja sakti hai, ya cancel bhi ki ja sakti hai." },
+      { label:"Urgent", text:"'Mark Urgent' dabayein aur ghante chunein (jaise 3h). Phir jo kapra urgent hai uske saath 🔥 + dabayein — sirf woh kapre double rate par lagte hain. Koi bhi 🔥 na chuna ho to order save nahi hoga." },
+      { label:"Wapsi ka din", text:"Neeche 'Kal / Parson / 3 din' dabayein, ya date box mein khud din aur waqt chunein." },
       { label:"Add New Item", text:"Naya item rate-list mein naam, category aur price ke sath add kiya ja sakta hai." },
       { label:"Save & Print", text:"Order ko save karke receipt print karta hai — yeh order lene ka final step hai." },
     ],
@@ -13824,8 +13856,10 @@ const PAGE_HELP = {
       { label:"Refresh", text:"List ko refresh karke latest data dikhata hai." },
       { label:"Clear Search", text:"Search aur filters clear karke poori list wapis dikhata hai." },
       { label:"Price History", text:"Customer ki purani rates aur orders ki history dikhata hai." },
-      { label:"Mark Ready / Print Bill", text:"Order ko 'Ready' mark karta hai aur customer ko WhatsApp/SMS notification bhejta hai, ya final bill print karta hai." },
-      { label:"Dispatch / Close Order", text:"Order deliver karne se pehle kaun le raha hai uska naam/number poochta hai, phir order ko close/dispatched mark karta hai." },
+      { label:"Search", text:"Gahak ka 4 number wala code likhein — sirf usi code ka order aata hai. Code na mile to wohi number Serial samajh kar dhoonda jata hai. QR scan bhi yahin order khol deta hai." },
+      { label:"☑ Check Items (Ready)", text:"Har kapra check karke OK dabayein. Sab OK hone par order khud 'Ready' ho jata hai aur gahak ko WhatsApp/SMS chuna ja sakta hai ('Abhi nahi' bhi)." },
+      { label:"⚙ Partial", text:"Kuch kapre abhi dene hon to har kapre ke saath − / + dabayein, jitne paise liye woh likhein, phir Confirm. Aakhri kapre dene se pehle poora baqaya lena zaroori hai." },
+      { label:"Close / Dispatched", text:"Upar Serial, Code aur kapron ki tasveerein dekh kar mila lein. Kaun le raha hai uska naam likhein ('Same as Customer' bhi), phir baqaya lein: gahak ne jo note diya woh dabayein — wapas kitne dene hain woh hara likha aata hai." },
       { label:"Resend Message", text:"Dispatch/Close ka WhatsApp ya SMS message dobara bhejta hai, agar pehli baar fail ho gaya ho." },
       { label:"Clear Urgent Tag", text:"Order se 'Urgent' tag hatane ki confirmation kholta hai." },
     ],
