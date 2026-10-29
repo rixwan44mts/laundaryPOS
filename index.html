@@ -536,6 +536,7 @@
   .ewp-save-btn{background:var(--accent-soft);color:var(--accent);border:1.5px solid var(--accent);border-radius:8px;
     width:32px;height:32px;font-size:14px;cursor:pointer;}
   .ewp-save-btn:hover{background:var(--accent);color:#fff;}
+  .ewp-save-btn:disabled{opacity:.4;cursor:default;pointer-events:none;}
 
   /* ---------- Notifications log ---------- */
   .notif-row-new td{animation:notifFlash 2s ease;}
@@ -806,6 +807,8 @@
     align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;
   }
   .modal-overlay.open{display:flex;}
+  .modal-overlay:focus{outline:none;}
+  [role="button"][tabindex="0"]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
   @keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
   /* modal-box is now a bounded-height flex column: header stays fixed at
      the top and modal-body is the ONLY thing that scrolls internally.
@@ -1764,7 +1767,7 @@
     --rail-w:256px;
 
     --neel:#222C74; --neel-deep:#18205A; --neel-2:#3443A8; --neel-soft:#E7EAF8;
-    --ink:#171B34; --ink-soft:#454B66; --muted:#6C7290;
+    --ink:#171B34; --ink-soft:#454B66; --muted:#5D6380;
     --paper:#ECEEF4; --paper-2:#F3F4F9; --panel:#FFFFFF;
     --line:#DFE2EC; --line-strong:#C6CBDA; --hover:#F1F2F8;
 
@@ -1773,9 +1776,9 @@
     --dispatched:#7647C2; --dispatched-soft:#EFE7FB; --dispatched-ink:#45237E;
 
     --accent:var(--neel-2); --accent-dim:rgba(52,67,168,.18); --accent-soft:var(--neel-soft);
-    --accent-2:#DB4A2E; --accent-2-soft:#FCE4DC;
+    --accent-2:#C2401F; --accent-2-soft:#FCE4DC;
     --amber:var(--printed); --amber-soft:var(--printed-soft);
-    --good:var(--ready); --warn:#DB4A2E;
+    --good:var(--ready); --warn:#C2401F;
     --grad-accent:var(--neel-2);
     --shadow-accent:0 8px 18px -10px rgba(34,44,116,.8);
     --shadow-md:0 1px 2px rgba(23,27,52,.05), 0 8px 20px -12px rgba(23,27,52,.18);
@@ -1836,8 +1839,10 @@
   /* ---- Status colours, used everywhere a status appears ---- */
   .status-tag{color:#fff;}
   .status-tag.live, .status-tag.printed{background:var(--printed);color:#3A2600;}
-  .status-tag.ready{background:var(--ready);}
+  /* Darker green than --ready so white 11.5px text clears 4.5:1 */
+  .status-tag.ready{background:#13804A;}
   .status-tag.archived, .status-tag.closed, .status-tag.dispatched{background:var(--dispatched);}
+  .urgent-badge.urgent-soon{background:var(--printed);color:#3A2600;}
 
   /* ---- Open Orders: Printed / Ready / Dispatched hang tags ---- */
   .status-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 12px;}
@@ -2300,6 +2305,17 @@
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
+  /* ---- Touch targets: at least 44px for fingers on the counter screen ---- */
+  .qty-stepper button, .menu-card .qty-stepper button{width:44px;height:44px;}
+  .fs-btn{min-width:44px;min-height:44px;padding:8px 12px;}
+  .ewp-save-btn, .ewp-del-btn{width:44px;height:44px;}
+  /* Small inline buttons keep their look; an invisible ring widens the hit area */
+  .urgent-clear-btn, .line-urgent button{position:relative;}
+  .urgent-clear-btn::after, .line-urgent button::after{content:'';position:absolute;inset:-10px;}
+  @media (max-width:640px){
+    nav button{font-size:13px;min-height:44px;}
+  }
+
 </style>
 </head>
 <body>
@@ -2399,16 +2415,16 @@
     <div class="no-step"><span class="no-step-n">1</span><span class="kk-ur">گاہک</span> Customer</div>
     <div class="row">
       <div class="field">
-        <label data-i18n="lbl_phone" data-ur="فون نمبر">Customer Phone</label>
+        <label data-i18n="lbl_phone" data-ur="فون نمبر" for="phoneInput">Customer Phone</label>
         <input type="tel" id="phoneInput" placeholder="03XXXXXXXXX" maxlength="11">
         <div id="phoneError" class="small error"></div>
       </div>
       <div class="field">
-        <label data-i18n="lbl_name" data-ur="نام">Customer Name</label>
+        <label data-i18n="lbl_name" data-ur="نام" for="nameInput">Customer Name</label>
         <input type="text" id="nameInput" placeholder="Name">
       </div>
       <div class="field">
-        <label data-i18n="lbl_code" data-ur="کوڈ">Order Code (auto, editable)</label>
+        <label data-i18n="lbl_code" data-ur="کوڈ" for="codeInput">Order Code (auto, editable)</label>
         <input type="text" id="codeInput" placeholder="last 4 digits" maxlength="8" style="width:110px;">
       </div>
       <div class="field">
@@ -2446,16 +2462,16 @@
       <summary class="add-menu-item-heading">+ Add new item to rate list</summary>
       <div class="row" style="margin-top:10px;">
         <div class="field">
-          <label>Item Name</label>
+          <label for="menuNewItemName">Item Name</label>
           <input type="text" id="menuNewItemName" placeholder="e.g. Sherwani" style="width:160px;">
         </div>
         <div class="field">
-          <label>Category</label>
+          <label for="menuNewItemCategory">Category</label>
           <select id="menuNewItemCategory" style="width:150px;" onchange="toggleMenuCustomCategory()"></select>
           <input type="text" id="menuNewItemCategoryCustom" placeholder="Type new category name" style="width:150px;margin-top:6px;display:none;">
         </div>
         <div class="field">
-          <label>Price (Rs)</label>
+          <label for="menuNewItemPrice">Price (Rs)</label>
           <input type="number" id="menuNewItemPrice" placeholder="Rs" style="width:90px;">
         </div>
         <div class="field">
@@ -2469,16 +2485,16 @@
       <div class="no-step no-step-pay"><span class="no-step-n">3</span><span class="kk-ur">پیسے</span> Money and save</div>
       <div class="payment-inputs-row">
         <div class="field">
-          <label data-i18n="lbl_discount" data-ur="ڈسکاؤنٹ">Discount %</label>
+          <label data-i18n="lbl_discount" data-ur="ڈسکاؤنٹ" for="discountInput">Discount %</label>
           <input type="number" id="discountInput" oninput="clampDiscountInput(this); renderItemsList()" value="0" min="0" max="100" step="0.5">
           <div id="discountAmountPreview" class="small"></div>
         </div>
         <div class="field">
-          <label data-i18n="lbl_advance" data-ur="ایڈوانس">Advance Paid (Rs)</label>
+          <label data-i18n="lbl_advance" data-ur="ایڈوانس" for="advanceInput">Advance Paid (Rs)</label>
           <input type="number" id="advanceInput" oninput="renderItemsList()" placeholder="0" min="0">
         </div>
         <div class="field">
-          <label data-i18n="lbl_tendered" data-ur="گاہک نے دیے">Cash Tendered</label>
+          <label data-i18n="lbl_tendered" data-ur="گاہک نے دیے" for="tenderedInput">Cash Tendered</label>
           <input type="number" id="tenderedInput" oninput="renderItemsList()" placeholder="Leave blank" min="0">
         </div>
       </div>
@@ -2552,11 +2568,11 @@
       </div>
       <div class="row" style="margin-top:6px;">
         <div class="field">
-          <label>Search by Phone</label>
+          <label for="searchPhoneInput">Search by Phone</label>
           <input type="text" id="searchPhoneInput" placeholder="03XXXXXXXXX" style="width:160px;" oninput="filterOpenOrders()">
         </div>
         <div class="field">
-          <label>Search by Code or Serial</label>
+          <label for="searchCodeInput">Search by Code or Serial</label>
           <input type="text" id="searchCodeInput" placeholder="e.g. 1234" style="width:140px;" oninput="filterOpenOrders()">
         </div>
         <div class="field">
@@ -2615,19 +2631,19 @@
       </div>
       <div class="row">
         <div class="field">
-          <label>Amount</label>
+          <label for="expenseAmount">Amount</label>
           <input type="number" id="expenseAmount" class="exp-amount" inputmode="numeric" placeholder="Rs" style="width:150px;">
         </div>
         <div class="field">
-          <label>Category</label>
+          <label for="expenseCategory">Category</label>
           <input type="text" id="expenseCategory" placeholder="e.g. Detergent" style="width:160px;">
         </div>
         <div class="field">
-          <label>Note</label>
+          <label for="expenseNote">Note</label>
           <input type="text" id="expenseNote" style="width:220px;">
         </div>
         <div class="field">
-          <button class="btn-main exp-save" onclick="addExpense()">+ Add Expense</button>
+          <button class="btn-main exp-save" onclick="runBusy(this, addExpense)">+ Add Expense</button>
         </div>
       </div>
       <label style="margin-top:14px;">Logged this session</label>
@@ -2699,7 +2715,7 @@
       <summary><span class="kk-ur">رپورٹ</span> Reports — day and month totals</summary>
       <div class="panel">
         <div class="kk-head">
-          <label style="margin:0;">Daily record</label>
+          <label for="kkViewDate" style="margin:0;">Daily record</label>
           <div style="display:flex;gap:8px;align-items:center;">
             <input type="date" id="kkViewDate" style="width:160px;" onchange="loadKarkhanaDay()">
             <button class="btn-secondary" onclick="loadKarkhanaDay()">Refresh</button>
@@ -2711,7 +2727,7 @@
       </div>
       <div class="panel">
         <div class="kk-head">
-          <label style="margin:0;">Monthly shop summary</label>
+          <label style="margin:0;" for="kkMonth">Monthly shop summary</label>
           <input type="month" id="kkMonth" style="width:170px;" onchange="loadKarkhanaMonth()">
         </div>
         <div id="kkMonthStats" class="kk-stats"></div>
@@ -2754,27 +2770,27 @@
 
     <div class="promo-layout">
       <div class="promo-form panel">
-        <label>Top Label / Tagline (optional)</label>
+        <label for="promoLabel">Top Label / Tagline (optional)</label>
         <div class="field"><input type="text" id="promoLabel" placeholder="e.g. SPECIAL OFFER — leave blank to show nothing" style="width:100%;" oninput="onPromoFieldInput()"></div>
 
         <label>Heading</label>
         <div class="field"><input type="text" id="promoHeading" placeholder="e.g. Jashn-e-Azadi Mubarak!" style="width:100%;" oninput="onPromoFieldInput()"></div>
 
-        <label>Message</label>
+        <label for="promoBody">Message</label>
         <div class="field"><textarea id="promoBody" rows="3" style="width:100%;font-family:var(--font-mono);padding:9px 11px;border:1px solid var(--line);border-radius:6px;font-size:14px;background:#fffefb;color:var(--ink);" placeholder="Short message for customers..." oninput="onPromoFieldInput()"></textarea></div>
 
         <div class="row">
-          <div class="field"><label>Discount Badge</label><input type="text" id="promoDiscount" placeholder="e.g. 14% OFF" style="width:160px;" oninput="onPromoFieldInput()"></div>
-          <div class="field" style="flex:1;"><label>Valid / CTA line</label><input type="text" id="promoCta" placeholder="e.g. Offer valid 14–16 August only" style="width:100%;" oninput="onPromoFieldInput()"></div>
+          <div class="field"><label for="promoDiscount">Discount Badge</label><input type="text" id="promoDiscount" placeholder="e.g. 14% OFF" style="width:160px;" oninput="onPromoFieldInput()"></div>
+          <div class="field" style="flex:1;"><label for="promoCta">Valid / CTA line</label><input type="text" id="promoCta" placeholder="e.g. Offer valid 14–16 August only" style="width:100%;" oninput="onPromoFieldInput()"></div>
         </div>
 
-        <label>Contact / Footer line (optional)</label>
+        <label for="promoContact">Contact / Footer line (optional)</label>
         <div class="field"><input type="text" id="promoContact" placeholder="e.g. 0300-1234567 or 'Visit us today!'" style="width:100%;" oninput="onPromoFieldInput()"></div>
 
         <label>Colour Theme</label>
         <div class="chip-bar" id="promoColorSwatches"></div>
 
-        <label>Shop Logo (optional — saved on this device only)</label>
+        <label for="promoLogoInput">Shop Logo (optional — saved on this device only)</label>
         <div class="promo-logo-row">
           <img id="promoLogoThumb" class="promo-logo-thumb" style="display:none;">
           <input type="file" accept="image/*" id="promoLogoInput" onchange="handlePromoLogoUpload(this)">
@@ -2795,7 +2811,7 @@
           <button type="button" class="btn-secondary" onclick="openPromoFacebook()">🔵 Open Facebook</button>
         </div>
         <div class="field" style="margin-top:10px;">
-          <label>Facebook Page Link (optional — saved on this device)</label>
+          <label for="promoFacebookLinkInput">Facebook Page Link (optional — saved on this device)</label>
           <input type="text" id="promoFacebookLinkInput" placeholder="https://facebook.com/yourpage" style="width:100%;" onchange="savePromoFacebookLink(this.value)">
         </div>
         <p class="promo-hint">Image download hone ke baad, WhatsApp Web ya Facebook khol kar usay manually upload karein aur caption paste kar dein ("Copy Caption" se copy ho jayega). Filhal koi bhi platform third-party app ko Status/Story apne aap post karne ki ijazat nahi deta, is liye yeh aakhri qadam hamesha manual hi rahega.</p>
@@ -2839,7 +2855,7 @@
     <!-- CASH REGISTER SECTION -->
     <div class="dash-section active" id="dashSection-cashregister">
       <div class="panel">
-        <label>Viewing Month</label>
+        <label for="dashMonthSelect">Viewing Month</label>
         <div class="row">
           <div class="field">
             <select id="dashMonthSelect" onchange="onDashMonthChange()" style="width:200px;"></select>
@@ -2862,11 +2878,11 @@
         <label>Audit — browse past notifications</label>
         <div class="row">
           <div class="field">
-            <label>Date</label>
+            <label for="notifDateInput">Date</label>
             <input type="date" id="notifDateInput" onchange="loadNotifications()">
           </div>
           <div class="field">
-            <label>Branch</label>
+            <label for="notifBranchFilter">Branch</label>
             <select id="notifBranchFilter" onchange="loadNotifications()"><option value="">All Branches</option></select>
           </div>
           <div class="field">
@@ -2896,20 +2912,20 @@
         <p class="small">Tap <b>+</b> to add a brand-new item or category (password required). Tap the price on any card to edit it. Tap <b>🗑</b> to delete an item (password required).</p>
         <div class="row" style="margin-top:6px;">
           <div class="field">
-            <label>Item Name</label>
+            <label for="ewpNewItemName">Item Name</label>
             <input type="text" id="ewpNewItemName" placeholder="e.g. Sherwani" style="width:160px;">
           </div>
           <div class="field">
-            <label>Category</label>
+            <label for="ewpNewItemCategory">Category</label>
             <select id="ewpNewItemCategory" style="width:150px;" onchange="toggleEwpCustomCategory()"></select>
             <input type="text" id="ewpNewItemCategoryCustom" placeholder="Type new category name" style="width:150px;margin-top:6px;display:none;">
           </div>
           <div class="field">
-            <label>Price (Rs)</label>
+            <label for="ewpNewItemPrice">Price (Rs)</label>
             <input type="number" id="ewpNewItemPrice" placeholder="Rs" style="width:90px;">
           </div>
           <div class="field">
-            <button class="btn-main" onclick="addEwpItem()">+ Add Item / Category</button>
+            <button class="btn-main" onclick="runBusy(this, addEwpItem)">+ Add Item / Category</button>
           </div>
         </div>
       </div>
@@ -2930,7 +2946,7 @@
     <button type="button" class="btn-secondary" style="margin-bottom:12px;" onclick="backToAdminDashboard()">&larr; Back to Admin Dashboard</button>
 
     <div class="panel">
-      <label>Branch</label>
+      <label for="mrBranchSelect">Branch</label>
       <div class="row">
         <div class="field">
           <select id="mrBranchSelect" style="width:200px;" onchange="onMrBranchChange()"></select>
@@ -2975,18 +2991,18 @@
     <div class="panel">
       <label>Record Salary Payment</label>
       <div class="row">
-        <div class="field"><label>Worker Name</label><input type="text" id="salaryWorkerName" style="width:160px;"></div>
-        <div class="field"><label>Amount</label><input type="number" id="salaryAmount" style="width:120px;"></div>
+        <div class="field"><label for="salaryWorkerName">Worker Name</label><input type="text" id="salaryWorkerName" style="width:160px;"></div>
+        <div class="field"><label for="salaryAmount">Amount</label><input type="number" id="salaryAmount" style="width:120px;"></div>
         <div class="field">
-          <label>Type</label>
+          <label for="salaryType">Type</label>
           <select id="salaryType" style="width:120px;">
             <option value="salary">Salary</option>
             <option value="advance">Advance</option>
           </select>
         </div>
-        <div class="field"><label>Month</label><input type="month" id="salaryMonth" style="width:150px;"></div>
-        <div class="field"><label>Note (optional)</label><input type="text" id="salaryNote" style="width:200px;"></div>
-        <div class="field"><button class="btn-secondary" onclick="addSalaryPayment()">+ Add</button></div>
+        <div class="field"><label for="salaryMonth">Month</label><input type="month" id="salaryMonth" style="width:150px;"></div>
+        <div class="field"><label for="salaryNote">Note (optional)</label><input type="text" id="salaryNote" style="width:200px;"></div>
+        <div class="field"><button class="btn-secondary" onclick="runBusy(this, addSalaryPayment)">+ Add</button></div>
       </div>
       <table style="margin-top:10px;">
         <thead><tr><th>Month</th><th>Worker</th><th>Type</th><th>Amount</th><th>Note</th><th></th></tr></thead>
@@ -3004,10 +3020,10 @@
         <button class="btn-secondary" onclick="quickExpense('')">Other / Custom</button>
       </div>
       <div class="row" id="mrExpenseForm" style="display:none;margin-top:10px;">
-        <div class="field"><label>Category</label><input type="text" id="mrExpenseCategory" style="width:160px;"></div>
-        <div class="field"><label>Amount</label><input type="number" id="mrExpenseAmount" style="width:120px;"></div>
-        <div class="field"><label>Note</label><input type="text" id="mrExpenseNote" style="width:200px;"></div>
-        <div class="field"><button class="btn-main" onclick="submitMrExpense()">Save Expense</button></div>
+        <div class="field"><label for="mrExpenseCategory">Category</label><input type="text" id="mrExpenseCategory" style="width:160px;"></div>
+        <div class="field"><label for="mrExpenseAmount">Amount</label><input type="number" id="mrExpenseAmount" style="width:120px;"></div>
+        <div class="field"><label for="mrExpenseNote">Note</label><input type="text" id="mrExpenseNote" style="width:200px;"></div>
+        <div class="field"><button class="btn-main" onclick="runBusy(this, submitMrExpense)">Save Expense</button></div>
       </div>
     </div>
 
@@ -3160,7 +3176,7 @@
         <p class="return-help"><span class="kk-ur">گاہک خوش نہیں۔ جو کپڑے واپس لایا ان پر + دبائیں، پھر وجہ چنیں۔ ٹھیک ہونے تک یہ آرڈر الگ نشان کے ساتھ رہے گا۔</span>
           <span class="small">Customer is not satisfied — tap + on the clothes they brought back, then pick why. The order stays flagged until marked fixed.</span></p>
         <div id="returnItemsBody"></div>
-        <label style="margin-top:12px;">Reason</label>
+        <label for="returnReason" style="margin-top:12px;">Reason</label>
         <div class="chip-bar" id="returnReasonChips" style="margin-bottom:6px;"></div>
         <input type="text" id="returnReason" maxlength="500" placeholder="e.g. Stain on collar still there" style="width:100%;">
         <div id="returnError" class="small" style="color:var(--warn);margin-top:6px;"></div>
@@ -3213,11 +3229,11 @@
         <button class="btn-secondary" style="width:100%;margin-bottom:12px;" onclick="fillReceiverSameAsCustomer()">Same as Customer (autofill)</button>
 
         <div class="field">
-          <label>Receiver Name</label>
+          <label for="dispatchReceiverName">Receiver Name</label>
           <input type="text" id="dispatchReceiverName" placeholder="Name of person collecting" style="width:100%;">
         </div>
         <div class="field">
-          <label>Receiver Phone (optional, if different from customer)</label>
+          <label for="dispatchReceiverPhone">Receiver Phone (optional, if different from customer)</label>
           <input type="text" id="dispatchReceiverPhone" placeholder="03XXXXXXXXX" style="width:100%;">
         </div>
 
@@ -3267,7 +3283,7 @@
         </div>
 
         <div class="field">
-          <label>Amount Received From Customer</label>
+          <label for="dcAmountReceived">Amount Received From Customer</label>
           <input type="number" id="dcAmountReceived" style="width:100%;font-size:20px;" inputmode="decimal" oninput="updateDispatchChangeDisplay()">
         </div>
 
@@ -3353,7 +3369,7 @@
         <!-- Payment -->
         <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
           <div class="field" style="margin-bottom:10px;">
-            <label style="font-weight:700;">Collect Now (Rs) — enter 0 to hand over clothes without payment</label>
+            <label style="font-weight:700;" for="pdAmountCollected">Collect Now (Rs) — enter 0 to hand over clothes without payment</label>
             <input type="number" id="pdAmountCollected" min="0" inputmode="decimal"
               style="width:100%;font-size:20px;margin-top:6px;" placeholder="0"
               oninput="updatePdSummary()">
@@ -3386,11 +3402,11 @@
         <!-- Receiver -->
         <div style="display:flex;gap:10px;margin-bottom:16px;">
           <div class="field" style="flex:1;margin:0;">
-            <label>Receiver Name <span style="color:var(--warn);">*</span></label>
+            <label for="pdReceiverName">Receiver Name <span style="color:var(--warn);">*</span></label>
             <input type="text" id="pdReceiverName" placeholder="Who is collecting" style="width:100%;margin-top:4px;">
           </div>
           <div class="field" style="flex:1;margin:0;">
-            <label>Receiver Phone <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+            <label for="pdReceiverPhone">Receiver Phone <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
             <input type="text" id="pdReceiverPhone" placeholder="03XXXXXXXXX" style="width:100%;margin-top:4px;">
           </div>
         </div>
@@ -3469,7 +3485,7 @@
       <div class="modal-body">
         <div id="noteTimelineBody" class="note-timeline"></div>
         <div class="note-add-area">
-          <label style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Add a Note</label>
+          <label style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;" for="noteInput">Add a Note</label>
           <textarea id="noteInput" placeholder="e.g. Handle collar with care — delicate fabric. Remove stain on left sleeve first." maxlength="1000" oninput="updateNoteCharCount()"></textarea>
           <div class="note-add-footer">
             <span class="note-char-count" id="noteCharCount">0 / 1000</span>
@@ -3504,7 +3520,7 @@
         </div>
 
         <div class="field" style="margin-top:14px;">
-          <label>Step 2 — Copy the message, paste it into the text box</label>
+          <label for="smsHelperMessage">Step 2 — Copy the message, paste it into the text box</label>
           <div class="row" style="gap:8px;align-items:flex-start;">
             <textarea id="smsHelperMessage" readonly style="flex:1;min-height:120px;"></textarea>
             <button class="btn-secondary" onclick="copySmsHelperField('smsHelperMessage', this)">Copy</button>
@@ -3528,7 +3544,7 @@
       <div class="modal-body">
         <p id="deleteConfirmLabel" class="small" style="margin-top:0;"></p>
         <div class="field">
-          <label>Re-enter your admin password to confirm</label>
+          <label for="deleteConfirmPassword">Re-enter your admin password to confirm</label>
           <input type="password" id="deleteConfirmPassword" style="width:100%;" autocomplete="current-password">
         </div>
         <div id="deleteConfirmError" class="error"></div>
@@ -3563,7 +3579,7 @@
         <input type="number" id="newServicePrice" placeholder="Default price" style="width:120px;">
         <select id="newServiceCategory" style="width:160px;" onchange="toggleNewServiceCustomCategory()"></select>
         <input type="text" id="newServiceCategoryCustom" placeholder="Type new category name" style="width:160px;display:none;">
-        <button class="btn-secondary" onclick="addService()">+ Add</button>
+        <button class="btn-secondary" onclick="runBusy(this, addService)">+ Add</button>
       </div>
       <table style="margin-top:14px;">
         <thead><tr><th>Service Name</th><th>Category</th><th>Default Price</th><th></th></tr></thead>
@@ -3577,7 +3593,7 @@
     <button type="button" class="btn-secondary" style="margin-bottom:12px;" onclick="backToAdminDashboard()">&larr; Back to Admin Dashboard</button>
 
     <div class="panel">
-      <label>Branch</label>
+      <label for="staffBranchSelect">Branch</label>
       <div class="row">
         <div class="field">
           <select id="staffBranchSelect" style="width:200px;" onchange="onStaffBranchChange()"></select>
@@ -3588,9 +3604,9 @@
     <div class="panel">
       <label>Add Worker</label>
       <div class="row">
-        <div class="field"><label>Name</label><input type="text" id="staffNewName" style="width:160px;"></div>
-        <div class="field"><label>Phone (optional)</label><input type="text" id="staffNewPhone" style="width:140px;"></div>
-        <div class="field"><label>Joining Date</label><input type="date" id="staffNewJoinDate" style="width:150px;"></div>
+        <div class="field"><label for="staffNewName">Name</label><input type="text" id="staffNewName" style="width:160px;"></div>
+        <div class="field"><label for="staffNewPhone">Phone (optional)</label><input type="text" id="staffNewPhone" style="width:140px;"></div>
+        <div class="field"><label for="staffNewJoinDate">Joining Date</label><input type="date" id="staffNewJoinDate" style="width:150px;"></div>
         <div class="field"><button class="btn-secondary" onclick="addStaffMember()">+ Add Worker</button></div>
       </div>
     </div>
@@ -3606,17 +3622,17 @@
     <div class="panel" id="staffLedgerPanel" style="display:none;">
       <label>Log Book — <span id="staffLedgerName"></span></label>
       <div class="row">
-        <div class="field"><label>Date</label><input type="date" id="staffLedgerDate" style="width:150px;"></div>
-        <div class="field"><label>Amount</label><input type="number" id="staffLedgerAmount" style="width:120px;"></div>
+        <div class="field"><label for="staffLedgerDate">Date</label><input type="date" id="staffLedgerDate" style="width:150px;"></div>
+        <div class="field"><label for="staffLedgerAmount">Amount</label><input type="number" id="staffLedgerAmount" style="width:120px;"></div>
         <div class="field">
-          <label>Type</label>
+          <label for="staffLedgerType">Type</label>
           <select id="staffLedgerType" style="width:120px;">
             <option value="advance">Advance</option>
             <option value="salary">Salary</option>
           </select>
         </div>
-        <div class="field"><label>Note (optional)</label><input type="text" id="staffLedgerNote" style="width:200px;"></div>
-        <div class="field"><button class="btn-secondary" onclick="addStaffLedgerEntry()">+ Add Entry</button></div>
+        <div class="field"><label for="staffLedgerNote">Note (optional)</label><input type="text" id="staffLedgerNote" style="width:200px;"></div>
+        <div class="field"><button class="btn-secondary" onclick="runBusy(this, addStaffLedgerEntry)">+ Add Entry</button></div>
       </div>
       <table style="margin-top:10px;">
         <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th><th></th></tr></thead>
@@ -4585,7 +4601,7 @@ function renderEwpPanel(){
           <div class="menu-name"><span class="n">${escHtml(s.name)}</span></div>
           <input type="number" class="menu-price-input" id="ewpPrice_${s.id}" value="${s.default_price||0}" min="0">
           <div class="ewp-actions">
-            <button type="button" class="ewp-save-btn" title="Save price" onclick="saveEwpPrice(${s.id})">💾</button>
+            <button type="button" class="ewp-save-btn" title="Save price" onclick="runBusy(this, saveEwpPrice, ${s.id})">💾</button>
             <button type="button" class="ewp-del-btn" title="Delete item" onclick="openEwpDeleteModal(${s.id}, '${jsArg(s.name)}')">🗑</button>
           </div>
         </div>`;
@@ -4725,6 +4741,15 @@ function safeHttpUrl(v){
     const u = new URL(String(v || '').trim());
     return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : '';
   }catch(e){ return ''; }
+}
+
+// Disables the clicked button until the async handler finishes, so a double
+// tap on a slow connection can't record the same expense / payment twice.
+// Same idea as saveAndPrint's try/finally, for handlers wired from onclick.
+function runBusy(btn, fn, ...args){
+  if(btn.disabled) return;
+  btn.disabled = true;
+  return Promise.resolve().then(() => fn(...args)).finally(() => { btn.disabled = false; });
 }
 
 // Escapes a value for safe insertion as HTML TEXT CONTENT (table cells,
@@ -5318,7 +5343,7 @@ async function renderOpenOrdersRows(list){
     return `<tr class="${rowClass}${urgentRowClass}${openReturn ? ' row-returned' : ''}${idx % 2 === 1 ? ' zebra-b' : ''}">
       <td class="serial-code-cell">${serialCodeCell(o.serial_no, o.code)}</td>
       <td>${escHtml(o.customer_phone)}</td>
-      <td>${isVip ? `<div class="vip-badge" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
+      <td>${isVip ? `<div class="vip-badge" tabindex="0" role="button" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(o.items)}</td>
       <td>Rs ${o.total}</td>
       <td>Rs ${advancePaid}</td>
@@ -8690,7 +8715,7 @@ async function checkOrderCode(){
     const conflict = data[0];
     statusBox.innerHTML = `<span class="error">Code "${escHtml(code)}" is already in use by an open order (${escHtml(conflict.customer_name || 'unknown')}, ${escHtml(conflict.phone)}). Choose a different code.</span>`;
   } else {
-    statusBox.innerHTML = `<span>Code "${code}" is available.</span>`;
+    statusBox.innerHTML = `<span>Code "${escHtml(code)}" is available.</span>`;
   }
 }
 
@@ -8889,7 +8914,8 @@ function renderItemsList(){
   updatePressDeadlineVisibility();
   const subtotal = baseSubtotalForRow + urgentSurchargeForRow;
   const discountPct = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0));
-  const discount = Math.round((subtotal * discountPct / 100) * 100) / 100; // rupee amount, 2dp
+  // Whole rupees, so the screen, receipt and dashboards (kkMoney) all show the same figure.
+  const discount = Math.round(subtotal * discountPct / 100);
   const total = subtotal - discount;
   document.getElementById('subtotalDisplay').textContent = 'Rs ' + subtotal;
   document.getElementById('grandTotalDisplay').textContent = 'Rs ' + total;
@@ -9100,7 +9126,7 @@ async function saveAndPrint(){
   const urgentSurcharge = isUrgent ? urgentSurchargeOf(currentItems) : 0;
   const subtotal = baseSubtotal + urgentSurcharge;
   const discountPct = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountInput').value) || 0));
-  const discount = Math.round((subtotal * discountPct / 100) * 100) / 100; // rupee amount saved to the order, same as before
+  const discount = Math.round(subtotal * discountPct / 100); // whole rupees — must match renderItemsList
   const total = subtotal - discount;
 
   // Advance payment is mandatory — 0 is a valid, explicit answer, but a
@@ -10600,6 +10626,65 @@ function orderRef(orderId, code){
   return (sn ? 'Serial ' + fmtSerial(sn) + ' · ' : '') + 'Code ' + (code || orderId);
 }
 
+// ---------- POPUP KEYBOARD HANDLING ----------
+// Every .modal-overlay popup gets dialog semantics, moves focus inside when
+// it opens, keeps Tab inside it, closes on Escape (by clicking its own
+// close/cancel button, so each popup's normal close logic runs) and hands
+// focus back to whatever was focused before it opened. Popups with their
+// own key handling (piece details, the app dialog) call preventDefault,
+// which this skips.
+(function(){
+  const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const openStack = [];
+  const focusables = m => [...m.querySelectorAll(FOCUSABLE)].filter(el => el.getClientRects().length);
+
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.tabIndex = -1;
+    const h = m.querySelector('h1, h2, h3');
+    if(h){ if(!h.id) h.id = m.id + 'Title'; m.setAttribute('aria-labelledby', h.id); }
+    new MutationObserver(() => {
+      const isOpen = m.classList.contains('open');
+      const i = openStack.findIndex(x => x.el === m);
+      if(isOpen && i < 0){
+        openStack.push({ el: m, restore: document.activeElement });
+        // Wait a tick — some open functions focus their own field first.
+        setTimeout(() => { if(!m.contains(document.activeElement)) (focusables(m)[0] || m).focus(); }, 0);
+      } else if(!isOpen && i >= 0){
+        const { restore } = openStack.splice(i, 1)[0];
+        if(restore && document.contains(restore) && restore.focus) restore.focus();
+      }
+    }).observe(m, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  document.addEventListener('keydown', e => {
+    const top = openStack[openStack.length - 1];
+    if(!top || e.defaultPrevented) return;
+    const m = top.el;
+    if(e.key === 'Escape'){
+      const closeBtn = m.querySelector('[onclick^="close"]');
+      if(closeBtn){ e.preventDefault(); closeBtn.click(); }
+    } else if(e.key === 'Tab'){
+      const f = focusables(m);
+      if(!f.length){ e.preventDefault(); return; }
+      const first = f[0], last = f[f.length - 1], cur = document.activeElement;
+      if(!m.contains(cur) || (!e.shiftKey && cur === last)){ e.preventDefault(); first.focus(); }
+      else if(e.shiftKey && (cur === first || cur === m)){ e.preventDefault(); last.focus(); }
+    }
+  });
+})();
+
+// Rows and badges that act as buttons (tabindex="0" role="button") open
+// with Enter or Space too, like a real <button>.
+document.addEventListener('keydown', e => {
+  const el = e.target;
+  if((e.key === 'Enter' || e.key === ' ') && el.getAttribute && el.getAttribute('role') === 'button' && el.tagName !== 'BUTTON'){
+    e.preventDefault();
+    el.click();
+  }
+});
+
 // ---------- RECEIPT QR SCANS ----------
 // A USB QR/barcode scanner acts as a keyboard: it types the code very fast
 // and presses Enter. Keys arriving less than 80 ms apart are collected;
@@ -11617,7 +11702,7 @@ async function loadKarkhanaMonth(){
     <tbody>${list.map(([k, s], i) => {
       const cats = kkCategoryTotals(s.rows).map(([c, q]) => `${escHtml(c)}: ${q} pcs`).join(', ');
       const out = lifetime[k] || 0;
-      return `<tr class="kk-shop-row" onclick="openKkKhata('${jsArg(k)}')" title="Open this shop's khata"><td><b>${escHtml(s.name)}</b><span class="kk-open-hint">›</span></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
+      return `<tr class="kk-shop-row" tabindex="0" role="button" onclick="openKkKhata('${jsArg(k)}')" title="Open this shop's khata"><td><b>${escHtml(s.name)}</b><span class="kk-open-hint">›</span></td><td class="kk-num">${s.days.size}</td><td class="kk-num">${s.pieces}</td><td class="small">${cats || '—'}</td>
         <td class="kk-num">${kkMoney(s.charges)}</td><td class="kk-num">${kkMoney(s.paid)}</td><td class="kk-num">${kkMoney(s.charges - s.paid)}</td>
         <td class="kk-num" style="${out > 0 ? 'color:var(--accent-2);font-weight:700;' : ''}">${kkMoney(out)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
@@ -11718,7 +11803,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
 
   // ---- Daily Cash Register ----
   const dailyRows = bDaily.map(r => `
-    <tr class="audit-row" onclick="openDailyAudit('${jsArg(r.day)}', ${Number(bId)}, '${jsArg(branch.name)}')">
+    <tr class="audit-row" tabindex="0" role="button" onclick="openDailyAudit('${jsArg(r.day)}', ${Number(bId)}, '${jsArg(branch.name)}')">
       <td>${r.day}</td><td>${r.orders_booked}</td><td>Rs ${r.value_booked}</td>
       <td>Rs ${r.advance_collected}</td><td>Rs ${r.balance_collected}</td><td>Rs ${r.total_cash_in}</td>
       <td>Rs ${r.expenses_today}</td><td>Rs ${r.pending_from_bookings}</td>
@@ -11755,10 +11840,10 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
 
   return `
     <div class="branch-block ${branchThemeClass(branch.name, idx)}">
-    <div class="branch-heading">${branch.name}</div>
+    <div class="branch-heading">${escHtml(branch.name)}</div>
 
     <div class="panel">
-      <label>Daily Cash Register — ${monthLabel} — ${branch.name}</label>
+      <label>Daily Cash Register — ${monthLabel} — ${escHtml(branch.name)}</label>
       <table>
         <thead><tr><th>Date</th><th>Orders Booked</th><th>Value Booked</th><th>Advance Collected</th><th>Balance Recovered</th><th>Total Cash In</th><th>Expenses</th><th>Cash to be Received</th></tr></thead>
         <tbody>${dailyRows}</tbody>
@@ -11766,11 +11851,11 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
           <td>Rs ${dSum.advance}</td><td>Rs ${dSum.balance}</td><td>Rs ${dSum.cash}</td>
           <td>Rs ${dSum.exp}</td><td>Rs ${dSum.pendingBooked}</td></tr></tfoot>
       </table>
-      <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${branch.name}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${bPending}</b></div>
+      <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${escHtml(branch.name)}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${bPending}</b></div>
     </div>
 
     <div class="panel">
-      <label>Expenses — ${branch.name} (${monthLabel})</label>
+      <label>Expenses — ${escHtml(branch.name)} (${monthLabel})</label>
       <div class="row" style="margin-bottom:10px;">
         <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Electricity')">Electricity</button>
         <button class="btn-secondary" onclick="quickDashExpense(${bId}, 'Gas')">Gas</button>
@@ -11780,10 +11865,10 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
         <button class="btn-secondary" onclick="quickDashExpense(${bId}, '')">Other / Custom</button>
       </div>
       <div class="row" id="dashExpenseForm_${bId}" style="display:none;margin-bottom:14px;">
-        <div class="field"><label>Category</label><input type="text" id="dashExpenseCategory_${bId}" style="width:160px;"></div>
-        <div class="field"><label>Amount</label><input type="number" id="dashExpenseAmount_${bId}" style="width:120px;"></div>
-        <div class="field"><label>Note</label><input type="text" id="dashExpenseNote_${bId}" style="width:200px;"></div>
-        <div class="field"><button class="btn-main" onclick="submitDashExpense(${bId})">Save Expense</button></div>
+        <div class="field"><label for="dashExpenseCategory_${bId}">Category</label><input type="text" id="dashExpenseCategory_${bId}" style="width:160px;"></div>
+        <div class="field"><label for="dashExpenseAmount_${bId}">Amount</label><input type="number" id="dashExpenseAmount_${bId}" style="width:120px;"></div>
+        <div class="field"><label for="dashExpenseNote_${bId}">Note</label><input type="text" id="dashExpenseNote_${bId}" style="width:200px;"></div>
+        <div class="field"><button class="btn-main" onclick="runBusy(this, submitDashExpense, ${bId})">Save Expense</button></div>
       </div>
       <table>
         <thead><tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th><th>Worker</th><th></th></tr></thead>
@@ -11793,7 +11878,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
     </div>
 
     <div class="panel">
-      <label>Monthly Summary — ${branch.name}</label>
+      <label>Monthly Summary — ${escHtml(branch.name)}</label>
       <table>
         <thead><tr><th>Month</th><th>Orders</th><th>Sales</th><th>Avg</th><th>Peak</th><th>Min</th><th>Expenses</th><th>Net</th></tr></thead>
         <tbody>${monthlyRows}</tbody>
@@ -11849,7 +11934,7 @@ async function loadMonthlyRegister(){
   document.getElementById('mrCurrentBranchLabel').textContent = label;
 
   const { data, error } = await sb.from('monthly_register').select('*').eq('branch_id', currentBranchId).order('month', { ascending:false });
-  if(error){ document.getElementById('monthlyRegisterBody').innerHTML = `<tr><td colspan="11" class="error">${error.message}</td></tr>`; return; }
+  if(error){ document.getElementById('monthlyRegisterBody').innerHTML = `<tr><td colspan="11" class="error">${escHtml(error.message)}</td></tr>`; return; }
   const rows = data || [];
   mrRows = rows;
 
@@ -12007,7 +12092,7 @@ async function loadSalaryLog(){
   const { data, error } = await sb.from('salary_payments').select('*').eq('branch_id', currentBranchId)
     .is('deleted_at', null)
     .order('month', { ascending:false }).order('created_at', { ascending:false }).limit(100);
-  if(error){ document.getElementById('salaryLogBody').innerHTML = `<tr><td colspan="6" class="error">${error.message}</td></tr>`; return; }
+  if(error){ document.getElementById('salaryLogBody').innerHTML = `<tr><td colspan="6" class="error">${escHtml(error.message)}</td></tr>`; return; }
   document.getElementById('salaryLogBody').innerHTML = (data||[]).map(s => `
     <tr><td>${s.month}</td><td>${escHtml(s.worker_name)}</td><td>${escHtml(s.payment_type)}</td><td>Rs ${s.amount}</td><td>${escHtml(s.note||'')}</td>
     <td><button class="btn-secondary" onclick="deleteSalaryPayment(${s.id})">Delete</button></td></tr>`
@@ -12081,7 +12166,7 @@ async function loadStaffList(){
     .is('deleted_at', null)
     .order('leaving_date', { ascending: true, nullsFirst: true })
     .order('name', { ascending: true });
-  if(error){ document.getElementById('staffListBody').innerHTML = `<tr><td colspan="6" class="error">${error.message}</td></tr>`; return; }
+  if(error){ document.getElementById('staffListBody').innerHTML = `<tr><td colspan="6" class="error">${escHtml(error.message)}</td></tr>`; return; }
   staffRows = data || [];
   document.getElementById('staffListBody').innerHTML = staffRows.map(w => `
     <tr>
@@ -12163,7 +12248,7 @@ async function loadStaffLedger(){
     .is('deleted_at', null)
     .order('payment_date', { ascending: false })
     .order('created_at', { ascending: false });
-  if(error){ document.getElementById('staffLedgerBody').innerHTML = `<tr><td colspan="5" class="error">${error.message}</td></tr>`; return; }
+  if(error){ document.getElementById('staffLedgerBody').innerHTML = `<tr><td colspan="5" class="error">${escHtml(error.message)}</td></tr>`; return; }
   const rows = data || [];
   document.getElementById('staffLedgerBody').innerHTML = rows.map(r => `
     <tr>
@@ -12313,7 +12398,7 @@ function renderAuditOrderRows(bodyId, list, opts){
         : '<span style="color:var(--muted);">—</span>'
       }</td>` : '';
     return `
-    <tr class="audit-order-row" onclick="openAuditBill(${o.id})">
+    <tr class="audit-order-row" tabindex="0" role="button" onclick="openAuditBill(${o.id})">
       <td>${new Date(o.created_at).toLocaleTimeString()}</td>
       <td class="audit-code-cell serial-code-cell">${serialCodeCell(o.serial_no, o.code)}</td>
       <td>${escHtml(o.customer_name || 'Walk-in')}</td>
