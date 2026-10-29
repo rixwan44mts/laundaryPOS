@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-8">
+<meta name="app-build" content="2026-10-29-9">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -810,7 +810,7 @@
   .modal-overlay.open{display:flex;}
   .modal-overlay:focus{outline:none;}
   [role="button"][tabindex="0"]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  @keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
+  @keyframes modalIn{from{opacity:0;transform:translateY(6px) scale(.97);}to{opacity:1;transform:none;}}
   /* modal-box is now a bounded-height flex column: header stays fixed at
      the top and modal-body is the ONLY thing that scrolls internally.
      This is what lets table headers inside modal-body use position:sticky
@@ -1130,7 +1130,6 @@
   :root{
     --radius-sm:8px; --radius-md:12px; --radius-lg:18px;
     --ring:0 0 0 3px var(--accent-dim);
-    --ease-out:cubic-bezier(.2,.8,.2,1);
   }
 
   /* ---- Login ---- */
@@ -1213,9 +1212,6 @@
   nav button[data-tab="staff"]::before{content:"👥";}
   nav button.active{box-shadow:0 6px 16px -8px rgba(23,143,112,.8);}
 
-  /* ---- Tab content: gentle fade when switching ---- */
-  .tab{animation:tabIn .22s var(--ease-out);}
-  @keyframes tabIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
 
   /* ---- Panels, inputs, buttons ---- */
   .panel{border-radius:14px;}
@@ -1334,8 +1330,7 @@
     --shadow-lg:0 4px 8px rgba(15,31,36,.05), 0 28px 60px -18px rgba(15,31,36,.30);
     --shadow-accent:0 10px 22px -10px rgba(14,159,122,.75);
     --radius-sm:10px; --radius-md:14px; --radius-lg:20px;
-    --ease-out:cubic-bezier(.22,1,.36,1);
-    --spring:cubic-bezier(.34,1.56,.64,1);
+    --ease-out:cubic-bezier(.23,1,.32,1);
   }
   /* Urdu: Inter has no Arabic-script glyphs, so name a proper fallback
      instead of letting the browser pick a random system font. */
@@ -1372,7 +1367,7 @@
   nav button{
     font-family:var(--font-ui);font-size:13.5px;font-weight:600;letter-spacing:0;text-transform:none;
     color:var(--ink-soft);border-radius:11px;padding:10px 12px;
-    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),box-shadow .3s var(--ease-out),transform .18s var(--spring);
+    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),box-shadow .3s var(--ease-out),transform .18s var(--ease-out);
   }
   nav button:hover{background:var(--hover);color:var(--ink);}
   nav button:active{transform:scale(.96);}
@@ -1421,7 +1416,7 @@
     background:var(--grad-accent);font-family:var(--font-ui);font-weight:650;font-size:14.5px;letter-spacing:0;
     border-radius:12px;padding:12px 20px;
     box-shadow:var(--shadow-accent), inset 0 1px 0 rgba(255,255,255,.22);
-    transition:transform .18s var(--spring),box-shadow .25s var(--ease-out),filter .2s;
+    transition:transform .18s var(--ease-out),box-shadow .25s var(--ease-out),filter .2s;
   }
   .btn-main:hover{filter:brightness(1.05);transform:translateY(-1px);box-shadow:0 14px 26px -12px rgba(14,159,122,.85), inset 0 1px 0 rgba(255,255,255,.22);}
   .btn-main:active{transform:translateY(0) scale(.98);}
@@ -1430,7 +1425,7 @@
     font-family:var(--font-ui);font-weight:600;font-size:13px;letter-spacing:0;
     background:#fff;border:1px solid var(--line-strong);border-radius:10px;
     box-shadow:var(--shadow-sm);
-    transition:background-color .18s,border-color .18s,box-shadow .2s var(--ease-out),transform .18s var(--spring);
+    transition:background-color .18s,border-color .18s,box-shadow .2s var(--ease-out),transform .18s var(--ease-out);
   }
   .btn-secondary:hover{background:var(--hover);border-color:#b7c3c9;box-shadow:var(--shadow-md);}
   .btn-secondary:active{transform:scale(.97);}
@@ -1439,14 +1434,6 @@
   .status-filter-btn.active{background:var(--ink);border-color:var(--ink);}
   .pw-toggle{font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-weight:600;font-size:12.5px;}
 
-  /* button press ripple (added by the UI-motion script at the bottom) */
-  .has-ripple{overflow:hidden;}
-  .ripple{
-    position:absolute;border-radius:50%;pointer-events:none;
-    background:currentColor;opacity:.18;transform:scale(0);
-    animation:ripple .55s var(--ease-out) forwards;
-  }
-  @keyframes ripple{to{transform:scale(1);opacity:0;}}
 
   /* ---- Status pills ---- */
   .status-tag{text-transform:none;letter-spacing:0;font-weight:600;font-size:12px;padding:4px 11px;}
@@ -1472,21 +1459,21 @@
   .menu-cat-heading{text-transform:none;letter-spacing:-.01em;font-size:16px;font-weight:700;border-bottom-width:1px;}
   .menu-card{
     border:1px solid var(--cat-wash-border,var(--line));border-radius:16px;box-shadow:var(--shadow-sm);
-    transition:transform .22s var(--spring),box-shadow .22s var(--ease-out),border-color .18s,background-color .18s;
+    transition:transform .22s var(--ease-out),box-shadow .22s var(--ease-out),border-color .18s,background-color .18s;
   }
   .menu-card:hover{transform:translateY(-3px);filter:none;box-shadow:var(--shadow-md);}
   .menu-card.has-qty{box-shadow:0 0 0 2px var(--cat-fill,var(--accent)), var(--shadow-md);}
   .menu-card .menu-name .customer-rate-tag{text-transform:none;letter-spacing:0;font-size:11px;}
   .qty-stepper button{
     border:1px solid var(--line-strong);font-family:var(--font-ui);
-    transition:transform .18s var(--spring),background-color .15s,border-color .15s,box-shadow .2s;
+    transition:transform .12s var(--ease-out),background-color .15s,border-color .15s,box-shadow .2s;
   }
-  .qty-stepper button:active{transform:scale(.86);}
+  .qty-stepper button:active{transform:scale(.96);}
   .qty-stepper button.qty-plus{box-shadow:0 6px 12px -6px var(--cat-fill,var(--accent));}
   .chip-btn{
     font-family:var(--font-ui);font-weight:600;font-size:13.5px;letter-spacing:0;
     border:1px solid var(--line-strong);border-radius:999px;padding:8px 16px;
-    transition:background-color .18s,border-color .18s,color .18s,transform .18s var(--spring),box-shadow .2s;
+    transition:background-color .18s,border-color .18s,color .18s,transform .18s var(--ease-out),box-shadow .2s;
   }
   .chip-btn:active{transform:scale(.95);}
   .chip-btn.active{box-shadow:0 8px 16px -10px var(--cat-fill,var(--accent));}
@@ -1497,9 +1484,7 @@
     background:rgba(255,255,255,.88);backdrop-filter:saturate(1.6) blur(16px);-webkit-backdrop-filter:saturate(1.6) blur(16px);
     border:1px solid var(--line);border-bottom:none;border-radius:20px 20px 0 0;
     box-shadow:0 -12px 32px -14px rgba(15,31,36,.22);
-    animation:barUp .5s var(--ease-out) both;
   }
-  @keyframes barUp{from{transform:translateY(100%);}to{transform:none;}}
   .panel.neworder-payment{padding:8px 18px calc(8px + env(safe-area-inset-bottom));}
   .payment-inputs-row label{font-size:11px;margin-bottom:3px;}
   .payment-inputs-row input{padding:6px 10px;font-size:13.5px;}
@@ -1512,8 +1497,8 @@
   .press-deadline-field,.wd-deadline-field{border-radius:12px;}
   .press-deadline-field label,.wd-deadline-field label{text-transform:none;letter-spacing:0;font-size:12px;}
   /* numbers that just changed get a small pop (see UI-motion script) */
-  .bump{animation:bump .45s var(--spring);}
-  @keyframes bump{40%{transform:scale(1.12);}}
+  .bump{animation:bump .18s var(--ease-out);}
+  @keyframes bump{40%{transform:scale(1.04);}}
 
   /* ---- Ledgers / expenses ---- */
   .expense-day-block{background:#fff;border-radius:14px;}
@@ -1524,7 +1509,7 @@
   /* ---- Admin dashboard tiles ---- */
   .dash-tile{
     border-radius:18px;border-color:var(--line);box-shadow:var(--shadow-sm);
-    transition:transform .25s var(--spring),box-shadow .25s var(--ease-out),border-color .2s,background-color .2s,color .2s;
+    transition:transform .25s var(--ease-out),box-shadow .25s var(--ease-out),border-color .2s,background-color .2s,color .2s;
   }
   .dash-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);border-color:var(--line-strong);}
   .dash-tile:active{transform:translateY(-1px) scale(.98);}
@@ -1535,14 +1520,13 @@
   .modal-overlay.open{animation:fadeIn .2s ease-out;}
   .modal-box{
     background:var(--panel);border:1px solid var(--line);border-radius:20px;
-    box-shadow:var(--shadow-lg);animation:modalPop .38s var(--spring);
+    box-shadow:var(--shadow-lg);animation:modalIn .2s var(--ease-out);
   }
-  @keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:none;}}
   .modal-header{border-bottom:1px solid var(--line);}
   .modal-header h2{font-weight:700;font-size:18px;}
-  .modal-close-btn{border-radius:10px;font-family:var(--font-ui);transition:background-color .15s,transform .18s var(--spring);}
+  .modal-close-btn{border-radius:10px;font-family:var(--font-ui);transition:background-color .15s,transform .18s var(--ease-out);}
   .modal-close-btn:active{transform:scale(.92);}
-  .app-dialog{border-radius:20px;border:1px solid var(--line);border-top:4px solid var(--tone);animation:modalPop .38s var(--spring);}
+  .app-dialog{border-radius:20px;border:1px solid var(--line);border-top:4px solid var(--tone);animation:modalIn .2s var(--ease-out);}
   .app-dialog-overlay{background:rgba(15,31,36,.42);backdrop-filter:blur(6px);}
 
   /* ---- Toasts ---- */
@@ -1550,7 +1534,7 @@
     background:rgba(15,31,36,.94);border-left:none;border-radius:14px !important;
     box-shadow:inset 3px 0 0 var(--accent), var(--shadow-lg);
     transform:translateY(-10px) scale(.96);
-    transition:opacity .25s ease,transform .45s var(--spring);
+    transition:opacity .2s var(--ease-out),transform .25s var(--ease-out);
   }
   .toast.show{transform:none;}
   .toast.hide{transform:translateY(-6px) scale(.96);}
@@ -1577,24 +1561,10 @@
   ::-webkit-scrollbar-thumb{background:#c9d3d8;border:3px solid transparent;background-clip:padding-box;}
   ::-webkit-scrollbar-thumb:hover{background:#a9b6bc;background-clip:padding-box;}
 
-  /* ---- Page entrance: cards rise in one after another when a tab or
-     dashboard section opens. Scoped to the short-lived .enter class (set
-     by the UI-motion script) so cards re-rendered by live refreshes
-     don't replay the animation. The fixed payment bar slides up instead. ---- */
-  .tab.enter .panel:not(.neworder-payment), .dash-section.enter > *{animation:riseIn .5s var(--ease-out) both;}
-  .tab.enter .panel:nth-child(2), .dash-section.enter > :nth-child(2){animation-delay:.05s;}
-  .tab.enter .panel:nth-child(3), .dash-section.enter > :nth-child(3){animation-delay:.10s;}
-  .tab.enter .panel:nth-child(4), .dash-section.enter > :nth-child(4){animation-delay:.15s;}
-  .tab.enter .panel:nth-child(n+5), .dash-section.enter > :nth-child(n+5){animation-delay:.2s;}
-  .tab.enter .dash-tile{animation:riseIn .5s var(--ease-out) both;}
-  .tab.enter .dash-tile:nth-child(2){animation-delay:.04s;}
-  .tab.enter .dash-tile:nth-child(3){animation-delay:.08s;}
-  .tab.enter .dash-tile:nth-child(4){animation-delay:.12s;}
-  .tab.enter .dash-tile:nth-child(n+5){animation-delay:.16s;}
-  @keyframes riseIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-  /* .tab's own fade (from the V2 layer) uses transform too — drop it so
-     the fixed payment bar never positions against a moving parent. */
-  .tab{animation:fadeIn .25s ease-out;}
+  /* ---- Dashboard sections: a quick fade when one is opened (admin,
+     a few times a day). Tabs don't animate: switching is the main
+     navigation and the QR scanner triggers it too. ---- */
+  .dash-section.enter > *{animation:fadeIn .12s ease-out both;}
 
   /* ---- Piece details popup (colour / cloth type / note) ---- */
   #pieceDetailModal{align-items:center;}
@@ -1608,7 +1578,7 @@
     display:inline-flex;align-items:center;gap:6px;
     font:600 13px/1 var(--font-ui);color:var(--ink-soft);background:#fff;
     border:1px solid var(--line-strong);border-radius:999px;padding:7px 12px;cursor:pointer;
-    transition:background-color .15s,border-color .15s,color .15s,transform .18s var(--spring),box-shadow .2s;
+    transition:background-color .15s,border-color .15s,color .15s,transform .18s var(--ease-out),box-shadow .2s;
   }
   .piece-chip:hover{background:var(--hover);border-color:#b7c3c9;}
   .piece-chip:active{transform:scale(.94);}
@@ -1650,8 +1620,10 @@
   .dh-details{font-size:12px;color:var(--muted);font-weight:400;}
   .rh-event{border-left:2px solid #000;padding-left:6px;margin:4px 0 6px;}
   nav button[data-tab="returns"]{--ico:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 14 4 9l5-5'/><path d='M4 9h11a5 5 0 0 1 0 10h-3'/></svg>");}
-  .return-badge{display:inline-block;background:var(--accent-2);color:#fff;font-size:11px;font-weight:800;letter-spacing:.3px;border-radius:999px;padding:2px 9px;animation:returnPulse 1.6s ease-in-out infinite;}
-  @keyframes returnPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,86,59,.45);}50%{box-shadow:0 0 0 6px rgba(224,86,59,0);}}
+  .return-badge{display:inline-block;background:var(--accent-2);color:#fff;font-size:11px;font-weight:800;letter-spacing:.3px;border-radius:999px;padding:2px 9px;position:relative;}
+  .return-badge::after{content:'';position:absolute;inset:0;border-radius:inherit;border:2px solid var(--accent-2);
+    pointer-events:none;animation:returnPulse 1.6s var(--ease-out) infinite;}
+  @keyframes returnPulse{from{transform:scale(1);opacity:.55;}to{transform:scale(1.35,1.6);opacity:0;}}
   tr.row-returned td{background:var(--accent-2-soft) !important;}
   tr.row-returned td:first-child{box-shadow:inset 4px 0 0 var(--accent-2);}
   .return-btn{border-color:var(--accent-2) !important;color:var(--accent-2) !important;}
@@ -1855,7 +1827,7 @@
     padding:14px 20px 14px 46px;min-height:72px;
     /* the pointed end of a garment tag */
     clip-path:polygon(16px 0,100% 0,100% 100%,16px 100%,0 50%);
-    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),transform .18s var(--spring);
+    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),transform .18s var(--ease-out);
   }
   .status-tab.st-ready{--c:var(--ready);--soft:var(--ready-soft);--cink:var(--ready-ink);}
   .status-tab.st-dispatched{--c:var(--dispatched);--soft:var(--dispatched-soft);--cink:var(--dispatched-ink);}
@@ -1940,7 +1912,7 @@
     text-align:start;font:inherit;color:var(--ink);cursor:pointer;
     background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;min-height:96px;
     border-inline-start:6px solid var(--line-strong);
-    transition:transform .18s var(--spring),box-shadow .2s var(--ease-out);
+    transition:transform .18s var(--ease-out),box-shadow .2s var(--ease-out);
   }
   .kk-shop:hover{box-shadow:var(--shadow-md);}
   .kk-shop:active{transform:scale(.98);}
@@ -1980,7 +1952,7 @@
   .kk-act{
     display:grid;justify-items:center;gap:2px;font:inherit;cursor:pointer;border:none;color:#fff;
     border-radius:18px;padding:18px 12px;min-height:128px;
-    transition:transform .18s var(--spring),filter .2s;
+    transition:transform .18s var(--ease-out),filter .2s;
   }
   .kk-act:hover{filter:brightness(1.07);}
   .kk-act:active{transform:scale(.97);}
@@ -2020,7 +1992,7 @@
   .kk-sheet-overlay{position:fixed;inset:0;z-index:2000;background:rgba(23,27,52,.45);display:flex;align-items:center;justify-content:center;padding:16px;}
   .kk-sheet-overlay[hidden]{display:none;}
   body.kk-sheet-open{overflow:hidden;}
-  .kk-sheet{background:var(--panel);border-radius:20px;width:min(980px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow-lg);border-top:6px solid var(--neel-2);animation:modalPop .32s var(--spring);}
+  .kk-sheet{background:var(--panel);border-radius:20px;width:min(980px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow-lg);border-top:6px solid var(--neel-2);animation:modalIn .2s var(--ease-out);}
   .kk-sheet.is-pay{border-top-color:var(--ready);width:min(560px,100%);}
   .kk-sheet.is-newshop{width:min(480px,100%);}
   .kk-sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line);}
@@ -2156,7 +2128,7 @@
   .menu-face{
     display:grid;justify-items:center;gap:0;width:100%;font:inherit;cursor:pointer;
     background:rgba(255,255,255,.65);border:none;border-radius:12px;padding:10px 4px 4px;color:var(--cat-text,var(--neel-2));
-    transition:transform .15s var(--spring),background-color .15s;
+    transition:transform .15s var(--ease-out),background-color .15s;
   }
   .menu-face:hover{background:#fff;}
   .menu-face:active{transform:scale(.94);}
@@ -2259,7 +2231,7 @@
   .exp-tile{
     display:grid;justify-items:center;gap:0;font:600 12.5px var(--font-ui);color:var(--ink-soft);cursor:pointer;
     background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 6px 8px;
-    transition:transform .15s var(--spring),border-color .15s,background-color .15s;
+    transition:transform .15s var(--ease-out),border-color .15s,background-color .15s;
   }
   .exp-tile:active{transform:scale(.95);}
   .exp-tile .kk-ico{width:34px;height:34px;color:var(--accent-2);stroke-width:1.6;}
@@ -2304,6 +2276,47 @@
   .receipt-qr svg{width:30mm;height:30mm;display:block;margin:0 auto 2px;}
   .receipt-qr div{font-size:10px;font-weight:700;}
 
+
+  /* ---- Worst-case data fixes (long names, big totals, 48-piece lines) ---- */
+  /* Cart: the table scrolls inside its panel instead of pushing the page
+     (and the remove button) sideways. */
+  .items-table-wrap{overflow-x:auto;max-width:100%;}
+  #itemsTable th, #itemsTable td{padding-left:8px;padding-right:8px;}
+  #itemsTable td:first-child{width:100%;min-width:130px;}
+  #itemsTable td.money-cell, #openOrdersBody td.money-cell{white-space:nowrap;}
+  /* Open Orders is wider than the till; a small "Rs" above the figure
+     keeps these columns narrow so Balance isn't under the pinned actions. */
+  /* Action buttons: Urdu on its own line, so a wrapped Urdu word can't
+     run into the English ("یاClose /"). */
+  .oo-actions > button[data-ur]::before{display:block;margin:0 0 1px;line-height:1.6;}
+  #openOrdersBody .rs-label{display:block;font-size:11px;font-weight:600;color:var(--muted);line-height:1.2;}
+  .line-head{display:flex;align-items:flex-start;gap:8px;}
+  .line-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;}
+  .line-head .line-remove{flex-shrink:0;min-width:40px;min-height:40px;padding:2px 8px;margin:-4px 0 0;}
+  .line-rate{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;}
+  /* This font's tabular comma is extra wide ("9 , 99 , 999"); money with
+     grouping commas uses normal figures. */
+  td, .ledger-stat-value, .ledger-line, .ledger-total, .audit-stat-card .audit-stat-value,
+  .kk-num, .kk-stat, .kk-stats b, .kk-total b, .kk-shop-bal b, .kk-bigbal b, .kk-line-amt b,
+  .kk-sum b, .kk-owes b, .kk-entry-money, .kk-day-head{font-variant-numeric:normal;}
+  #itemsTable tr.line-flash td{animation:lineFlash .4s ease-out;}
+  @keyframes lineFlash{from{background-color:var(--accent-soft);}to{background-color:transparent;}}
+  /* Open Orders: tall rows keep everything at the top, next to the code */
+  #openOrdersBody tr:not(.section-heading-row) > td{vertical-align:top;}
+  .imt-more summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--accent);padding:4px 6px;min-height:32px;display:flex;align-items:center;gap:6px;}
+  .imt-more[open] summary{color:var(--muted);}
+  /* Money bar: inputs keep a usable width; totals wrap before squeezing them */
+  .payment-inputs-row{flex-wrap:wrap;}
+  .payment-inputs-row .field{flex:1 1 110px;}
+  .ledger-stat-value{white-space:nowrap;}
+  @media (min-width:1180px){
+    .panel.neworder-payment{grid-template-columns:minmax(330px,1fr) minmax(0,auto) minmax(200px,250px);}
+    .neworder-payment .ledger-strip{flex-wrap:wrap;}
+  }
+  /* Touch screens: hover lifts stick after a tap, so only mice get them */
+  @media (hover:none), (pointer:coarse){
+    .menu-card:hover, .dash-tile:hover, .btn-main:hover, .promo-theme-swatch:hover{transform:none;}
+  }
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
@@ -2365,7 +2378,7 @@
   .wd-deadline-field > :not(label):not(.deadline-picks), .press-deadline-field > :not(label):not(.deadline-picks){flex:1 1 170px;min-width:0;}
   .deadline-picks{margin-top:0;flex:0 0 auto;gap:4px;}
   .deadline-picks .pick-chip{min-height:36px;padding:2px 6px;font-size:12px;}
-  .wd-deadline-field > label, .press-deadline-field > label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .wd-deadline-field > label, .press-deadline-field > label{white-space:normal;line-height:1.25;}
   /* In the wide money-bar grid the Press box shares an "auto" column with
      the totals; without a cap its one-line width squeezed the inputs. */
   @media (min-width:1180px){
@@ -2449,6 +2462,14 @@
     position:sticky;right:0;z-index:1;box-shadow:-8px 0 8px -8px rgba(0,0,0,.35);
   }
   #openOrdersBody :where(tr > td:last-child), #overdueBody :where(tr > td:last-child){background:#fff;}
+  /* Phones: the pinned two-across actions (250px) covered the whole row.
+     One button per line keeps them pinned but narrow, so the serial,
+     code and name still show beside them. */
+  @media (max-width:640px){
+    .oo-actions{grid-template-columns:1fr;min-width:0;width:124px;}
+    #openOrdersBody td:last-child{min-width:0;}
+    .oo-actions > button{font-size:11.5px;padding:5px 6px;}
+  }
   .table-scroll table:has(#openOrdersBody) thead th:last-child,
   .table-scroll table:has(#overdueBody) thead th:last-child{z-index:2;}
 
@@ -2558,7 +2579,7 @@
       </div>
       <div class="field">
         <label data-i18n="lbl_name" data-ur="نام" for="nameInput">Customer Name</label>
-        <input type="text" id="nameInput" placeholder="Name">
+        <input type="text" id="nameInput" placeholder="Name" maxlength="60">
       </div>
       <div class="field">
         <label data-i18n="lbl_code" data-ur="کوڈ" for="codeInput">Order Code (auto, editable)</label>
@@ -2588,10 +2609,10 @@
   <div class="neworder-left">
     <div class="panel">
       <label data-i18n="lbl_itemsinorder" data-ur="آرڈر کے کپڑے">Items in this order</label>
-      <table id="itemsTable">
-        <thead><tr><th data-i18n="th_service">Service</th><th data-i18n="th_qty">Qty</th><th data-i18n="th_price">Price</th><th data-i18n="th_linetotal">Line Total</th><th></th></tr></thead>
+      <div class="items-table-wrap"><table id="itemsTable">
+        <thead><tr><th data-i18n="th_service">Service</th><th data-i18n="th_qty">Qty</th><th data-i18n="th_linetotal">Line Total</th></tr></thead>
         <tbody></tbody>
-      </table>
+      </table></div>
       <div id="emptyItemsHint" class="small" style="margin-top:8px;">Nothing added yet. Tap a cloth picture in step 2.</div>
     </div>
 
@@ -4848,7 +4869,7 @@ async function saveEwpPrice(serviceId){
   const label = s ? s.name : serviceId;
   if(s) s.default_price = price;
   renderServiceOptions();
-  await logActivity('service_price_updated', `Updated price for "${label}" to Rs ${price}`, null);
+  await logActivity('service_price_updated', `Updated price for "${label}" to Rs ${moneyText(price)}`, null);
 }
 
 // New item / new category creation requires the admin's password, same
@@ -4873,8 +4894,8 @@ async function addEwpItem(){
   document.getElementById('deleteConfirmTitle').textContent = isNewCategory ? 'Confirm New Category & Item' : 'Confirm New Item';
   document.getElementById('deleteConfirmSubmitBtn').textContent = 'Confirm';
   document.getElementById('deleteConfirmLabel').textContent = isNewCategory
-    ? `Create new category "${customLabel}" and add item "${name}" (Rs ${default_price})? Re-enter your admin password to confirm.`
-    : `Add item "${name}" (Rs ${default_price}) to the rate list? Re-enter your admin password to confirm.`;
+    ? `Create new category "${customLabel}" and add item "${name}" (Rs ${moneyText(default_price)})? Re-enter your admin password to confirm.`
+    : `Add item "${name}" (Rs ${moneyText(default_price)}) to the rate list? Re-enter your admin password to confirm.`;
   document.getElementById('deleteConfirmPassword').value = '';
   document.getElementById('deleteConfirmError').textContent = '';
   document.getElementById('deleteConfirmModal').classList.add('open');
@@ -5001,10 +5022,17 @@ function escHtml(v){
 function buildItemsCellHtml(items){
   items = items || [];
   if(!items.length) return '<span class="small" style="color:var(--muted);">—</span>';
-  const rows = items.map(it =>
-    `<tr><td class="imt-qty">${escHtml(it.qty)}</td><td>${escHtml(it.service)}${lineUrgentQty(it) ? ` <span class="imt-urgent">🔥 ${lineUrgentQty(it)} urgent</span>` : ''}${pieceDetailsSummary(it) ? `<div class="imt-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td></tr>`
-  ).join('');
-  return `<table class="items-mini-table"><thead><tr><th class="imt-qty">Qty</th><th>Item</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const row = it =>
+    `<tr><td class="imt-qty">${escHtml(it.qty)}</td><td>${escHtml(it.service)}${lineUrgentQty(it) ? ` <span class="imt-urgent">🔥 ${lineUrgentQty(it)} urgent</span>` : ''}${pieceDetailsSummary(it) ? `<div class="imt-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}</td></tr>`;
+  const head = '<thead><tr><th class="imt-qty">Qty</th><th>Item</th></tr></thead>';
+  // Long orders show 4 lines and fold the rest, so the row (and its
+  // action buttons) stays on screen. Tap "+N more" to see them all.
+  const SHOWN = 4;
+  if(items.length <= SHOWN + 1) return `<table class="items-mini-table">${head}<tbody>${items.map(row).join('')}</tbody></table>`;
+  const rest = items.slice(SHOWN);
+  return `<table class="items-mini-table">${head}<tbody>${items.slice(0, SHOWN).map(row).join('')}</tbody></table>` +
+    `<details class="imt-more"><summary>+${rest.length} more <span class="kk-ur">مزید ${rest.length}</span></summary>` +
+    `<table class="items-mini-table"><tbody>${rest.map(row).join('')}</tbody></table></details>`;
 }
 
 // App-wide date formatting: "18/10/2026" (dd/mm/yyyy, as used in
@@ -5255,9 +5283,9 @@ function pendingOrderRowHtml(record){
       <td>${escHtml(p.p_phone || pa.phone || '')}</td>
       <td>${escHtml(p.p_name || pa.name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(items)}</td>
-      <td>Rs ${p.p_total != null ? p.p_total : (pa.total || 0)}</td>
-      <td>Rs ${p.p_advance_paid != null ? p.p_advance_paid : (pa.advancePaid || 0)}</td>
-      <td>Rs ${pa.balanceDue != null ? pa.balanceDue : ''}</td>
+      <td>Rs ${moneyText(p.p_total != null ? p.p_total : (pa.total || 0))}</td>
+      <td>Rs ${moneyText(p.p_advance_paid != null ? p.p_advance_paid : (pa.advancePaid || 0))}</td>
+      <td>Rs ${moneyText(pa.balanceDue != null ? pa.balanceDue : '')}</td>
       <td><span class="status-tag" style="background:#f4d35e;">⏳ Queued (offline)${errorNote}</span></td>
       <td>${p.p_is_urgent ? `<span class="urgent-badge urgent-soon">🔥 Urgent</span>` : ''}</td>
       <td>${formatAppDateTime(record.queuedAt)}</td>
@@ -5289,8 +5317,8 @@ function pendingDispatchRowHtml(record){
       <td>${escHtml(record.phone || '')}</td>
       <td>${escHtml(record.name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(items)}</td>
-      <td>Rs ${record.total || 0}</td>
-      <td>Rs ${record.advancePaid || 0}</td>
+      <td>Rs ${moneyText(record.total || 0)}</td>
+      <td>Rs ${moneyText(record.advancePaid || 0)}</td>
       <td class="amt-good">Rs 0</td>
       <td>${statusBadge}${errorNote}</td>
       <td></td>
@@ -5574,9 +5602,9 @@ async function renderOpenOrdersRows(list){
       <td>${escHtml(o.customer_phone)}</td>
       <td>${isVip ? `<div class="vip-badge" tabindex="0" role="button" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(o.items)}</td>
-      <td>Rs ${o.total}</td>
-      <td>Rs ${advancePaid}</td>
-      <td class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</td>
+      <td class="money-cell"><span class="rs-label">Rs</span>${moneyText(o.total)}</td>
+      <td class="money-cell"><span class="rs-label">Rs</span>${moneyText(advancePaid)}</td>
+      <td class="money-cell ${balanceDue > 0 ? 'amt-owed' : 'amt-good'}"><span class="rs-label">Rs</span>${moneyText(balanceDue)}</td>
       <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isDormant ? `<br><span class="dormant-tag">⏳ 30+ days <span lang="ur">مہینے سے پڑا ہے</span></span>` : ''}${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
       <td>${urgentCell}${returnBadge}</td>
       <td>${formatAppDateTime(o.created_at)}</td>
@@ -6502,12 +6530,12 @@ function copyPromoCaption(btnEl){
 // above, near buildUrduMessage, and shared by every customer message.)
 function buildBookingMessage(code, branchInfo, items, total, advancePaid, balanceDue, isUrgentOrder, wdCollectByDate, pressCollectByDate, expiryDate){
   const itemsText = (items || [])
-    .map(it => `• ${escHtml(it.service)} × ${it.qty} — Rs ${it.line_total ?? (it.qty * it.price)}${lineUrgentQty(it) ? ` (🔥 ${lineUrgentQty(it)} urgent pc${lineUrgentQty(it) === 1 ? '' : 's'} +Rs ${lineUrgentQty(it) * it.price})` : ''}`)
+    .map(it => `• ${escHtml(it.service)} × ${it.qty} — Rs ${moneyText(it.line_total ?? (it.qty * it.price))}${lineUrgentQty(it) ? ` (🔥 ${lineUrgentQty(it)} urgent pc${lineUrgentQty(it) === 1 ? '' : 's'} +Rs ${moneyText(lineUrgentQty(it) * it.price)})` : ''}`)
     .join('\n');
 
   const paymentBlock = balanceDue > 0
-    ? `Total Bill: *Rs ${total}*\nAdvance Paid: Rs ${advancePaid}\nBalance Due: *Rs ${balanceDue}*`
-    : `Total Bill: *Rs ${total}*\n*✅ PAID IN FULL*`;
+    ? `Total Bill: *Rs ${moneyText(total)}*\nAdvance Paid: Rs ${moneyText(advancePaid)}\nBalance Due: *Rs ${moneyText(balanceDue)}*`
+    : `Total Bill: *Rs ${moneyText(total)}*\n*✅ PAID IN FULL*`;
 
   const urgentLine = isUrgentOrder
     ? `\n🔥 *URGENT ORDER* — ${itemsHaveUrgentInfo(items) ? 'urgent pieces are' : 'order is'} billed at double the normal rate\n`
@@ -6650,7 +6678,7 @@ function renderItemCheckList(){
     return `<div class="item-check-row${isChecked ? ' is-checked' : ''}">
       <div class="icr-info">
         <div class="icr-name">${escHtml(it.service)}</div>
-        <div class="icr-qty">Qty ${escHtml(it.qty)}${it.line_total != null ? ` · Rs ${escHtml(it.line_total)}` : ''}</div>
+        <div class="icr-qty">Qty ${escHtml(it.qty)}${it.line_total != null ? ` · Rs ${moneyText(escHtml(it.line_total))}` : ''}</div>
         ${pieceDetailsSummary(it) ? `<div class="icr-details">${escHtml(pieceDetailsSummary(it))}</div>` : ''}
       </div>
       <button type="button" class="icr-toggle" onclick="toggleOrderItemChecked(${it.line_id}, ${!isChecked})">${isChecked ? '✓ OK' : 'Mark OK'}</button>
@@ -6842,9 +6870,9 @@ let pendingCashDispatch = null;
 function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue){
   pendingCashDispatch = { orderId, phone, code, receiverName, receiverPhone, balanceDue };
   fillOrderIdCard('dcOrderCard', orderId, code);
-  document.getElementById('dcTotal').textContent = 'Rs ' + (cachedOrder ? cachedOrder.total : '—');
-  document.getElementById('dcAdvance').textContent = 'Rs ' + (cachedOrder ? cachedOrder.advance_paid : '—');
-  document.getElementById('dcBalanceDue').textContent = 'Rs ' + balanceDue;
+  document.getElementById('dcTotal').textContent = 'Rs ' + moneyText((cachedOrder ? cachedOrder.total : '—'));
+  document.getElementById('dcAdvance').textContent = 'Rs ' + moneyText((cachedOrder ? cachedOrder.advance_paid : '—'));
+  document.getElementById('dcBalanceDue').textContent = 'Rs ' + moneyText(balanceDue);
   document.getElementById('dcAmountReceived').value = balanceDue;
   document.getElementById('dcAmountReceived').dataset.autofill = '1';
   document.getElementById('dcWarning').style.display = 'none';
@@ -6894,7 +6922,7 @@ function updateDispatchChangeDisplay(){
     changeEl.textContent = `Short by Rs ${fmtMoney(Math.abs(change))}`;
     changeEl.style.color = 'var(--warn)';
     warnEl.style.display = 'block';
-    warnEl.textContent = `Rs ${fmtMoney(Math.abs(change))} short of the Rs ${pendingCashDispatch.balanceDue} balance due. Full balance must be collected before dispatch.`;
+    warnEl.textContent = `Rs ${fmtMoney(Math.abs(change))} short of the Rs ${moneyText(pendingCashDispatch.balanceDue)} balance due. Full balance must be collected before dispatch.`;
     confirmBtn.disabled = true;
   } else {
     changeEl.textContent = `Rs ${fmtMoney(change)}`;
@@ -6911,7 +6939,7 @@ function confirmDispatchCash(){
   if(received < pendingCashDispatch.balanceDue){
     // Shouldn't normally happen (button is disabled in this state), but
     // guards against a stale click.
-    alert(`Rs ${received} is short of the Rs ${pendingCashDispatch.balanceDue} balance due.`);
+    alert(`Rs ${moneyText(received)} is short of the Rs ${moneyText(pendingCashDispatch.balanceDue)} balance due.`);
     return;
   }
   const { orderId, phone, code, receiverName, receiverPhone } = pendingCashDispatch;
@@ -7093,13 +7121,13 @@ function updatePdSummary(){
 function pdSetExact(){
   if(!pendingPartialDispatch || !pendingPartialDispatch.state) return;
   document.getElementById('pdAmountCollected').value =
-    fmtMoney(pendingPartialDispatch.state.effectiveBalance);
+    moneyInputValue(pendingPartialDispatch.state.effectiveBalance);
   document.getElementById('pdAmountCollected').dataset.autofill = '1';
   updatePdSummary();
 }
 function pdAddNote(amount){
   const inp = document.getElementById('pdAmountCollected');
-  inp.value = fmtMoney(noteTapBase(inp) + amount);
+  inp.value = moneyInputValue(noteTapBase(inp) + amount);
   updatePdSummary();
 }
 function pdClearAmount(){
@@ -7193,7 +7221,7 @@ async function dispatchItemsPartial(orderId, phone, code, customerName, releasin
         (receiverName ? ` — collected by ${receiverName}${receiverPhone ? ' (' + receiverPhone + ')' : ''}` : ''));
     } else {
       await logActivity('order_partial_dispatch',
-        `Order ${code || orderId} partial release [oid:${orderId}] — ${releasingItems.reduce((s,x)=>s+x.qty,0)} item(s), Rs ${collected} collected` +
+        `Order ${code || orderId} partial release [oid:${orderId}] — ${releasingItems.reduce((s,x)=>s+x.qty,0)} item(s), Rs ${moneyText(collected)} collected` +
         (receiverName ? ` — collected by ${receiverName}${receiverPhone ? ' (' + receiverPhone + ')' : ''}` : ''));
     }
 
@@ -7938,7 +7966,7 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
       // Dispatch is not allowed until the full balance is in hand — no
       // partial collection, no "close it now and get the rest later."
       if(collected < balanceDue){
-        alert(`The server balance due (Rs ${balanceDue}) doesn't match what was collected (Rs ${collected}) — this order may have changed on another device. Please try dispatching again so the correct amount can be collected.`);
+        alert(`The server balance due (Rs ${moneyText(balanceDue)}) doesn't match what was collected (Rs ${moneyText(collected)}) — this order may have changed on another device. Please try dispatching again so the correct amount can be collected.`);
         return;
       }
       change = collected - balanceDue;
@@ -9120,7 +9148,7 @@ function openPriceHistoryModal(){
     const std = r.standard_price != null ? Number(r.standard_price) : null;
     const diff = std !== null ? Number(r.price) - std : null;
     return `<div class="price-history-line">
-      <div><b>${escHtml(r.service)}</b>: <b>Rs ${r.price}</b>${diff ? ` <span class="ph-diff ${diff > 0 ? 'is-up' : 'is-down'}">${diff > 0 ? '+' : '−'}Rs ${Math.abs(diff)} vs rate list Rs ${std}</span>` : ''}</div>
+      <div><b>${escHtml(r.service)}</b>: <b>Rs ${moneyText(r.price)}</b>${diff ? ` <span class="ph-diff ${diff > 0 ? 'is-up' : 'is-down'}">${diff > 0 ? '+' : '−'}Rs ${moneyText(Math.abs(diff))} vs rate list Rs ${moneyText(std)}</span>` : ''}</div>
       ${r.note ? `<div class="ph-note">💬 ${escHtml(r.note)}</div>` : ''}
       <div class="small" style="color:var(--muted);">${formatAppDate(r.updated_at)} · ${escHtml(r.branch_name)}${r.order_code ? ` · Order ${escHtml(r.order_code)}` : ''}</div>
     </div>`;
@@ -9173,12 +9201,23 @@ function clampDiscountInput(el){
 function renderItemsList(){
   // One small tappable tag per piece under the item name — shows its
   // colour/cloth/note, or "+ details" if none were entered yet.
+  // Pieces with nothing entered yet share one chip (it opens the next
+  // empty piece), so a 48-piece line stays one row tall.
   const pieceTags = (it, idx) => {
     const details = padPieceDetails(it.details, it.qty);
-    return `<div class="piece-tags">${details.map((d, p) => {
+    const tag = (p, inner, empty) =>
+      `<button type="button" class="piece-tag${empty ? ' is-empty' : ''}" onclick="editPieceDetails(${idx},${p})" title="Edit piece ${p + 1}">${inner}</button>`;
+    const tags = [];
+    const emptyIdx = [];
+    details.forEach((d, p) => {
       const text = formatPieceDetail(d);
-      return `<button type="button" class="piece-tag${text ? '' : ' is-empty'}" onclick="editPieceDetails(${idx},${p})" title="Edit piece ${p + 1}">${details.length > 1 ? `<b>${p + 1}</b>` : ''}${text ? escHtml(text) : '+ details <span class="kk-ur">تفصیل</span>'}</button>`;
-    }).join('')}</div>`;
+      if(text) tags.push(tag(p, `${details.length > 1 ? `<b>${p + 1}</b>` : ''}${escHtml(text)}`, false));
+      else emptyIdx.push(p);
+    });
+    if(emptyIdx.length === 1 && details.length > 1) tags.push(tag(emptyIdx[0], `<b>${emptyIdx[0] + 1}</b>+ details <span class="kk-ur">تفصیل</span>`, true));
+    else if(emptyIdx.length === 1) tags.push(tag(0, '+ details <span class="kk-ur">تفصیل</span>', true));
+    else if(emptyIdx.length > 1) tags.push(tag(emptyIdx[0], `+ details · ${emptyIdx.length} pcs <span class="kk-ur">تفصیل</span>`, true));
+    return `<div class="piece-tags">${tags.join('')}</div>`;
   };
   // While Urgent is on, each line gets a "🔥 urgent n/qty" stepper.
   const urgentCtl = (it, idx) => {
@@ -9186,9 +9225,14 @@ function renderItemsList(){
     const u = lineUrgentQty(it);
     return `<div class="line-urgent${u ? ' is-on' : ''}" title="How many of these pieces are urgent (2x rate)">🔥<button type="button" onclick="changeLineUrgent(${idx},-1)" ${u <= 0 ? 'disabled' : ''} aria-label="Fewer urgent pieces">−</button><b>${u}/${it.qty}</b><button type="button" onclick="changeLineUrgent(${idx},1)" ${u >= it.qty ? 'disabled' : ''} aria-label="More urgent pieces">+</button>urgent</div>`;
   };
+  // A line that was just added, or whose qty went up, flashes once so the
+  // worker sees which picture landed where.
+  const prevQty = renderItemsList._qty || {};
+  const nextQty = {};
+  currentItems.forEach(it => { nextQty[it.service] = it.qty; });
+  renderItemsList._qty = nextQty;
   const itemRows = currentItems.map((it,idx)=>
-    `<tr><td>${escHtml(it.service)}${it.price_note ? `<div class="price-note-tag">💬 ${escHtml(it.price_note)}</div>` : ''}${pieceTags(it, idx)}${urgentCtl(it, idx)}</td><td>${it.qty}</td><td>Rs ${it.price}</td><td>Rs ${it.line_total}</td>
-     <td><button class="btn-secondary" onclick="removeLineItem(${idx})">x</button></td></tr>`
+    `<tr${(prevQty[it.service] || 0) < it.qty ? ' class="line-flash"' : ''}><td><div class="line-head"><span class="line-name">${escHtml(it.service)}</span><button class="btn-secondary line-remove" onclick="removeLineItem(${idx})" aria-label="Remove" title="Remove">✕</button></div><div class="line-rate">Rs ${moneyText(it.price)} <span class="kk-ur">فی پیس</span> each</div>${it.price_note ? `<div class="price-note-tag">💬 ${escHtml(it.price_note)}</div>` : ''}${pieceTags(it, idx)}${urgentCtl(it, idx)}</td><td>${it.qty}</td><td class="money-cell">Rs ${moneyText(it.line_total)}</td></tr>`
   ).join('');
   const baseSubtotalForRow = currentItems.reduce((s,it)=>s+it.line_total,0);
   // Urgent surcharge = 100% of base, same doubling saveAndPrint() applies
@@ -9200,7 +9244,7 @@ function renderItemsList(){
   const urgentSurchargeForRow = isUrgent ? urgentSurchargeOf(currentItems) : 0;
   const urgentPcs = isUrgent ? urgentPiecesOf(currentItems) : 0;
   const urgentRow = (isUrgent && baseSubtotalForRow > 0)
-    ? `<tr class="urgent-surcharge-row"><td colspan="3">🔥 URGENT SERVICE (2x RATE on ${urgentPcs} pc${urgentPcs === 1 ? '' : 's'})</td><td>+Rs ${urgentSurchargeForRow}</td><td></td></tr>`
+    ? `<tr class="urgent-surcharge-row"><td colspan="2">🔥 URGENT SERVICE (2x RATE on ${urgentPcs} pc${urgentPcs === 1 ? '' : 's'})</td><td class="money-cell">+Rs ${moneyText(urgentSurchargeForRow)}</td></tr>`
     : '';
   document.querySelector('#itemsTable tbody').innerHTML = itemRows + urgentRow;
   syncMenuQtyBadges();
@@ -9210,9 +9254,9 @@ function renderItemsList(){
   // Whole rupees, so the screen, receipt and dashboards (kkMoney) all show the same figure.
   const discount = Math.round(subtotal * discountPct / 100);
   const total = subtotal - discount;
-  document.getElementById('subtotalDisplay').textContent = 'Rs ' + subtotal;
-  document.getElementById('grandTotalDisplay').textContent = 'Rs ' + total;
-  document.getElementById('discountAmountPreview').textContent = discountPct > 0 ? `= Rs ${discount} off` : '';
+  document.getElementById('subtotalDisplay').textContent = 'Rs ' + moneyText(subtotal);
+  document.getElementById('grandTotalDisplay').textContent = 'Rs ' + moneyText(total);
+  document.getElementById('discountAmountPreview').textContent = discountPct > 0 ? `= Rs ${moneyText(discount)} off` : '';
 
   // Advance/Balance: left blank until the worker types something, rather
   // than silently defaulting to 0, so an empty field is visibly empty —
@@ -9221,8 +9265,8 @@ function renderItemsList(){
   const advance = parseFloat(advanceRaw);
   const hasAdvance = advanceRaw.trim() !== '' && !isNaN(advance);
   const balance = hasAdvance ? total - advance : total;
-  document.getElementById('advanceDisplay').textContent = hasAdvance ? ('Rs ' + advance) : '—';
-  document.getElementById('balanceDisplay').textContent = 'Rs ' + balance;
+  document.getElementById('advanceDisplay').textContent = hasAdvance ? ('Rs ' + moneyText(advance)) : '—';
+  document.getElementById('balanceDisplay').textContent = 'Rs ' + moneyText(balance);
 
   // Cash Tendered is optional: if the cashier fills it in and it's more
   // than the advance being recorded, show the change owed live, before
@@ -9269,7 +9313,7 @@ async function flagRateMismatches(code, items){
     if(!actual || actual === charged) continue;
     const diff = charged - actual;
     const direction = diff > 0 ? 'Overcharged' : 'Undercharged';
-    const desc = `Order ${code} — "${it.service}": charged Rs ${charged} vs rate-list Rs ${actual} (${direction} by Rs ${Math.abs(diff)})`;
+    const desc = `Order ${code} — "${it.service}": charged Rs ${moneyText(charged)} vs rate-list Rs ${moneyText(actual)} (${direction} by Rs ${moneyText(Math.abs(diff))})`;
     await logActivity('price_mismatch', desc);
   }
 }
@@ -9298,8 +9342,8 @@ function linesNeedingPriceNote(){
       ? currentItems.find((o, j) => j < i && o.service.trim().toLowerCase() === key && Number(o.price) !== price)
       : null;
     const reasons = [];
-    if(last !== null && last !== price) reasons.push(`last time charged Rs ${last}`);
-    if(otherLine) reasons.push(`also Rs ${otherLine.price} in this order`);
+    if(last !== null && last !== price) reasons.push(`last time charged Rs ${moneyText(last)}`);
+    if(otherLine) reasons.push(`also Rs ${moneyText(otherLine.price)} in this order`);
     return reasons.length ? { i, it, std, reasons } : null;
   }).filter(Boolean);
 }
@@ -9336,9 +9380,9 @@ function askPriceNotes(){
   if(!need.length || need.every(n => (n.it.price_note || '').trim())) return Promise.resolve(true);
   document.getElementById('priceNoteBody').innerHTML = need.map(n => `
     <div class="price-note-row pick-host">
-      <div><b>${escHtml(n.it.service)}</b> — charging <b>Rs ${n.it.price}</b> × ${n.it.qty}
-        <div class="small">${n.std !== null ? `Rate list Rs ${n.std} · ` : ''}${escHtml(n.reasons.join(' · '))}</div></div>
-      <input type="text" maxlength="300" data-line="${n.i}" placeholder="Why Rs ${n.it.price}? e.g. silk shirt, heavy embroidery" value="${escHtml(n.it.price_note || '')}">
+      <div><b>${escHtml(n.it.service)}</b> — charging <b>Rs ${moneyText(n.it.price)}</b> × ${n.it.qty}
+        <div class="small">${n.std !== null ? `Rate list Rs ${moneyText(n.std)} · ` : ''}${escHtml(n.reasons.join(' · '))}</div></div>
+      <input type="text" maxlength="300" data-line="${n.i}" placeholder="Why Rs ${moneyText(n.it.price)}? e.g. silk shirt, heavy embroidery" value="${escHtml(n.it.price_note || '')}">
       ${pickChipsHtml(PRICE_NOTE_PICKS)}
     </div>`).join('');
   document.getElementById('priceNoteError').textContent = '';
@@ -9462,7 +9506,7 @@ async function saveAndPrint(){
     return;
   }
   if(advancePaid > total){
-    alert(`Advance (Rs ${advancePaid}) cannot be more than the total bill (Rs ${total}).`);
+    alert(`Advance (Rs ${moneyText(advancePaid)}) cannot be more than the total bill (Rs ${moneyText(total)}).`);
     return;
   }
   const balanceDue = total - advancePaid;
@@ -9475,7 +9519,7 @@ async function saveAndPrint(){
   if(tenderedRaw !== ''){
     const tendered = parseFloat(tenderedRaw);
     if(isNaN(tendered) || tendered < 0){ alert('Enter a valid, non-negative cash tendered amount, or leave it blank.'); return; }
-    if(tendered < advancePaid){ alert(`Cash tendered (Rs ${tendered}) cannot be less than the advance being recorded (Rs ${advancePaid}).`); return; }
+    if(tendered < advancePaid){ alert(`Cash tendered (Rs ${moneyText(tendered)}) cannot be less than the advance being recorded (Rs ${moneyText(advancePaid)}).`); return; }
     changeGiven = tendered - advancePaid;
   }
 
@@ -9557,7 +9601,7 @@ async function saveAndPrint(){
     const serial = await fetchOrderSerial(orderId);
     if(serial){ noteLatestSerial(serial); showSerialForTags(serial, code); }
     await sb.rpc('mark_order_printed', { p_order_id: orderId });
-    await logActivity('order_booked', `New order booked — ${serial ? 'serial ' + fmtSerial(serial) + ', ' : ''}code ${code}, Rs ${total}${isUrgent ? ' (Urgent)' : ''}`);
+    await logActivity('order_booked', `New order booked — ${serial ? 'serial ' + fmtSerial(serial) + ', ' : ''}code ${code}, Rs ${moneyText(total)}${isUrgent ? ' (Urgent)' : ''}`);
     await flagRateMismatches(code, currentItems);
     sendBookingMessage(phone, code, branchNameKey, currentItems, total, advancePaid, balanceDue, isUrgent, wdCollectByDate, pressCollectByDate, expiryDate);
 
@@ -9908,7 +9952,7 @@ async function syncPendingOrders(silent){
     synced++;
     claimed.push({ claimedSerial: record.claimedSerial || null, orderId, code: record.payload.p_code });
     sb.rpc('mark_order_printed', { p_order_id: orderId }).catch(()=>{});
-    logActivity('order_booked', `New order booked — code ${record.payload.p_code}, Rs ${record.payload.p_total}${record.payload.p_is_urgent ? ' (Urgent)' : ''} [synced from offline queue]`, record.payload.p_branch_id).catch(()=>{});
+    logActivity('order_booked', `New order booked — code ${record.payload.p_code}, Rs ${moneyText(record.payload.p_total)}${record.payload.p_is_urgent ? ' (Urgent)' : ''} [synced from offline queue]`, record.payload.p_branch_id).catch(()=>{});
     flagRateMismatches(record.payload.p_code, record.payload.p_items).catch(()=>{});
   }
 
@@ -10173,7 +10217,7 @@ async function syncPendingDispatches(silent){
     // device doesn't know.
     if(serverBalanceDue > 0 && serverBalanceDue !== record.balanceDueAtQueueTime){
       record.conflict = true;
-      record.lastError = `Server balance (Rs ${serverBalanceDue}) differs from what this device saw when dispatched offline (Rs ${record.balanceDueAtQueueTime}). Needs manual reconciliation.`;
+      record.lastError = `Server balance (Rs ${moneyText(serverBalanceDue)}) differs from what this device saw when dispatched offline (Rs ${moneyText(record.balanceDueAtQueueTime)}). Needs manual reconciliation.`;
       await idbPutPendingDispatch(record);
       conflicts++;
       continue;
@@ -10308,7 +10352,7 @@ async function syncPendingPartialDispatches(silent){
         record.branchId);
     } else {
       await logActivity('order_partial_dispatch',
-        `Order ${record.code || record.orderId} partial release [oid:${record.orderId}] — ${(record.itemsReleased||[]).reduce((s,x)=>s+x.qty,0)} item(s), Rs ${record.amountCollected} collected` +
+        `Order ${record.code || record.orderId} partial release [oid:${record.orderId}] — ${(record.itemsReleased||[]).reduce((s,x)=>s+x.qty,0)} item(s), Rs ${moneyText(record.amountCollected)} collected` +
         (record.receiverName ? ` — collected by ${record.receiverName}${record.receiverPhone ? ' (' + record.receiverPhone + ')' : ''}` : ''),
         record.branchId);
     }
@@ -10488,7 +10532,7 @@ async function syncPendingExpenses(silent){
       continue;
     }
 
-    await logActivity('expense_added', `Added expense: Rs ${record.payload.p_amount} — ${record.payload.p_category}${record.payload.p_note ? ' (' + record.payload.p_note + ')' : ''} [synced from offline queue]`, record.payload.p_branch_id).catch(()=>{});
+    await logActivity('expense_added', `Added expense: Rs ${moneyText(record.payload.p_amount)} — ${record.payload.p_category}${record.payload.p_note ? ' (' + record.payload.p_note + ')' : ''} [synced from offline queue]`, record.payload.p_branch_id).catch(()=>{});
     await idbDeletePendingExpense(record.localId);
     synced++;
   }
@@ -10775,7 +10819,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
     ? Math.round((Number(discount) / Number(subtotal)) * 1000) / 10
     : null;
   const discountLines = (discount != null && Number(discount) > 0)
-    ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${subtotal}</span></div>
+    ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${moneyText(subtotal)}</span></div>
        <div class="receipt-row"><span>DISCOUNT (${discountPct}%)</span><span>-Rs ${fmtMoney(Number(discount))}</span></div>`
     : '';
 
@@ -10783,7 +10827,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
   // change already has its own line on the original booking receipt and
   // must never reappear here.
   const changeLine = Number(dispatchChangeGiven) > 0
-    ? `<div class="receipt-row"><span>CHANGE GIVEN (DISPATCH)</span><span>Rs ${dispatchChangeGiven}</span></div>`
+    ? `<div class="receipt-row"><span>CHANGE GIVEN (DISPATCH)</span><span>Rs ${moneyText(dispatchChangeGiven)}</span></div>`
     : '';
   // Cash actually tendered at dispatch (balanceRecovered + change) — the
   // amount the dispatch change was calculated from. Only shown when
@@ -10820,10 +10864,10 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
       <hr>
       ${releaseBlock}
       ${discountLines}
-      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
+      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${moneyText(total)}</b></div>
       <div style="border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
-        <div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${advancePaid}</b></div>
-        <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${balanceRecovered}</b></div>
+        <div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${moneyText(advancePaid)}</b></div>
+        <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${moneyText(balanceRecovered)}</b></div>
         <div style="border-top:1px dashed #000;margin:4px 0;"></div>
         <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${fmtMoney((Number(advancePaid) + Number(balanceRecovered)))}</b></div>
       </div>
@@ -10898,13 +10942,13 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
   // a 0% order shouldn't carry two redundant "Rs X" lines that both say
   // the same number as Subtotal/Total already show.
   const discountLines = (Number(discount) > 0 || isUrgentOrder)
-    ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${subtotal}</span></div>` +
+    ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${moneyText(subtotal)}</span></div>` +
       (Number(discount) > 0
         ? `<div class="receipt-row"><span>DISCOUNT (${discountPct}%)</span><span>-Rs ${fmtMoney(Number(discount))}</span></div>`
         : '')
     : '';
   const balanceLine = balanceDue > 0
-    ? `<div class="receipt-row"><b>DUE AT PICKUP</b><b>Rs ${balanceDue}</b></div>`
+    ? `<div class="receipt-row"><b>DUE AT PICKUP</b><b>Rs ${moneyText(balanceDue)}</b></div>`
     : `<div class="center"><b>PAID IN FULL</b></div>`;
   // Cash actually handed over at the counter, tendered — this is the
   // amount change was calculated from (advancePaid + changeGiven). Only
@@ -10976,11 +11020,11 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       <hr>
       ${urgentReceiptLine}
       ${discountLines}
-      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${total}</b></div>
-      <div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${advancePaid}</span></div>
+      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${moneyText(total)}</b></div>
+      <div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${moneyText(advancePaid)}</span></div>
       ${cashPaidLine}
       ${changeLine}
-      <div class="receipt-row"><span>BALANCE DUE</span><span>Rs ${balanceDue}</span></div>
+      <div class="receipt-row"><span>BALANCE DUE</span><span>Rs ${moneyText(balanceDue)}</span></div>
       <hr>
       ${balanceLine}
       ${expiryLine}
@@ -11008,7 +11052,21 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
 const orderSerials = {};
 // One money format everywhere: whole rupees print with no ".00" (most
 // screens and the receipt already did); paisa still show when present.
+// Digits are grouped the way amounts are written by hand here (7,52,270),
+// so a long total can't be misread by a digit.
 function fmtMoney(n){
+  const v = Math.round((Number(n) || 0) * 100) / 100;
+  return v.toLocaleString('en-IN', Number.isInteger(v) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+// Same, for template text that may hold a placeholder ('—', '') instead
+// of a number — those pass through untouched.
+function moneyText(v){
+  if(v === null || v === undefined) return '';
+  if(typeof v === 'string' && (v.trim() === '' || !Number.isFinite(Number(v)))) return v;
+  return fmtMoney(v);
+}
+// Plain digits for <input type="number"> (grouping commas are invalid there).
+function moneyInputValue(n){
   const v = Math.round((Number(n) || 0) * 100) / 100;
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
 }
@@ -11175,7 +11233,7 @@ async function addExpense(){
     } else if(error){
       alert('Failed: ' + error.message); return;
     } else {
-      await logActivity('expense_added', `Added expense: Rs ${amount} — ${category}${note ? ' (' + note + ')' : ''}`);
+      await logActivity('expense_added', `Added expense: Rs ${moneyText(amount)} — ${category}${note ? ' (' + note + ')' : ''}`);
     }
   } else {
     await queueOfflineExpense(payload);
@@ -11202,7 +11260,7 @@ async function addExpense(){
 }
 function renderExpenseLog(){
   document.getElementById('expenseLogList').innerHTML = sessionExpenseLog.map(e =>
-    `<div class="ledger-line"><span>${e.time} — ${escHtml(e.category)}: ${escHtml(e.note || '')}${e.queued ? ' <span style="color:var(--warn);font-weight:700;">(offline — pending sync)</span>' : ''}</span><span>Rs ${e.amount}</span></div>`
+    `<div class="ledger-line"><span>${e.time} — ${escHtml(e.category)}: ${escHtml(e.note || '')}${e.queued ? ' <span style="color:var(--warn);font-weight:700;">(offline — pending sync)</span>' : ''}</span><span>Rs ${moneyText(e.amount)}</span></div>`
   ).join('') || '<div class="small">Nothing logged yet this session.</div>';
 }
 
@@ -11301,12 +11359,12 @@ async function loadExpenseMonth(){
     monthTotal += dayTotal;
     const rows = data.slice()
       .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
-      .map(e => `<div class="ledger-line"><span>${new Date(e.created_at).toLocaleTimeString()} — ${escHtml(e.category || '')}${e.note ? ': ' + escHtml(e.note) : ''}</span><span>Rs ${e.amount}</span></div>`)
+      .map(e => `<div class="ledger-line"><span>${new Date(e.created_at).toLocaleTimeString()} — ${escHtml(e.category || '')}${e.note ? ': ' + escHtml(e.note) : ''}</span><span>Rs ${moneyText(e.amount)}</span></div>`)
       .join('');
-    dayBlocks.push(`<div class="expense-day-block"><div class="expense-day-header"><span>${expDateLabel(date)}</span><span>Rs ${dayTotal}</span></div>${rows}</div>`);
+    dayBlocks.push(`<div class="expense-day-block"><div class="expense-day-header"><span>${expDateLabel(date)}</span><span>Rs ${moneyText(dayTotal)}</span></div>${rows}</div>`);
   });
 
-  totalEl.textContent = 'Rs ' + monthTotal;
+  totalEl.textContent = 'Rs ' + moneyText(monthTotal);
   if(dayBlocks.length){
     listEl.innerHTML = dayBlocks.join('');
   } else if(anyError){
@@ -11506,7 +11564,7 @@ async function resolveReturn(id){
 // Branches that run the Karkhana (washing for other shops). 1 = Get Smart.
 const KARKHANA_BRANCH_IDS = [1];
 
-function kkMoney(n){ return 'Rs ' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+function kkMoney(n){ return 'Rs ' + fmtMoney(Math.round(Number(n) || 0)); }
 function kkBranchId(){
   if(profile && profile.role === 'admin'){
     const sel = document.getElementById('kkBranchSelect');
@@ -12310,8 +12368,8 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
   // ---- Expenses ----
   const expRows = bExpenses.map(e => `
     <tr><td>${formatAppDateTime(e.created_at)}</td><td>${escHtml(e.category||'')}</td>
-      <td>${escHtml(e.note||'')}</td><td>Rs ${e.amount}</td><td>${escHtml(e.worker_name||'—')}</td>
-      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${jsArg(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td></tr>`).join('')
+      <td>${escHtml(e.note||'')}</td><td>Rs ${moneyText(e.amount)}</td><td>${escHtml(e.worker_name||'—')}</td>
+      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${jsArg(e.category || 'expense')} — Rs ${moneyText(e.amount)}')">Delete</button></td></tr>`).join('')
     || '<tr><td colspan="6" class="small">No expenses logged.</td></tr>';
   const expTotal = bExpenses.reduce((s,e) => s + Number(e.amount), 0);
 
@@ -12320,9 +12378,9 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
     const exp = monthlyExp.find(e => e.branch_id===bId && e.month===r.month);
     const expAmt = exp ? exp.total_expenses : 0;
     const isSelected = r.month && r.month.slice(0,7) === selectedMonthKey;
-    return `<tr${isSelected ? ' style="background:#fff3c4;font-weight:bold;"' : ''}><td>${r.month}</td><td>${r.order_count}</td><td>Rs ${Math.round(r.total_sales)}</td>
-      <td>Rs ${Math.round(r.avg_order_value)}</td><td>Rs ${r.peak_order}</td><td>Rs ${r.min_order}</td>
-      <td>Rs ${expAmt}</td><td>Rs ${Math.round(r.total_sales - expAmt)}</td></tr>`;
+    return `<tr${isSelected ? ' style="background:#fff3c4;font-weight:bold;"' : ''}><td>${r.month}</td><td>${r.order_count}</td><td>Rs ${moneyText(Math.round(r.total_sales))}</td>
+      <td>Rs ${moneyText(Math.round(r.avg_order_value))}</td><td>Rs ${moneyText(r.peak_order)}</td><td>Rs ${moneyText(r.min_order)}</td>
+      <td>Rs ${moneyText(expAmt)}</td><td>Rs ${moneyText(Math.round(r.total_sales - expAmt))}</td></tr>`;
   }).join('') || '<tr><td colspan="8" class="small">No activity yet.</td></tr>';
   const mSum = bMonthly.reduce((s,r) => {
     const exp = monthlyExp.find(e => e.branch_id===bId && e.month===r.month);
@@ -12343,7 +12401,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
           <td>Rs ${fmtMoney(dSum.advance)}</td><td>Rs ${fmtMoney(dSum.balance)}</td><td>Rs ${fmtMoney(dSum.cash)}</td>
           <td>Rs ${fmtMoney(dSum.exp)}</td><td>Rs ${fmtMoney(dSum.pendingBooked)}</td></tr></tfoot>
       </table>
-      <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${escHtml(branch.name)}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${bPending}</b></div>
+      <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${escHtml(branch.name)}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${moneyText(bPending)}</b></div>
     </div>
 
     <div class="panel">
@@ -12365,7 +12423,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
       <table>
         <thead><tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th><th>Worker</th><th></th></tr></thead>
         <tbody>${expRows}</tbody>
-        <tfoot><tr style="font-weight:bold;"><td colspan="3">TOTAL</td><td>Rs ${expTotal}</td><td></td><td></td></tr></tfoot>
+        <tfoot><tr style="font-weight:bold;"><td colspan="3">TOTAL</td><td>Rs ${moneyText(expTotal)}</td><td></td><td></td></tr></tfoot>
       </table>
     </div>
 
@@ -12374,8 +12432,8 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
       <table>
         <thead><tr><th>Month</th><th>Orders</th><th>Sales</th><th>Avg</th><th>Peak</th><th>Min</th><th>Expenses</th><th>Net</th></tr></thead>
         <tbody>${monthlyRows}</tbody>
-        <tfoot><tr style="font-weight:bold;"><td>GRAND TOTAL</td><td>${mSum.orders}</td><td>Rs ${Math.round(mSum.sales)}</td>
-          <td colspan="3"></td><td>Rs ${Math.round(mSum.expenses)}</td><td>Rs ${Math.round(mSum.sales - mSum.expenses)}</td></tr></tfoot>
+        <tfoot><tr style="font-weight:bold;"><td>GRAND TOTAL</td><td>${mSum.orders}</td><td>Rs ${moneyText(Math.round(mSum.sales))}</td>
+          <td colspan="3"></td><td>Rs ${moneyText(Math.round(mSum.expenses))}</td><td>Rs ${moneyText(Math.round(mSum.sales - mSum.expenses))}</td></tr></tfoot>
       </table>
     </div>
     </div>
@@ -12405,7 +12463,7 @@ async function submitDashExpense(branchId){
   if(amount <= 0){ alert('Enter a valid amount.'); return; }
   const { error } = await sb.rpc('add_expense', { p_branch_id: branchId, p_amount: amount, p_category: category, p_note: note });
   if(error){ alert('Failed: ' + error.message); return; }
-  await logActivity('expense_added', `Added expense: Rs ${amount} — ${category}${note ? ' (' + note + ')' : ''}`, branchId);
+  await logActivity('expense_added', `Added expense: Rs ${moneyText(amount)} — ${category}${note ? ' (' + note + ')' : ''}`, branchId);
   loadAdminDashboard();
 }
 
@@ -12435,13 +12493,13 @@ async function loadMonthlyRegister(){
     <tr>
       <td>${r.month}</td>
       <td>${r.orders_booked}</td>
-      <td>Rs ${r.value_booked}</td>
-      <td>Rs ${r.advance_collected}</td>
-      <td>Rs ${r.balance_collected}</td>
-      <td>Rs ${r.total_cash_collected}</td>
-      <td>Rs ${r.total_expenses}</td>
-      <td>Rs ${r.total_salaries}</td>
-      <td>Rs ${Math.round(r.net_cash)}</td>
+      <td>Rs ${moneyText(r.value_booked)}</td>
+      <td>Rs ${moneyText(r.advance_collected)}</td>
+      <td>Rs ${moneyText(r.balance_collected)}</td>
+      <td>Rs ${moneyText(r.total_cash_collected)}</td>
+      <td>Rs ${moneyText(r.total_expenses)}</td>
+      <td>Rs ${moneyText(r.total_salaries)}</td>
+      <td>Rs ${moneyText(Math.round(r.net_cash))}</td>
       <td>${r.is_closed ? 'Closed' : 'Open'}</td>
       <td><button class="btn-secondary" onclick="toggleMonthClosed('${jsArg(r.month)}', ${r.is_closed ? 'true' : 'false'})">${r.is_closed ? 'Reopen' : 'Mark Closed'}</button></td>
     </tr>`).join('') || '<tr><td colspan="11" class="small">No activity yet.</td></tr>';
@@ -12457,7 +12515,7 @@ async function loadMonthlyRegister(){
 
   const { data: pending } = await sb.rpc('get_outstanding_balance', { p_branch_id: currentBranchId });
   const pendingAmt = (pending && pending[0]) ? pending[0].total_pending : 0;
-  document.getElementById('mrLivePending').textContent = 'Rs ' + pendingAmt;
+  document.getElementById('mrLivePending').textContent = 'Rs ' + moneyText(pendingAmt);
 
   await loadSalaryLog();
 
@@ -12509,11 +12567,11 @@ function updateMrLiveSummary(){
   document.getElementById('mrSelectedMonthLabel').textContent =
     `${MR_MONTH_FULL[mrSelMonth-1]} ${mrSelYear}${isCurrent ? ' — Live' : ''}`;
   document.getElementById('mrLiveOrders').textContent = row ? row.orders_booked : 0;
-  document.getElementById('mrLiveValue').textContent = 'Rs ' + (row ? row.value_booked : 0);
-  document.getElementById('mrLiveCash').textContent = 'Rs ' + (row ? row.total_cash_collected : 0);
-  document.getElementById('mrLiveExpenses').textContent = 'Rs ' + (row ? row.total_expenses : 0);
-  document.getElementById('mrLiveSalaries').textContent = 'Rs ' + (row ? row.total_salaries : 0);
-  document.getElementById('mrLiveNet').textContent = 'Rs ' + Math.round(row ? row.net_cash : 0);
+  document.getElementById('mrLiveValue').textContent = 'Rs ' + moneyText((row ? row.value_booked : 0));
+  document.getElementById('mrLiveCash').textContent = 'Rs ' + moneyText((row ? row.total_cash_collected : 0));
+  document.getElementById('mrLiveExpenses').textContent = 'Rs ' + moneyText((row ? row.total_expenses : 0));
+  document.getElementById('mrLiveSalaries').textContent = 'Rs ' + moneyText((row ? row.total_salaries : 0));
+  document.getElementById('mrLiveNet').textContent = 'Rs ' + moneyText(Math.round(row ? row.net_cash : 0));
   updateMrPendingThisMonth();
 }
 
@@ -12537,7 +12595,7 @@ async function updateMrPendingThisMonth(){
     .lt('created_at', monthEnd);
   if(error){ el.textContent = 'Rs —'; return; }
   const total = (data || []).reduce((s, o) => s + Number(o.balance_due || 0), 0);
-  el.textContent = 'Rs ' + total;
+  el.textContent = 'Rs ' + moneyText(total);
 }
 
 async function toggleMonthClosed(monthStr, isClosed){
@@ -12546,9 +12604,9 @@ async function toggleMonthClosed(monthStr, isClosed){
     const { data: pending } = await sb.rpc('get_outstanding_balance', { p_branch_id: currentBranchId });
     const pendingAmt = (pending && pending[0]) ? pending[0].total_pending : 0;
     const msg = pendingAmt > 0
-      ? `This branch still has Rs ${pendingAmt} pending/uncollected on open orders. Mark the month closed anyway?`
+      ? `This branch still has Rs ${moneyText(pendingAmt)} pending/uncollected on open orders. Mark the month closed anyway?`
       : 'Mark this month as closed?';
-    if(!await appConfirm({ tone: 'warn', pic: 'calendar', urTitle: 'مہینہ بند کریں؟', title: 'Close month?', ur: pendingAmt > 0 ? `ابھی Rs ${pendingAmt} بقایا ہے۔ پھر بھی مہینہ بند کریں؟` : 'یہ مہینہ بند کریں؟', message: msg, okText: 'Close month' })) return;
+    if(!await appConfirm({ tone: 'warn', pic: 'calendar', urTitle: 'مہینہ بند کریں؟', title: 'Close month?', ur: pendingAmt > 0 ? `ابھی Rs ${moneyText(pendingAmt)} بقایا ہے۔ پھر بھی مہینہ بند کریں؟` : 'یہ مہینہ بند کریں؟', message: msg, okText: 'Close month' })) return;
   } else {
     if(!await appConfirm({ tone: 'info', pic: 'calendar', urTitle: 'مہینہ کھولیں؟', title: 'Reopen month?', ur: 'تبدیلی کے لیے یہ مہینہ دوبارہ کھولیں؟', message: 'Reopen this month for edits?', okText: 'Reopen' })) return;
   }
@@ -12571,7 +12629,7 @@ async function addSalaryPayment(){
     p_payment_type: type, p_month: monthVal + '-01', p_note: note
   });
   if(error){ alert('Failed: ' + error.message); return; }
-  await logActivity('salary_payment_added', `Recorded ${type} of Rs ${amount} for ${worker} (${monthVal})`);
+  await logActivity('salary_payment_added', `Recorded ${type} of Rs ${moneyText(amount)} for ${worker} (${monthVal})`);
   document.getElementById('salaryWorkerName').value = '';
   document.getElementById('salaryAmount').value = '';
   document.getElementById('salaryNote').value = '';
@@ -12587,7 +12645,7 @@ async function loadSalaryLog(){
     .order('month', { ascending:false }).order('created_at', { ascending:false }).limit(100);
   if(error){ document.getElementById('salaryLogBody').innerHTML = `<tr><td colspan="6" class="error">${escHtml(error.message)}</td></tr>`; return; }
   document.getElementById('salaryLogBody').innerHTML = (data||[]).map(s => `
-    <tr><td>${s.month}</td><td>${escHtml(s.worker_name)}</td><td>${escHtml(s.payment_type)}</td><td>Rs ${s.amount}</td><td>${escHtml(s.note||'')}</td>
+    <tr><td>${s.month}</td><td>${escHtml(s.worker_name)}</td><td>${escHtml(s.payment_type)}</td><td>Rs ${moneyText(s.amount)}</td><td>${escHtml(s.note||'')}</td>
     <td><button class="btn-secondary" onclick="deleteSalaryPayment(${s.id})">Delete</button></td></tr>`
   ).join('') || '<tr><td colspan="6" class="small">No salary payments logged.</td></tr>';
 }
@@ -12614,7 +12672,7 @@ async function submitMrExpense(){
   if(amount <= 0){ alert('Enter a valid amount.'); return; }
   const { error } = await sb.rpc('add_expense', { p_branch_id: currentBranchId, p_amount: amount, p_category: category, p_note: note });
   if(error){ alert('Failed: ' + error.message); return; }
-  await logActivity('expense_added', `Added expense: Rs ${amount} — ${category}${note ? ' (' + note + ')' : ''}`);
+  await logActivity('expense_added', `Added expense: Rs ${moneyText(amount)} — ${category}${note ? ' (' + note + ')' : ''}`);
   document.getElementById('mrExpenseCategory').value = '';
   document.getElementById('mrExpenseAmount').value = '';
   document.getElementById('mrExpenseNote').value = '';
@@ -12747,7 +12805,7 @@ async function loadStaffLedger(){
     <tr>
       <td>${r.payment_date ? formatAppDate(r.payment_date + 'T00:00:00') : formatMonthLabel(String(r.month || '').slice(0,7))}</td>
       <td>${escHtml(r.payment_type)}</td>
-      <td>Rs ${r.amount}</td>
+      <td>Rs ${moneyText(r.amount)}</td>
       <td>${escHtml(r.note || '')}</td>
       <td><button class="btn-secondary" onclick="openDeleteStaffLedgerModal(${r.id})">Delete</button></td>
     </tr>`).join('') || '<tr><td colspan="5" class="small">No entries logged yet.</td></tr>';
@@ -12771,7 +12829,7 @@ async function addStaffLedgerEntry(){
     p_worker_id: currentStaffLedgerWorkerId, p_payment_date: date
   });
   if(error){ alert('Failed: ' + error.message + (error.message && error.message.includes('p_worker_id') ? ' — the add_salary_payment function in Supabase needs the p_worker_id/p_payment_date parameters added (see SQL notes).' : '')); return; }
-  await logActivity('staff_ledger_entry_added', `Logged ${type} of Rs ${amount} for "${w ? w.name : ''}" on ${date}`, currentBranchId);
+  await logActivity('staff_ledger_entry_added', `Logged ${type} of Rs ${moneyText(amount)} for "${w ? w.name : ''}" on ${date}`, currentBranchId);
   document.getElementById('staffLedgerAmount').value = '';
   document.getElementById('staffLedgerNote').value = '';
   loadStaffLedger();
@@ -12884,7 +12942,7 @@ function renderAuditOrderRows(bodyId, list, opts){
     // orders can still have their balance change before dispatch).
     const totalCashIn = Number(o.advance_paid || 0) + Number(balanceValue || 0);
     const dispatchedCells = dispatchedMode ? `
-      <td style="font-weight:700;">Rs ${totalCashIn}</td>
+      <td style="font-weight:700;">Rs ${moneyText(totalCashIn)}</td>
       <td>${o.dispatched_at ? formatAppDateTime(o.dispatched_at) : '—'}</td>
       <td>${o.receiverName
         ? `<span style="font-weight:700;">${escHtml(o.receiverName)}</span>${o.receiverPhone ? `<br><span class="small" style="color:var(--accent);font-weight:700;">📞 ${escHtml(o.receiverPhone)}</span>` : '<br><span class="small" style="color:var(--muted);">No phone</span>'}`
@@ -12897,11 +12955,11 @@ function renderAuditOrderRows(bodyId, list, opts){
       <td>${escHtml(o.customer_name || 'Walk-in')}</td>
       <td>${escHtml(o.phone || o.customer_phone || '—')}</td>
       <td>${auditItemsSummary(o.items)}</td>
-      <td>Rs ${subtotal}</td>
-      <td>Rs ${o.discount || 0}</td>
-      <td>Rs ${o.total}</td>
-      <td>Rs ${o.advance_paid || 0}</td>
-      <td class="${balanceClass}">Rs ${balanceValue}</td>
+      <td>Rs ${moneyText(subtotal)}</td>
+      <td>Rs ${moneyText(o.discount || 0)}</td>
+      <td>Rs ${moneyText(o.total)}</td>
+      <td>Rs ${moneyText(o.advance_paid || 0)}</td>
+      <td class="${balanceClass}">Rs ${moneyText(balanceValue)}</td>
       ${dispatchedCells}
       <td class="audit-tags-cell">${auditTagsCell(o, allowClear)}</td>
       <td>${escHtml(o.worker_name || branchAbbrev(lastAuditContext ? lastAuditContext.branchLabel : ''))}</td>
@@ -12920,9 +12978,9 @@ function renderAuditExpenseRows(list){
       <td>${new Date(e.created_at).toLocaleTimeString()}</td>
       <td>${escHtml(e.category || '')}</td>
       <td>${escHtml(e.note || '')}</td>
-      <td>Rs ${e.amount}</td>
+      <td>Rs ${moneyText(e.amount)}</td>
       <td>${escHtml(e.worker_name || '—')}</td>
-      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${jsArg(e.category || 'expense')} — Rs ${e.amount}')">Delete</button></td>
+      <td><button class="btn-secondary" onclick="openDeleteExpenseModal(${e.id}, '${jsArg(e.category || 'expense')} — Rs ${moneyText(e.amount)}')">Delete</button></td>
     </tr>`).join('');
 }
 
@@ -13309,14 +13367,14 @@ async function openDailyAudit(date, branchId, branchLabel){
   const totalExpenses = expenses.reduce((s,e) => s + Number(e.amount), 0);
   const netCash = totalCollected - totalExpenses;
 
-  document.getElementById('auditGross').textContent = 'Rs ' + grossValue;
-  document.getElementById('auditDiscounts').textContent = 'Rs ' + totalDiscounts;
-  document.getElementById('auditAdvanceToday').textContent = 'Rs ' + advanceToday;
-  document.getElementById('auditBalanceRecoveredToday').textContent = 'Rs ' + balanceRecoveredToday;
-  document.getElementById('auditCollected').textContent = 'Rs ' + totalCollected;
-  document.getElementById('auditOutstanding').textContent = 'Rs ' + totalOutstanding;
-  document.getElementById('auditExpenseTotal').textContent = 'Rs ' + totalExpenses;
-  document.getElementById('auditNet').textContent = 'Rs ' + netCash;
+  document.getElementById('auditGross').textContent = 'Rs ' + moneyText(grossValue);
+  document.getElementById('auditDiscounts').textContent = 'Rs ' + moneyText(totalDiscounts);
+  document.getElementById('auditAdvanceToday').textContent = 'Rs ' + moneyText(advanceToday);
+  document.getElementById('auditBalanceRecoveredToday').textContent = 'Rs ' + moneyText(balanceRecoveredToday);
+  document.getElementById('auditCollected').textContent = 'Rs ' + moneyText(totalCollected);
+  document.getElementById('auditOutstanding').textContent = 'Rs ' + moneyText(totalOutstanding);
+  document.getElementById('auditExpenseTotal').textContent = 'Rs ' + moneyText(totalExpenses);
+  document.getElementById('auditNet').textContent = 'Rs ' + moneyText(netCash);
 }
 
 function closeAuditModal(){
@@ -13364,8 +13422,8 @@ function openAuditBill(orderId){
         <tr>
           <td>${escHtml(it.service)}</td>
           <td style="text-align:center;">${it.qty}</td>
-          <td style="text-align:right;">Rs ${it.price}</td>
-          <td style="text-align:right;">Rs ${it.line_total}</td>
+          <td style="text-align:right;">Rs ${moneyText(it.price)}</td>
+          <td style="text-align:right;">Rs ${moneyText(it.line_total)}</td>
         </tr>`).join('')
     : `<tr><td colspan="4" class="audit-empty">No items recorded</td></tr>`;
 
@@ -13373,8 +13431,8 @@ function openAuditBill(orderId){
     ? Math.round((discount / Number(subtotal)) * 1000) / 10
     : null;
   const discountRow = discount > 0
-    ? `<div class="ledger-line"><span>Subtotal</span><span>Rs ${subtotal}</span></div>
-       <div class="ledger-line"><span>Discount${discountPct != null ? ` (${discountPct}%)` : ''}</span><span>-Rs ${discount}</span></div>`
+    ? `<div class="ledger-line"><span>Subtotal</span><span>Rs ${moneyText(subtotal)}</span></div>
+       <div class="ledger-line"><span>Discount${discountPct != null ? ` (${discountPct}%)` : ''}</span><span>-Rs ${moneyText(discount)}</span></div>`
     : '';
 
   // Gated on isDispatched (actual status), not just "is dispatched_at
@@ -13399,11 +13457,11 @@ function openAuditBill(orderId){
     : '';
 
   const paymentRows = isDispatched
-    ? `<div class="ledger-line"><span>Advance Paid (at booking)</span><span>Rs ${advancePaid}</span></div>
-       <div class="ledger-line"><span>Balance Recovered (at dispatch)</span><span>Rs ${balanceRecovered}</span></div>
+    ? `<div class="ledger-line"><span>Advance Paid (at booking)</span><span>Rs ${moneyText(advancePaid)}</span></div>
+       <div class="ledger-line"><span>Balance Recovered (at dispatch)</span><span>Rs ${moneyText(balanceRecovered)}</span></div>
        <div class="ledger-total" style="font-size:15px;"><span>Total Received</span><span>Rs ${fmtMoney((advancePaid + balanceRecovered))}</span></div>`
-    : `<div class="ledger-line"><span>Advance Paid</span><span>Rs ${advancePaid}</span></div>
-       <div class="ledger-line"><span>Balance Due</span><span class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</span></div>`;
+    : `<div class="ledger-line"><span>Advance Paid</span><span>Rs ${moneyText(advancePaid)}</span></div>
+       <div class="ledger-line"><span>Balance Due</span><span class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${moneyText(balanceDue)}</span></div>`;
 
   document.getElementById('billViewBody').innerHTML = `
     <div class="bill-card">
@@ -13434,7 +13492,7 @@ function openAuditBill(orderId){
       </div>
       <div class="bill-totals">
         ${discountRow}
-        <div class="ledger-total"><span>Total Bill</span><span>Rs ${o.total}</span></div>
+        <div class="ledger-total"><span>Total Bill</span><span>Rs ${moneyText(o.total)}</span></div>
         <div style="height:8px;"></div>
         ${paymentRows}
       </div>
@@ -13444,9 +13502,9 @@ function openAuditBill(orderId){
         const rows = mm.map(m => `
           <tr>
             <td style="color:var(--warn);font-weight:700;">${escHtml(m.item)}</td>
-            <td style="text-align:right;">Rs ${m.charged}</td>
-            <td style="text-align:right;color:var(--muted);">Rs ${m.actual}</td>
-            <td style="text-align:right;color:var(--warn);font-weight:700;">${m.direction === 'Undercharged' ? '−' : '+'}Rs ${m.diff}</td>
+            <td style="text-align:right;">Rs ${moneyText(m.charged)}</td>
+            <td style="text-align:right;color:var(--muted);">Rs ${moneyText(m.actual)}</td>
+            <td style="text-align:right;color:var(--warn);font-weight:700;">${m.direction === 'Undercharged' ? '−' : '+'}Rs ${moneyText(m.diff)}</td>
           </tr>`).join('');
         return `<div style="border-top:2px solid var(--warn);margin-top:2px;padding:12px 16px;background:#fff5f3;">
           <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--warn);margin-bottom:8px;">⚠️ Rate Mismatches on This Order</div>
@@ -13497,8 +13555,8 @@ function printAuditBill(){
     ? Math.round((discount / Number(subtotal)) * 1000) / 10
     : null;
   const discountLines = discount > 0
-    ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${subtotal}</span></div>
-       <div class="receipt-row"><span>DISCOUNT${discountPct != null ? ` (${discountPct}%)` : ''}</span><span>-Rs ${discount}</span></div>`
+    ? `<div class="receipt-row"><span>SUBTOTAL</span><span>Rs ${moneyText(subtotal)}</span></div>
+       <div class="receipt-row"><span>DISCOUNT${discountPct != null ? ` (${discountPct}%)` : ''}</span><span>-Rs ${moneyText(discount)}</span></div>`
     : '';
   // Same gating fix as openAuditBill's dispatchMetaItem above — only show
   // a dispatch line for orders that are actually dispatched.
@@ -13516,11 +13574,11 @@ function printAuditBill(){
     ? `<div class="small receipt-line">${o.is_urgent ? '🔥 URGENT ' : ''}${o.is_vip ? '★ VIP' : ''}</div>`
     : '';
   const paymentLines = isDispatched
-    ? `<div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${advancePaid}</b></div>
-       <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${balanceRecovered}</b></div>
+    ? `<div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${moneyText(advancePaid)}</b></div>
+       <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${moneyText(balanceRecovered)}</b></div>
        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${fmtMoney((advancePaid + balanceRecovered))}</b></div>`
-    : `<div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${advancePaid}</span></div>
-       <div class="receipt-row"><b>BALANCE DUE</b><b>Rs ${balanceDue}</b></div>`;
+    : `<div class="receipt-row"><span>ADVANCE PAID</span><span>Rs ${moneyText(advancePaid)}</span></div>
+       <div class="receipt-row"><b>BALANCE DUE</b><b>Rs ${moneyText(balanceDue)}</b></div>`;
 
   document.getElementById('receipt').innerHTML = `
     <div class="receipt-box">
@@ -13538,7 +13596,7 @@ function printAuditBill(){
       ${receiptItemsGrid(items)}
       <hr>
       ${discountLines}
-      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${o.total}</b></div>
+      <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${moneyText(o.total)}</b></div>
       ${paymentLines}
       <hr>
       <div class="center">Thank you!</div>
@@ -13679,7 +13737,7 @@ async function runConfirmedAdminAction(password, errBox){
         if(labelError) console.error('Failed to save category label:', labelError.message);
       }
       await logActivity(action.isNewCategory ? 'category_and_item_created' : 'rate_item_created',
-        action.isNewCategory ? `Created category "${action.customLabel}" and item "${action.name}" (Rs ${action.default_price})` : `Added rate-list item "${action.name}" (Rs ${action.default_price})`, null);
+        action.isNewCategory ? `Created category "${action.customLabel}" and item "${action.name}" (Rs ${moneyText(action.default_price)})` : `Added rate-list item "${action.name}" (Rs ${moneyText(action.default_price)})`, null);
       document.getElementById('ewpNewItemName').value = '';
       document.getElementById('ewpNewItemPrice').value = '';
       document.getElementById('ewpNewItemCategoryCustom').value = '';
@@ -13730,7 +13788,7 @@ async function addService(){
     if(labelError) console.error('Failed to save category label:', labelError.message);
   }
   await logActivity(customLabel ? 'category_and_item_created' : 'rate_item_created',
-    customLabel ? `Created category "${customLabel}" and item "${name}" (Rs ${default_price})` : `Added rate-list item "${name}" (Rs ${default_price})`, null);
+    customLabel ? `Created category "${customLabel}" and item "${name}" (Rs ${moneyText(default_price)})` : `Added rate-list item "${name}" (Rs ${moneyText(default_price)})`, null);
 
   document.getElementById('newServiceName').value = '';
   document.getElementById('newServicePrice').value = '';
@@ -13756,7 +13814,7 @@ function openDeleteServiceModal(id, name){
 }
 function renderServicesTable(){
   document.getElementById('servicesTableBody').innerHTML = services.map(s =>
-    `<tr><td>${escHtml(s.name)}</td><td>${escHtml(CATEGORY_LABELS[s.category] || s.category || 'Wash + Dry Clean')}</td><td>Rs ${s.default_price || 0}</td><td><button class="btn-secondary" onclick="deleteService(${s.id})">Delete</button></td></tr>`
+    `<tr><td>${escHtml(s.name)}</td><td>${escHtml(CATEGORY_LABELS[s.category] || s.category || 'Wash + Dry Clean')}</td><td>Rs ${moneyText(s.default_price || 0)}</td><td><button class="btn-secondary" onclick="deleteService(${s.id})">Delete</button></td></tr>`
   ).join('');
 }
 
@@ -14265,62 +14323,32 @@ function closeHelpModal(){
 (function(){
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // Cards rise in when a tab or dashboard section is opened. .enter is
-  // removed again shortly after, so live re-renders don't replay it.
+  // Dashboard sections fade in when opened. .enter is removed again
+  // shortly after, so live re-renders don't replay it.
   function playEnter(el){
     el.classList.remove('enter');
     void el.offsetWidth;
     el.classList.add('enter');
     clearTimeout(el._enterTimer);
-    el._enterTimer = setTimeout(() => el.classList.remove('enter'), 900);
+    el._enterTimer = setTimeout(() => el.classList.remove('enter'), 300);
   }
   const shown = new WeakMap();
   const sectionObserver = new MutationObserver(records => {
     for (const r of records) {
       const el = r.target;
-      const visible = el.classList.contains('dash-section')
-        ? el.classList.contains('active')
-        : el.style.display !== 'none';
+      const visible = el.classList.contains('active');
       if (visible && !shown.get(el)) playEnter(el);
       shown.set(el, visible);
     }
   });
-  document.querySelectorAll('.tab, .dash-section').forEach(el => {
-    shown.set(el, el.classList.contains('dash-section') ? el.classList.contains('active') : el.style.display !== 'none');
-    sectionObserver.observe(el, { attributes:true, attributeFilter:['style','class'] });
-  });
-  const appScreen = document.getElementById('appScreen');
-  new MutationObserver(() => {
-    if (appScreen.style.display === 'none') return;
-    const current = [...document.querySelectorAll('.tab')].find(t => t.style.display !== 'none');
-    if (current) playEnter(current);
-  }).observe(appScreen, { attributes:true, attributeFilter:['style'] });
-
-  // Press ripple on buttons, nav tabs, chips and dashboard tiles.
-  const RIPPLE_TARGETS = '.btn-main, .btn-secondary, nav button, .chip-btn, .dash-tile';
-  document.addEventListener('pointerdown', e => {
-    if (reduceMotion.matches || e.button !== 0) return;
-    const btn = e.target.closest(RIPPLE_TARGETS);
-    if (!btn || btn.disabled) return;
-    // body.style.zoom (the A-/A+ buttons) scales layout px, so convert
-    // viewport coordinates back into the button's own px.
-    const zoom = parseFloat(document.body.style.zoom) || 1;
-    const rect = btn.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height) * 2 / zoom;
-    if (getComputedStyle(btn).position === 'static') btn.style.position = 'relative';
-    btn.classList.add('has-ripple');
-    const dot = document.createElement('span');
-    dot.className = 'ripple';
-    dot.setAttribute('aria-hidden', 'true');
-    dot.style.width = dot.style.height = size + 'px';
-    dot.style.left = ((e.clientX - rect.left) / zoom - size / 2) + 'px';
-    dot.style.top = ((e.clientY - rect.top) / zoom - size / 2) + 'px';
-    btn.appendChild(dot);
-    dot.addEventListener('animationend', () => dot.remove());
+  document.querySelectorAll('.dash-section').forEach(el => {
+    shown.set(el, el.classList.contains('active'));
+    sectionObserver.observe(el, { attributes:true, attributeFilter:['class'] });
   });
 
-  // Totals on the New Order bar give a small pop whenever they change.
-  ['grandTotalDisplay', 'balanceDisplay'].forEach(id => {
+  // Totals on the New Order bar, and the Open Orders status counters,
+  // give a small pop whenever they change.
+  ['grandTotalDisplay', 'balanceDisplay', 'statusCountPrinted', 'statusCountReady', 'statusCountDispatched'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     let last = el.textContent;
