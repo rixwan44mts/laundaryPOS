@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-7">
+<meta name="app-build" content="2026-10-29-8">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -12145,6 +12145,65 @@ function formatMonthLabel(monthKey){
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
+// Supabase returns at most 1000 rows per request; page through the rest.
+async function fetchAllRows(makeQuery){
+  const all = [];
+  for(let from = 0; ; from += 1000){
+    const { data, error } = await makeQuery().range(from, from + 999);
+    if(error) throw error;
+    all.push(...(data || []));
+    if(!data || data.length < 1000) return all;
+  }
+}
+
+// YYYY-MM-DD of a timestamp in shop time (Pakistan), not UTC.
+function shopDay(ts){
+  return ts ? new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }) : null;
+}
+
+// One row per day and branch: orders booked / marked ready / handed over
+// that day, plus the cash columns. "Ready" uses orders.ready_at; days
+// before ready_at was recorded fall back to the order_ready entries in the
+// activity log (never both for the same period, so nothing is counted
+// twice).
+function buildDailyRegister(orders, payments, readyLog, expenseRows){
+  const rows = new Map();
+  const row = (day, branchId) => {
+    const k = day + '|' + branchId;
+    if(!rows.has(k)) rows.set(k, { day, branch_id: branchId, orders_booked: 0, orders_ready: 0, orders_dispatched: 0,
+      value_booked: 0, advance_collected: 0, balance_collected: 0, total_cash_in: 0, expenses_today: 0, pending_from_bookings: 0 });
+    return rows.get(k);
+  };
+  const readyStamps = orders.map(o => o.ready_at).filter(Boolean).sort();
+  const firstReadyStamp = readyStamps[0] || null;
+  orders.forEach(o => {
+    if(o.created_at){
+      const r = row(shopDay(o.created_at), o.branch_id);
+      r.orders_booked++;
+      r.value_booked += Number(o.total) || 0;
+      r.pending_from_bookings += Number(o.balance_due) || 0;
+    }
+    if(o.ready_at) row(shopDay(o.ready_at), o.branch_id).orders_ready++;
+    if(o.dispatched_at) row(shopDay(o.dispatched_at), o.branch_id).orders_dispatched++;
+  });
+  readyLog.forEach(l => {
+    if(l.branch_id == null || !l.created_at) return;
+    if(firstReadyStamp && l.created_at >= firstReadyStamp) return;
+    row(shopDay(l.created_at), l.branch_id).orders_ready++;
+  });
+  payments.forEach(pm => {
+    const r = row(shopDay(pm.created_at), pm.branch_id);
+    const amt = Number(pm.amount) || 0;
+    if(pm.type === 'advance') r.advance_collected += amt; else r.balance_collected += amt;
+    r.total_cash_in += amt;
+  });
+  expenseRows.forEach(e => {
+    const day = e.date || shopDay(e.created_at);
+    if(day) row(day, e.branch_id).expenses_today += Number(e.amount) || 0;
+  });
+  return Array.from(rows.values()).sort((a, b) => a.day < b.day ? 1 : -1);
+}
+
 async function loadAdminDashboard(){
   // No .limit() on daily — we need full history so every past month is
   // selectable, not just the most recent ~90 day-rows.
@@ -12155,6 +12214,19 @@ async function loadAdminDashboard(){
   const { data: expenseRows } = await sb.rpc('get_admin_expenses');
 
   dashDailyAll = daily || [];
+  // Rebuild the register by Pakistan day from the raw rows (admins can
+  // read them). The server view splits days in UTC, so anything after
+  // midnight before 5 AM landed on the previous day, and its "orders
+  // booked" also counted orders handed over that day. Falls back to the
+  // view if the raw rows can't be loaded.
+  try{
+    const [orders, payments, readyLog] = await Promise.all([
+      fetchAllRows(() => sb.from('orders').select('id,branch_id,created_at,ready_at,dispatched_at,total,balance_due').order('id')),
+      fetchAllRows(() => sb.from('payments').select('id,branch_id,amount,type,created_at').order('id')),
+      fetchAllRows(() => sb.from('activity_log').select('id,branch_id,created_at').eq('action_type', 'order_ready').order('id'))
+    ]);
+    dashDailyAll = buildDailyRegister(orders, payments, readyLog, expenseRows || []);
+  }catch(e){ console.warn('Daily register: using the server view', e); }
   dashMonthlyAll = monthly || [];
   dashMonthlyExpAll = monthlyExp || [];
   dashPendingAll = pending || [];
@@ -12223,16 +12295,17 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
   // ---- Daily Cash Register ----
   const dailyRows = bDaily.map(r => `
     <tr class="audit-row" tabindex="0" role="button" onclick="openDailyAudit('${jsArg(r.day)}', ${Number(bId)}, '${jsArg(branch.name)}')">
-      <td>${r.day}</td><td>${r.orders_booked}</td><td>Rs ${r.value_booked}</td>
-      <td>Rs ${r.advance_collected}</td><td>Rs ${r.balance_collected}</td><td>Rs ${r.total_cash_in}</td>
-      <td>Rs ${r.expenses_today}</td><td>Rs ${r.pending_from_bookings}</td>
-    </tr>`).join('') || '<tr><td colspan="8" class="small">No activity yet.</td></tr>';
+      <td>${formatAppDate(r.day)}</td><td>${r.orders_booked}</td><td>${r.orders_ready ?? '—'}</td><td>${r.orders_dispatched ?? '—'}</td><td>Rs ${fmtMoney(r.value_booked)}</td>
+      <td>Rs ${fmtMoney(r.advance_collected)}</td><td>Rs ${fmtMoney(r.balance_collected)}</td><td>Rs ${fmtMoney(r.total_cash_in)}</td>
+      <td>Rs ${fmtMoney(r.expenses_today)}</td><td>Rs ${fmtMoney(r.pending_from_bookings)}</td>
+    </tr>`).join('') || '<tr><td colspan="10" class="small">No activity yet.</td></tr>';
   const dSum = bDaily.reduce((s,r) => ({
-    orders: s.orders + Number(r.orders_booked), value: s.value + Number(r.value_booked),
+    orders: s.orders + Number(r.orders_booked), ready: s.ready + (Number(r.orders_ready) || 0), dispatched: s.dispatched + (Number(r.orders_dispatched) || 0),
+    value: s.value + Number(r.value_booked),
     advance: s.advance + Number(r.advance_collected), balance: s.balance + Number(r.balance_collected),
     cash: s.cash + Number(r.total_cash_in), exp: s.exp + Number(r.expenses_today),
     pendingBooked: s.pendingBooked + Number(r.pending_from_bookings)
-  }), { orders:0, value:0, advance:0, balance:0, cash:0, exp:0, pendingBooked:0 });
+  }), { orders:0, ready:0, dispatched:0, value:0, advance:0, balance:0, cash:0, exp:0, pendingBooked:0 });
 
   // ---- Expenses ----
   const expRows = bExpenses.map(e => `
@@ -12264,11 +12337,11 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
     <div class="panel">
       <label>Daily Cash Register — ${monthLabel} — ${escHtml(branch.name)}</label>
       <table>
-        <thead><tr><th>Date</th><th>Orders Booked</th><th>Value Booked</th><th>Advance Collected</th><th>Balance Recovered</th><th>Total Cash In</th><th>Expenses</th><th>Cash to be Received</th></tr></thead>
+        <thead><tr><th>Date</th><th data-ur="بک ہوئے">Orders Booked</th><th data-ur="تیار ہوئے">Marked Ready</th><th data-ur="دے دیے">Dispatched</th><th>Value Booked</th><th>Advance Collected</th><th>Balance Recovered</th><th>Total Cash In</th><th>Expenses</th><th>Cash to be Received</th></tr></thead>
         <tbody>${dailyRows}</tbody>
-        <tfoot><tr style="font-weight:bold;"><td>MONTHLY TOTAL (${monthLabel})</td><td>${dSum.orders}</td><td>Rs ${dSum.value}</td>
-          <td>Rs ${dSum.advance}</td><td>Rs ${dSum.balance}</td><td>Rs ${dSum.cash}</td>
-          <td>Rs ${dSum.exp}</td><td>Rs ${dSum.pendingBooked}</td></tr></tfoot>
+        <tfoot><tr style="font-weight:bold;"><td>MONTHLY TOTAL (${monthLabel})</td><td>${dSum.orders}</td><td>${dSum.ready}</td><td>${dSum.dispatched}</td><td>Rs ${fmtMoney(dSum.value)}</td>
+          <td>Rs ${fmtMoney(dSum.advance)}</td><td>Rs ${fmtMoney(dSum.balance)}</td><td>Rs ${fmtMoney(dSum.cash)}</td>
+          <td>Rs ${fmtMoney(dSum.exp)}</td><td>Rs ${fmtMoney(dSum.pendingBooked)}</td></tr></tfoot>
       </table>
       <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${escHtml(branch.name)}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${bPending}</b></div>
     </div>
