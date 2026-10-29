@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-6">
+<meta name="app-build" content="2026-10-29-7">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2340,6 +2340,52 @@
   .receipt-row > :last-child, .receipt-row span:last-child, .receipt-row b:last-child{flex-shrink:0;white-space:nowrap;}
   .receipt-line, .receipt-item .item-name{white-space:normal;overflow-wrap:anywhere;}
 
+  /* Phones: the header's nine buttons took ~460px before the first field.
+     Text size, sound, language and Log Out fold behind one ⚙ button. */
+  .hdr-more-btn{display:none;}
+  @media (max-width:640px){
+    .hdr-more-btn{display:inline-flex;}
+    body:not(.hdr-open) .hdr-extra{display:none !important;}
+    header .tagline{display:none;}
+  }
+
+  /* Visual hierarchy pass (critique-visual-hierarchy, 2026-10-29) */
+  /* New Order: customer fields stay on one row on the till, so Urgent no
+     longer wraps onto its own line and the clothes come up higher. */
+  @media (min-width:1180px){
+    .neworder-top > .row{flex-wrap:nowrap;align-items:flex-end;}
+    .neworder-top > .row > .field{flex:0 1 auto;min-width:0;}
+    .neworder-top #phoneInput{width:210px;}
+    .neworder-top #nameInput{width:200px;}
+  }
+  /* Date chips sit beside the date box instead of on their own row, so
+     the money bar is back to its old height. */
+  .wd-deadline-field, .press-deadline-field{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+  .wd-deadline-field > label, .press-deadline-field > label{flex:1 0 100%;margin-bottom:0;}
+  .wd-deadline-field > :not(label):not(.deadline-picks), .press-deadline-field > :not(label):not(.deadline-picks){flex:1 1 170px;min-width:0;}
+  .deadline-picks{margin-top:0;flex:0 0 auto;gap:4px;}
+  .deadline-picks .pick-chip{min-height:36px;padding:2px 6px;font-size:12px;}
+  .wd-deadline-field > label, .press-deadline-field > label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* In the wide money-bar grid the Press box shares an "auto" column with
+     the totals; without a cap its one-line width squeezed the inputs. */
+  @media (min-width:1180px){
+    .neworder-payment #wd-deadline-wrap, .neworder-payment #press-deadline-wrap{max-width:370px;min-width:0;}
+  }
+  /* The popup grew with the order card; keep Confirm reachable on 768px tills. */
+  #dispatchCashModal .modal-box, #dispatchReceiverModal .modal-box, #partialDispatchModal .modal-box{max-height:calc(100vh - 24px);overflow-y:auto;}
+  /* At booking an unpaid balance is normal: dark, not alarm red. Red stays
+     on the collection screens. */
+  .neworder-payment .ledger-stat-balance .ledger-stat-value{color:var(--ink);}
+  /* Collect Payment: the two numbers the worker acts on are the biggest. */
+  #dcBalanceDue, #dcChange{font-size:24px !important;font-weight:800;}
+  /* Open Orders: actions in two columns (row ~half as tall); blank
+     booked-out columns hidden for orders still in the shop. */
+  .oo-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:250px;}
+  .oo-actions > button{margin:0;padding:6px 8px;min-height:40px;font-size:12.5px;}
+  table.oo-in-shop thead th:nth-last-child(2), table.oo-in-shop thead th:nth-last-child(3),
+  table.oo-in-shop #openOrdersBody tr:not(.section-heading-row) > td:nth-last-child(2),
+  table.oo-in-shop #openOrdersBody tr:not(.section-heading-row) > td:nth-last-child(3){display:none;}
+
   /* Phones: the fixed money bar covered almost half the screen and pushed
      Save off the bottom. Below 640px it sits at the end of the page like
      any other card, so everything is reached by scrolling. */
@@ -2462,20 +2508,21 @@
       </div>
     </div>
     <div class="headerRight">
-      <div class="fontSizeControls">
+      <div class="fontSizeControls hdr-extra">
         <button class="btn-secondary fs-btn" onclick="changeFontSize(-1)" title="Decrease font size" aria-label="Smaller text" data-ur="چھوٹا">A−</button>
         <button class="btn-secondary fs-btn" onclick="changeFontSize(1)" title="Increase font size" aria-label="Bigger text" data-ur="بڑا">A+</button>
       </div>
-      <button class="btn-secondary" id="soundToggleBtn" onclick="toggleSound()" aria-pressed="true" title="Sound on — tap to mute">🔊</button>
-      <button class="btn-secondary" id="langToggleBtn" onclick="toggleLanguage()" title="Switch language">اردو</button>
+      <button class="btn-secondary hdr-extra" id="soundToggleBtn" onclick="toggleSound()" aria-pressed="true" title="Sound on — tap to mute">🔊</button>
+      <button class="btn-secondary hdr-extra" id="langToggleBtn" onclick="toggleLanguage()" title="Switch language">اردو</button>
       <button class="btn-secondary fullscreen-btn admin-only" id="fullscreenBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">⛶ Fullscreen</button>
+      <button class="btn-secondary hdr-more-btn" onclick="document.body.classList.toggle('hdr-open')" aria-label="More settings" data-ur="سیٹنگ">⚙</button>
       <button class="btn-secondary page-help-btn" onclick="showPageHelp()" title="Help for this page" data-ur="مدد">❔ Help</button>
       <span class="badge" id="connBadge" style="display:none;"></span>
       <button class="btn-secondary" id="syncNowBtn" style="display:none;" onclick="syncAllPending(false)" title="Push offline-booked orders, dispatches, and ready-marks to the server now">🔄 Sync Now (<span id="pendingCount">0</span>)</button>
       <span class="badge" id="userBadge"></span>
       <select id="branchSelect" style="display:none;"></select>
       <span class="badge" id="branchNameFixed"></span>
-      <button class="btn-secondary" onclick="logout()" data-i18n="btn_logout" data-ur="لاگ آؤٹ">Log Out</button>
+      <button class="btn-secondary hdr-extra" onclick="logout()" data-i18n="btn_logout" data-ur="لاگ آؤٹ">Log Out</button>
     </div>
   </header>
 
@@ -2519,7 +2566,7 @@
       </div>
       <div class="field">
         <label data-i18n="lbl_vip" data-ur="خاص گاہک">VIP</label>
-        <button type="button" id="vipToggleBtn" class="btn-secondary vip-toggle-btn vip-simple" onclick="toggleVip()" disabled data-ur="خاص گاہک">Mark VIP</button>
+        <button type="button" id="vipToggleBtn" class="btn-secondary vip-toggle-btn vip-simple" onclick="toggleVip()" disabled>Mark VIP</button>
       </div>
       <div class="field">
         <label data-i18n="lbl_urgent" data-ur="ارجنٹ">Urgent</label>
@@ -2606,9 +2653,9 @@
         <label for="wd-deadline" data-ur="دھلائی واپسی کا دن">Wash + Dry Clean — Collect By Date &amp; Time</label>
         <input type="datetime-local" id="wd-deadline" class="hidden" oninput="renderItemsList()">
         <div class="pick-chips deadline-picks">
-          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',1)"><span class="kk-ur">کل</span> Tomorrow</button>
-          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',2)"><span class="kk-ur">پرسوں</span> 2 days</button>
-          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',3)"><span class="kk-ur">3 دن</span> 3 days</button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',1)" title="Tomorrow" aria-label="Tomorrow"><span class="kk-ur">کل</span></button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',2)" title="In 2 days" aria-label="In 2 days"><span class="kk-ur">پرسوں</span></button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('wd-deadline',3)" title="In 3 days" aria-label="In 3 days"><span class="kk-ur">3 دن</span></button>
         </div>
       </div>
       <!-- Only shown when the cart contains a Press item — see
@@ -2619,9 +2666,9 @@
         <label for="press-deadline" data-ur="استری واپسی کا دن">Press Order — Custom Collect-By Date &amp; Time</label>
         <input type="datetime-local" id="press-deadline" class="hidden" required oninput="renderItemsList()">
         <div class="pick-chips deadline-picks">
-          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',1)"><span class="kk-ur">کل</span> Tomorrow</button>
-          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',2)"><span class="kk-ur">پرسوں</span> 2 days</button>
-          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',3)"><span class="kk-ur">3 دن</span> 3 days</button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',1)" title="Tomorrow" aria-label="Tomorrow"><span class="kk-ur">کل</span></button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',2)" title="In 2 days" aria-label="In 2 days"><span class="kk-ur">پرسوں</span></button>
+          <button type="button" class="pick-chip" onclick="pickDeadline('press-deadline',3)" title="In 3 days" aria-label="In 3 days"><span class="kk-ur">3 دن</span></button>
         </div>
       </div>
       <button id="saveOrderBtn" class="btn-main" style="width:100%;" onclick="saveAndPrint()" data-i18n="btn_save" data-ur="محفوظ کریں اور رسید چھاپیں">Save Order &amp; Print Receipt</button>
@@ -5539,7 +5586,7 @@ async function renderOpenOrdersRows(list){
             ? `<span style="font-weight:700;">${escHtml(o.receiverName)}</span>${o.receiverPhone ? `<br><span class="small" style="color:var(--accent);font-weight:700;">📞 ${escHtml(o.receiverPhone)}</span>` : '<br><span class="small" style="color:var(--muted);">No phone</span>'}`
             : '<span style="color:var(--muted);">—</span>')
         : ''}</td>
-      <td>${actions}</td>
+      <td><div class="oo-actions">${actions}</div></td>
     </tr>`;
   }
 
@@ -5678,6 +5725,10 @@ async function filterOpenOrders(){
     return phoneMatches && codeMatches && statusMatches && urgentMatches && vipMatches;
   });
 
+  // Booked-out columns (Dispatched At / Received By) are blank for orders
+  // still in the shop; hide them there so the row is narrower.
+  const ooTable = document.getElementById('openOrdersBody').closest('table');
+  if(ooTable) ooTable.classList.toggle('oo-in-shop', !isSearching && activeStatusTab !== 'dispatched');
   await renderOpenOrdersRows(filtered);
   updateStatusTabCounts();
   // Kept in lockstep with Open Orders deliberately: every place that
@@ -9504,7 +9555,7 @@ async function saveAndPrint(){
 
     printReceipt(orderId, phone, name, code, subtotal, discountPct, discount, total, advancePaid, balanceDue, changeGiven, false, null, null, isUrgent, urgentSurcharge, wdCollectByDate, pressCollectByDate);
     const serial = await fetchOrderSerial(orderId);
-    if(serial) showSerialForTags(serial, code);
+    if(serial){ noteLatestSerial(serial); showSerialForTags(serial, code); }
     await sb.rpc('mark_order_printed', { p_order_id: orderId });
     await logActivity('order_booked', `New order booked — ${serial ? 'serial ' + fmtSerial(serial) + ', ' : ''}code ${code}, Rs ${total}${isUrgent ? ' (Urgent)' : ''}`);
     await flagRateMismatches(code, currentItems);
@@ -9743,23 +9794,48 @@ function newLocalId(){
 // operations aren't blocked by a connectivity outage, then updates the
 // header badge and the Open Orders "QUEUED (OFFLINE)" section so staff
 // can track pending-sync orders from inside the app instead.
-// Offline bookings get their real serial only after they sync, so the
-// tags got nothing written on them. A short temporary tag (T01…T99, per
-// device) is written instead; after sync the worker is told which real
-// serial replaces it.
-function nextTempTag(){
-  let n = 0;
-  try{ n = (parseInt(localStorage.getItem('pos_temp_tag_n'), 10) || 0) % 99 + 1; localStorage.setItem('pos_temp_tag_n', n); }
-  catch(e){ n = Math.floor(Math.random() * 99) + 1; }
-  return 'T' + String(n).padStart(2, '0');
+// Offline bookings must carry the same serial they will have on the
+// server, or the tags written now won't match. The server's counter hands
+// out last + 1, so the till keeps the newest serial it has seen for its
+// branch and claims the next one; with supabase/offline_serial.sql applied
+// book_order also takes p_serial_no and keeps exactly that number. If
+// another till took it meanwhile, the sync popup says what changed.
+function lastSerialKey(){ return 'pos_last_serial_' + currentBranchId; }
+function readLastSerial(){
+  try{ return JSON.parse(localStorage.getItem(lastSerialKey()) || 'null'); }catch(e){ return null; }
+}
+function noteLatestSerial(serial, at){
+  if(!serial || !currentBranchId) return;
+  const prev = readLastSerial();
+  const when = at ? new Date(at).getTime() : Date.now();
+  if(prev && prev.at > when) return;
+  try{ localStorage.setItem(lastSerialKey(), JSON.stringify({ serial: Number(serial), at: when })); }catch(e){}
+}
+function claimNextSerial(){
+  const prev = readLastSerial();
+  if(!prev || !prev.serial) return null;
+  const next = prev.serial >= 9999 ? 1 : prev.serial + 1;
+  try{ localStorage.setItem(lastSerialKey(), JSON.stringify({ serial: next, at: Date.now() })); }catch(e){}
+  return next;
+}
+// Until the server has p_serial_no, retry without it; its counter gives
+// last + 1 anyway, which is the number the till claimed.
+async function rpcBookOrder(payload){
+  let res = await sb.rpc('book_order', payload);
+  if(res.error && payload.p_serial_no != null && /p_serial_no|PGRST202|could not find the function/i.test(res.error.message + ' ' + (res.error.code || ''))){
+    const { p_serial_no, ...rest } = payload;
+    res = await sb.rpc('book_order', rest);
+  }
+  return res;
 }
 
 async function queueOfflineOrder(bookPayload, printArgs){
   const localId = newLocalId();
-  const tempTag = nextTempTag();
+  const claimedSerial = claimNextSerial();
+  if(claimedSerial) bookPayload.p_serial_no = claimedSerial;
   const record = {
     localId,
-    tempTag,
+    claimedSerial,
     payload: bookPayload,
     printArgs,
     queuedAt: new Date().toISOString(),
@@ -9771,11 +9847,12 @@ async function queueOfflineOrder(bookPayload, printArgs){
     printArgs.subtotal, printArgs.discountPct, printArgs.discount, printArgs.total,
     printArgs.advancePaid, printArgs.balanceDue, printArgs.changeGiven, true, null, null,
     printArgs.isUrgent, printArgs.urgentSurcharge, printArgs.wdCollectByDate, printArgs.pressCollectByDate);
-  appDialog({
-    tone: 'info', pic: 'tag', urTitle: 'عارضی ٹیگ نمبر',
-    title: 'Temporary tag number', big: tempTag,
-    ur: `انٹرنیٹ نہیں ہے۔ ابھی ہر کپڑے کے ٹیگ پر ${tempTag} لکھیں۔ انٹرنیٹ آنے پر اصل سیریل نمبر بتایا جائے گا۔`,
-    message: `No internet, so there is no serial yet. Write ${tempTag} on every cloth tag; the real serial is shown when the order syncs. Customer code: ${printArgs.code}.`
+  if(claimedSerial) showSerialForTags(claimedSerial, printArgs.code);
+  else appDialog({
+    tone: 'info', pic: 'tag', urTitle: 'سیریل نمبر',
+    title: 'Serial number after sync',
+    ur: 'یہ کمپیوٹر ابھی تک کسی آرڈر کا سیریل نہیں جانتا۔ انٹرنیٹ آنے پر سیریل نمبر بتایا جائے گا، پھر ٹیگ پر لکھیں۔',
+    message: `This device hasn't seen any serial for this branch yet, so the serial is shown once the order syncs. Customer code: ${printArgs.code}.`
   });
   await updateOfflineBadge();
   filterOpenOrders();
@@ -9797,12 +9874,12 @@ async function syncPendingOrders(silent){
   offlineSyncInProgress = true;
   await updateOfflineBadge('syncing');
   let synced = 0, failed = 0;
-  const retagged = []; // { tempTag, orderId, code } — real serial shown after the list reloads
+  const claimed = []; // { claimedSerial, orderId, code } — checked against the server after the list reloads
 
   for(const record of pending){
     let orderId, error;
     try {
-      ({ data: orderId, error } = await sb.rpc('book_order', record.payload));
+      ({ data: orderId, error } = await rpcBookOrder(record.payload));
     } catch(networkErr){
       error = networkErr;
     }
@@ -9829,7 +9906,7 @@ async function syncPendingOrders(silent){
     // this is the only place a queued order is ever deleted.
     await idbDeletePendingOrder(record.localId);
     synced++;
-    if(record.tempTag) retagged.push({ tempTag: record.tempTag, orderId, code: record.payload.p_code });
+    claimed.push({ claimedSerial: record.claimedSerial || null, orderId, code: record.payload.p_code });
     sb.rpc('mark_order_printed', { p_order_id: orderId }).catch(()=>{});
     logActivity('order_booked', `New order booked — code ${record.payload.p_code}, Rs ${record.payload.p_total}${record.payload.p_is_urgent ? ' (Urgent)' : ''} [synced from offline queue]`, record.payload.p_branch_id).catch(()=>{});
     flagRateMismatches(record.payload.p_code, record.payload.p_items).catch(()=>{});
@@ -9846,15 +9923,21 @@ async function syncPendingOrders(silent){
   }
   if(synced && typeof loadOpenOrders === 'function' && currentBranchId){
     await loadOpenOrders(); // returns serial_no with the list, so no extra request per order
-    const lines = retagged.map(r => {
+    // Normally the server kept the claimed serial. Only a clash (another
+    // till took that number first) or an order with no claimed serial
+    // needs the worker to write something on the tags.
+    const lines = claimed.map(r => {
       const serial = serialOf(r.orderId);
-      return serial ? `${r.tempTag} → ${fmtSerial(serial)} (code ${r.code})` : null;
+      if(!serial || Number(serial) === Number(r.claimedSerial)) return null;
+      return r.claimedSerial
+        ? `Code ${r.code}: ${fmtSerial(r.claimedSerial)} → ${fmtSerial(serial)}`
+        : `Code ${r.code}: serial ${fmtSerial(serial)}`;
     }).filter(Boolean);
     if(lines.length){
       appDialog({
-        tone: 'success', pic: 'tag', urTitle: 'ٹیگ بدلیں', title: 'Change the temporary tags',
-        big: lines.length === 1 ? lines[0].split(' (')[0] : '',
-        ur: 'انٹرنیٹ والے آرڈر محفوظ ہو گئے۔ عارضی ٹیگ کاٹ کر اصل سیریل نمبر لکھیں:',
+        tone: 'warn', pic: 'tag', urTitle: 'ٹیگ کا نمبر بدلیں', title: 'Change the serial on these tags',
+        big: lines.length === 1 ? lines[0].split(': ')[1] : '',
+        ur: 'ان آرڈرز کا سیریل نمبر بدل گیا ہے۔ ٹیگ پر پرانا نمبر کاٹ کر نیا لکھیں:',
         message: lines.join('\n')
       });
     }
@@ -10930,7 +11013,16 @@ function fmtMoney(n){
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
 }
 function fmtSerial(n){ return n ? String(n).padStart(4, '0') : ''; }
-function rememberSerials(list){ (list || []).forEach(o => { if(o && o.id && o.serial_no) orderSerials[o.id] = o.serial_no; }); }
+function rememberSerials(list){
+  let newest = null;
+  (list || []).forEach(o => {
+    if(!(o && o.id && o.serial_no)) return;
+    orderSerials[o.id] = o.serial_no;
+    if(o.created_at && (!newest || o.created_at > newest.created_at)) newest = o;
+  });
+  // The newest order's serial is what an offline booking continues from.
+  if(newest) noteLatestSerial(newest.serial_no, newest.created_at);
+}
 function serialOf(orderId){ return orderSerials[orderId] || null; }
 function serialTagHtml(serial){
   return serial ? `<span class="serial-tag" title="Shop serial — write it on the cloth tags">${fmtSerial(serial)}</span>` : '';
