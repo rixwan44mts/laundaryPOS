@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-1">
+<meta name="app-build" content="2026-10-29-2">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -143,6 +143,7 @@
   /* Ready orders sitting uncollected for 30+ days are flagged dormant —
      red overrides the usual green so they stand out as needing follow-up. */
   #openOrdersBody tr.row-dormant td{background:#f7c3ba;color:#5e1505;}
+  .dormant-tag{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#5e1505;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;}
 
   /* Urgent orders get a left-edge stripe layered on top of whichever
      status color is already applied, rather than overriding the row
@@ -2315,6 +2316,13 @@
   @media (max-width:640px){
     nav button{font-size:13px;min-height:44px;}
   }
+  /* Below the side rail the menu wraps onto extra rows instead of
+     scrolling sideways: a strip cut off at the edge gave no hint that
+     Overdue, Returns or Expenses were there at all. */
+  @media (max-width:1179px){
+    nav{flex-wrap:wrap;overflow-x:visible;}
+    nav button{flex:1 1 auto;justify-content:center;}
+  }
 
   /* ---- Readability floor: nothing the counter reads below 12–13px ---- */
   .small{font-size:13px;}
@@ -2545,7 +2553,7 @@
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:2px;">
       <div class="no-step"><span class="no-step-n">2</span><span class="kk-ur">کپڑے چنیں</span> Pick clothes <span class="no-step-hint">tap a picture once for each piece</span></div>
     </div>
-    <input type="text" id="menuSearchInput" placeholder="Search  /  تلاش کریں" style="width:100%;margin-bottom:10px;" oninput="renderMenuPanel()">
+    <input type="text" id="menuSearchInput" placeholder="Search  /  تلاش کریں" style="width:100%;margin-bottom:10px;" oninput="typingPause(renderMenuPanel)">
     <div id="menuCategoryChips" class="chip-bar"></div>
     <div id="menuListContainer" class="menu-list"></div>
   </div><!-- /neworder-menu -->
@@ -2581,11 +2589,11 @@
       <div class="row" style="margin-top:6px;">
         <div class="field">
           <label for="searchPhoneInput">Search by Phone</label>
-          <input type="text" id="searchPhoneInput" placeholder="03XXXXXXXXX" style="width:160px;" oninput="filterOpenOrders()">
+          <input type="text" id="searchPhoneInput" placeholder="03XXXXXXXXX" style="width:160px;" oninput="typingPause(filterOpenOrders)">
         </div>
         <div class="field">
           <label for="searchCodeInput">Search by Code or Serial</label>
-          <input type="text" id="searchCodeInput" placeholder="e.g. 1234" style="width:140px;" oninput="filterOpenOrders()">
+          <input type="text" id="searchCodeInput" placeholder="e.g. 1234" style="width:140px;" oninput="typingPause(filterOpenOrders)">
         </div>
         <div class="field">
           <button class="btn-secondary" onclick="clearOpenOrdersSearch()">Clear</button>
@@ -3677,13 +3685,39 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // instead of silently landing in the previous worker's still-open session.
 // A normal page refresh does NOT lose the session, since sessionStorage
 // survives reloads — only an actual tab/browser close clears it.
+// A server that accepts the connection but never answers used to leave
+// "Signing in…" or a greyed-out Save button up forever. Every request now
+// gives up after 30s with an error whose text isNetworkError() recognises,
+// so it takes the same path as a dropped connection (bookings go to the
+// offline queue, which is safe: book_order is idempotent on
+// p_client_order_uuid).
+const SERVER_TIMEOUT_MS = 30000;
+
+// Search boxes redraw the whole list; with hundreds of rate-list items or
+// open orders that took up to 2s per key. Wait until typing pauses.
+const typingPauseTimers = new Map();
+function typingPause(fn, ms = 150){
+  clearTimeout(typingPauseTimers.get(fn));
+  typingPauseTimers.set(fn, setTimeout(fn, ms));
+}
+function fetchWithTimeout(url, opts = {}){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error(`Network timeout: the server did not answer in ${SERVER_TIMEOUT_MS / 1000}s`)), SERVER_TIMEOUT_MS);
+  if(opts.signal){
+    if(opts.signal.aborted) ctrl.abort(opts.signal.reason);
+    else opts.signal.addEventListener('abort', () => ctrl.abort(opts.signal.reason), { once: true });
+  }
+  return fetch(url, Object.assign({}, opts, { signal: ctrl.signal })).finally(() => clearTimeout(timer));
+}
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     storage: window.sessionStorage,
     autoRefreshToken: true,
     detectSessionInUrl: false
-  }
+  },
+  global: { fetch: fetchWithTimeout }
 });
 
 // ---------- IN-APP DIALOGS ----------
@@ -3816,6 +3850,11 @@ const URDU_ALERTS = [
   [/no clothes from this order have left/i, 'اس آرڈر کا کوئی کپڑا ابھی دکان سے نہیں گیا۔', 'cloth'],
   [/shop name/i, 'دکان کا نام لکھیں۔', 'person'],
   [/type a note|write what was done/i, 'پہلے نوٹ لکھیں۔', 'warn'],
+  [/fullscreen was blocked/i, 'پوری اسکرین نہیں کھل سکی۔ دوبارہ دبائیں۔', 'warn'],
+  [/camera link must start/i, 'کیمرے کا لنک http:// یا https:// سے شروع ہونا چاہیے۔', 'warn'],
+  [/saved locally but failed to sync/i, 'یہ اسی کمپیوٹر میں محفوظ ہو گیا مگر سرور پر نہیں گیا۔ انٹرنیٹ آنے پر دوبارہ کریں۔', 'wifi'],
+  [/log book first/i, 'پہلے کاریگر کا کھاتہ کھولیں۔', 'person'],
+  [/missing an id/i, 'یہ خرچہ یہاں سے نہیں مٹ سکتا۔ مالک کو بتائیں۔', 'warn'],
   [/^(failed|could not|couldn't)/i, 'کام نہیں ہوا۔ انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔', 'warn'],
   [/branch/i, 'پہلے برانچ چنیں۔', 'warn'],
   [/only admins/i, 'نئی قسم صرف مالک بنا سکتا ہے۔ پرانی قسم چنیں۔', 'warn'],
@@ -3878,9 +3917,34 @@ function closeAppDialog(result){
   showNextAppDialog();
 }
 
+// Raw database errors ("new row violates row-level security policy…")
+// mean nothing at the counter, and "check the internet and try again" is
+// wrong advice for them because retrying never helps. Each kind gets a
+// plain sentence saying what to do; the original text stays in the console.
+const SERVER_ERROR_KINDS = [
+  { re: /row-level security|permission denied|not authori[sz]ed|42501/i,
+    en: "You don't have permission to do this. Tell the owner (admin).",
+    ur: 'آپ کو یہ کام کرنے کی اجازت نہیں۔ مالک کو بتائیں۔', pic: 'person' },
+  { re: /jwt expired|invalid jwt|refresh token|session (has )?expired|not logged in/i,
+    en: 'Your login has expired. Log out, log in again, then try again.',
+    ur: 'آپ کا لاگ اِن ختم ہو گیا ہے۔ لاگ آؤٹ کر کے دوبارہ لاگ اِن کریں۔', pic: 'person' },
+  { re: /failed to fetch|network|load failed|timeout|err_internet|err_connection/i,
+    en: "Couldn't reach the server. Check the internet and try again.",
+    ur: 'سرور سے رابطہ نہیں ہوا۔ انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔', pic: 'wifi' }
+];
+function friendlyServerError(text){
+  const m = text.match(/^((?:failed|could not|couldn't)[^:]*):\s*(.+)$/is);
+  if(!m) return null;
+  const kind = SERVER_ERROR_KINDS.find(k => k.re.test(m[2]));
+  if(kind) return { message: `${m[1]}. ${kind.en}`, ur: kind.ur, pic: kind.pic };
+  return { ur: 'کام نہیں ہوا۔ دوبارہ کوشش کریں۔ پھر بھی نہ ہو تو مالک کو بتائیں۔', pic: 'warn' };
+}
+
 window.alert = function(msg){
   const text = String(msg == null ? '' : msg);
-  appDialog(Object.assign({ message: text, tone: guessDialogTone(text) }, urduForAlert(text)));
+  const friendly = friendlyServerError(text);
+  if(friendly && friendly.message) console.warn('Server error shown to staff as a plain message:', text);
+  appDialog(Object.assign({ message: text, tone: guessDialogTone(text) }, urduForAlert(text), friendly || {}));
 };
 
 // WhatsApp or SMS, as two picture buttons instead of "OK = WhatsApp,
@@ -4129,8 +4193,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   }
   authRecordSuccess('login');
   document.getElementById('loginPassword').value = '';
-  await afterLogin(data.user);
-  setLoginBusy(false);
+  try{ await afterLogin(data.user); }
+  catch(err){ errBox.textContent = "📡 Couldn't reach the server — check the connection and try again."; }
+  finally{ setLoginBusy(false); }
 });
 
 // user is passed in directly (from signInWithPassword's response, or from
@@ -5342,9 +5407,10 @@ async function renderOpenOrdersRows(list){
     // dormant and turns red instead of green.
     // partially_dispatched gets the same green as ready (Step 6 adds the badge).
     let rowClass = '';
+    let isDormant = false;
     if(status === 'ready' || isPartiallyDispatchedAndChecked){
       const readySinceMs = o.ready_at ? new Date(o.ready_at).getTime() : null;
-      const isDormant = readySinceMs != null && (now - readySinceMs) > THIRTY_DAYS_MS;
+      isDormant = readySinceMs != null && (now - readySinceMs) > THIRTY_DAYS_MS;
       rowClass = isDormant ? 'row-dormant' : 'row-ready';
     } else if(status === 'printed' || isPartiallyDispatched){
       rowClass = 'row-printed';
@@ -5360,7 +5426,7 @@ async function renderOpenOrdersRows(list){
       <td>Rs ${o.total}</td>
       <td>Rs ${advancePaid}</td>
       <td class="${balanceDue > 0 ? 'amt-owed' : 'amt-good'}">Rs ${balanceDue}</td>
-      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
+      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isDormant ? `<br><span class="dormant-tag">⏳ 30+ days <span lang="ur">مہینے سے پڑا ہے</span></span>` : ''}${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
       <td>${urgentCell}${returnBadge}</td>
       <td>${formatAppDateTime(o.created_at)}</td>
       <td>${isTerminal ? (o.dispatched_at ? formatAppDateTime(o.dispatched_at) : '<span style="color:var(--muted);">—</span>') : ''}</td>
