@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-3">
+<meta name="app-build" content="2026-10-29-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2332,10 +2332,27 @@
   .receipt-row.receipt-total{font-size:14px;}
   .receipt-items-table th{font-size:11px;}
   .receipt-items-table td{font-size:12px;}
-  /* Bigger text must still fit 80mm on one line: the label (span or b)
-     shrinks with an ellipsis, the amount never does. */
-  .receipt-row > :first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-  .receipt-row > :last-child{flex-shrink:0;}
+  /* At 12px a long label no longer fits 80mm on one line. Paper can't be
+     scrolled, so labels and lines wrap onto a second line instead of
+     printing "…" (that cut phone numbers off); the amount never wraps. */
+  .receipt-row{align-items:flex-start;}
+  .receipt-row > :first-child, .receipt-row span:first-child, .receipt-row b:first-child{white-space:normal;overflow-wrap:anywhere;min-width:0;}
+  .receipt-row > :last-child, .receipt-row span:last-child, .receipt-row b:last-child{flex-shrink:0;white-space:nowrap;}
+  .receipt-line, .receipt-item .item-name{white-space:normal;overflow-wrap:anywhere;}
+
+  /* Open Orders / Overdue are wider than a 1366 till, which left the
+     Actions buttons off-screen behind a sideways scroll. Pin that column
+     to the right edge; it keeps its row colour (row rules are more
+     specific than the :where() fallback). */
+  #openOrdersBody tr:not(.section-heading-row) > td:last-child,
+  #overdueBody tr > td:last-child,
+  .table-scroll table:has(#openOrdersBody) thead th:last-child,
+  .table-scroll table:has(#overdueBody) thead th:last-child{
+    position:sticky;right:0;z-index:1;box-shadow:-8px 0 8px -8px rgba(0,0,0,.35);
+  }
+  #openOrdersBody :where(tr > td:last-child), #overdueBody :where(tr > td:last-child){background:#fff;}
+  .table-scroll table:has(#openOrdersBody) thead th:last-child,
+  .table-scroll table:has(#overdueBody) thead th:last-child{z-index:2;}
 
 </style>
 </head>
@@ -3768,6 +3785,7 @@ function ensureAppDialogEl(){
         <p id="appDialogMsg"></p>
       </div>
       <div class="app-dialog-actions">
+        <button type="button" class="btn-secondary" id="appDialogSkip" hidden></button>
         <button type="button" class="btn-secondary" id="appDialogCancel"></button>
         <button type="button" class="btn-main" id="appDialogOk"></button>
       </div>
@@ -3851,6 +3869,10 @@ const URDU_ALERTS = [
   [/no clothes from this order have left/i, 'اس آرڈر کا کوئی کپڑا ابھی دکان سے نہیں گیا۔', 'cloth'],
   [/shop name/i, 'دکان کا نام لکھیں۔', 'person'],
   [/type a note|write what was done/i, 'پہلے نوٹ لکھیں۔', 'warn'],
+  [/INVALID_TOTALS|INVALID_ITEMS/, 'بل کی رقم درست نہیں بنی۔ کپڑے، رعایت اور ایڈوانس دوبارہ دیکھیں۔', 'money'],
+  [/BALANCE_DUE|still owed/i, 'بقایا ابھی باقی ہے۔ پہلے پورے پیسے لیں، پھر آرڈر بند کریں۔', 'money'],
+  [/INVALID_QTY|EVENT_ORDER_MISMATCH/, 'کپڑوں کی تعداد درست نہیں۔ آرڈر دوبارہ کھولیں اور پھر کوشش کریں۔', 'cloth'],
+  [/what the money was spent on/i, 'پہلے تصویر دبا کر چنیں کہ پیسے کس چیز پر خرچ ہوئے۔', 'money'],
   [/fullscreen was blocked/i, 'پوری اسکرین نہیں کھل سکی۔ دوبارہ دبائیں۔', 'warn'],
   [/camera link must start/i, 'کیمرے کا لنک http:// یا https:// سے شروع ہونا چاہیے۔', 'warn'],
   [/saved locally but failed to sync/i, 'یہ اسی کمپیوٹر میں محفوظ ہو گیا مگر سرور پر نہیں گیا۔ انٹرنیٹ آنے پر دوبارہ کریں۔', 'wifi'],
@@ -3895,6 +3917,12 @@ function showNextAppDialog(){
   cancel.className = 'btn-secondary' + (opts.cancelClass ? ' ' + opts.cancelClass : '');
   ok.onclick = () => closeAppDialog(true);
   cancel.onclick = () => closeAppDialog(false);
+  // Optional third answer (resolves null), e.g. "Not now" next to WhatsApp / SMS.
+  const skip = document.getElementById('appDialogSkip');
+  skip.textContent = opts.skipText || '';
+  skip.hidden = !opts.skipText;
+  if(opts.skipUr) skip.dataset.ur = opts.skipUr; else delete skip.dataset.ur;
+  skip.onclick = () => closeAppDialog(null);
   overlay._resolve = next.resolve;
   overlay._escape = opts.escapeValue !== undefined ? opts.escapeValue : false;
   overlay.hidden = false;
@@ -3960,7 +3988,7 @@ function chooseWhatsAppOrSms(formattedPhone, msg, what){
   appDialog({
     tone: 'info', pic: 'chat', urTitle: 'گاہک کو میسج', title: what || 'Message the customer',
     ur: 'میسج کیسے بھیجیں؟', message: 'Choose how to send the message.',
-    okText: 'WhatsApp', cancelText: 'SMS', okClass: 'is-whatsapp', cancelClass: 'is-sms', escapeValue: null
+    okText: 'WhatsApp', cancelText: 'SMS', skipText: 'Not now', skipUr: 'ابھی نہیں', okClass: 'is-whatsapp', cancelClass: 'is-sms', escapeValue: null
   }).then(choice => {
     if(choice === true) window.open('https://wa.me/' + formattedPhone + '?text=' + encodeURIComponent(msg), '_blank');
     else if(choice === false) sendSms(formattedPhone, msg);
@@ -5554,11 +5582,19 @@ async function filterOpenOrders(){
   // own section headings still separate the results by status).
   const isSearching = !!(phoneQuery || codeQuery);
 
+  // The box takes a customer code or a shop serial. Both are 4 digits, so
+  // a partial match mixed them up (code 0427 also listed serial 0427). A
+  // full 4-digit entry matches exactly: the customer's code first, and the
+  // serial only when no order has that code. Shorter entries match codes.
+  const codeOf = o => (o.code || '').toString().toLowerCase();
+  const fullCode = /^\d{4}$/.test(codeQuery);
+  const bySerial = fullCode && !allOpenOrders.some(o => codeOf(o) === codeQuery);
   const filtered = allOpenOrders.filter(o => {
     const phoneMatches = phoneQuery ? (o.customer_phone || '').replace(/\D/g,'').includes(phoneQuery) : true;
-    const codeMatches = codeQuery
-      ? ((o.code || '').toString().toLowerCase().includes(codeQuery) || (o.serial_no && (fmtSerial(o.serial_no).includes(codeQuery) || String(o.serial_no) === codeQuery)))
-      : true;
+    const codeMatches = !codeQuery ? true
+      : bySerial ? !!o.serial_no && fmtSerial(o.serial_no) === codeQuery
+      : fullCode ? codeOf(o) === codeQuery
+      : codeOf(o).includes(codeQuery);
 
     const status = o.status || 'live';
     let statusMatches;
@@ -8331,10 +8367,10 @@ function menuAdjustQty(serviceId, delta){
       line.qty += 1;
       line.line_total = line.qty * price;
       line.details.push(detail);
-      // While Urgent is on, a newly added piece is urgent by default.
-      if(isUrgent) line.urgent_qty = lineUrgentQty(line) + 1;
+      // New pieces start non-urgent; the 🔥 + on the line marks them.
+      line.urgent_qty = lineUrgentQty(line);
     } else {
-      currentItems.push({ service, qty: 1, price, line_total: price, details: [detail], urgent_qty: isUrgent ? 1 : 0 });
+      currentItems.push({ service, qty: 1, price, line_total: price, details: [detail], urgent_qty: 0 });
     }
     renderItemsList();
     return;
@@ -8370,6 +8406,15 @@ const PIECE_PRESET_COLORS = [
 ];
 const PIECE_PRESET_FABRICS = ['Cotton','Lawn','Wash & Wear','Khaddar','Karandi','Linen','Silk','Chiffon','Georgette','Velvet','Wool','Denim','Polyester','Leather'];
 const PIECE_PRESET_NOTES = ['Stain','Delicate','Button missing','Torn / hole','Colour fading','Starch','No starch','On hanger','Fold'];
+// Urdu shown on the cloth-type and note chips (the stored value stays English).
+const PIECE_CHIP_UR = {
+  'Cotton':'سوتی', 'Lawn':'لان', 'Wash & Wear':'واش اینڈ ویئر', 'Khaddar':'کھدر', 'Karandi':'کرنڈی',
+  'Linen':'لینن', 'Silk':'ریشم', 'Chiffon':'شیفون', 'Georgette':'جارجٹ', 'Velvet':'مخمل', 'Wool':'اونی',
+  'Denim':'جینز', 'Polyester':'پولیسٹر', 'Leather':'چمڑا',
+  'Stain':'داغ', 'Delicate':'نازک', 'Button missing':'بٹن غائب', 'Torn / hole':'پھٹا / سوراخ',
+  'Colour fading':'رنگ اترا', 'Starch':'کلف', 'No starch':'کلف نہیں', 'On hanger':'ہینگر پر', 'Fold':'تہہ کریں'
+};
+function pieceChipUr(label){ const u = PIECE_CHIP_UR[label]; return u ? `<span class="kk-ur">${u}</span> ` : ''; }
 const PIECE_RECENT_KEY = 'pos_piece_recent';
 
 let pieceDetailCallback = null;
@@ -8441,7 +8486,7 @@ function renderPieceChips(containerId, inputId, options, withSwatch){
       ? `<span class="piece-swatch${hex ? '' : ' is-multi'}"${hex ? ` style="background:${hex}"` : ''}></span>`
       : '';
     const active = label.toLowerCase() === current ? ' active' : '';
-    return `<button type="button" class="piece-chip${active}" data-value="${escHtml(label)}">${swatch}${escHtml(label)}</button>`;
+    return `<button type="button" class="piece-chip${active}" data-value="${escHtml(label)}">${swatch}${pieceChipUr(label)}${escHtml(label)}</button>`;
   }).join('');
 }
 function refreshPieceChips(){
@@ -8451,7 +8496,7 @@ function refreshPieceChips(){
     [...PIECE_PRESET_FABRICS, ...pieceSuggestions('fabric', PIECE_PRESET_FABRICS)], false);
   const note = document.getElementById('pieceNoteInput').value.toLowerCase();
   document.getElementById('pieceNoteChips').innerHTML = PIECE_PRESET_NOTES.map(n =>
-    `<button type="button" class="piece-chip piece-chip-note${note.includes(n.toLowerCase()) ? ' active' : ''}" data-value="${escHtml(n)}">${escHtml(n)}</button>`
+    `<button type="button" class="piece-chip piece-chip-note${note.includes(n.toLowerCase()) ? ' active' : ''}" data-value="${escHtml(n)}">${pieceChipUr(n)}${escHtml(n)}</button>`
   ).join('');
 }
 
@@ -8645,8 +8690,9 @@ let urgentHours = null;
 
 // Per-item urgent: each cart line carries `urgent_qty` (0..qty) — only
 // those pieces are billed at 2x, the rest of the order stays at the normal
-// rate. Switching Urgent on marks every piece urgent; the cashier then
-// lowers it per line with − / +. Orders saved before this change have no
+// rate. Switching Urgent on marks no piece yet; the cashier taps 🔥 + on
+// the lines that are urgent (it used to mark every piece, and a missed −
+// billed the whole order at 2x). Saving with none marked is blocked. Orders saved before this change have no
 // urgent_qty on any line, so they're treated as fully urgent (old 2x rule).
 function lineUrgentQty(it){ return Math.max(0, Math.min(Number(it.qty) || 0, parseInt(it.urgent_qty, 10) || 0)); }
 function itemsHaveUrgentInfo(items){ return (items || []).some(it => it && it.urgent_qty != null); }
@@ -8702,10 +8748,9 @@ function setUrgentHours(hours){
     return;
   }
   urgentHours = n;
-  if(!isUrgent) setAllLinesUrgent(true);
   isUrgent = true;
   preview.textContent =
-    `Deadline: ${formatAppDateTime(new Date(Date.now() + n*60*60*1000).toISOString())} — only the pieces marked 🔥 urgent are billed at double rate; use − / + on each item to set how many.`;
+    `Deadline: ${formatAppDateTime(new Date(Date.now() + n*60*60*1000).toISOString())} — now tap 🔥 + on each urgent piece. Only those pieces are billed at double rate. / ہر ارجنٹ کپڑے کے ساتھ 🔥 + دبائیں، صرف وہی ڈبل ریٹ پر ہوں گے۔`;
   updateUrgentButton();
   renderItemsList(); // show the surcharge row/doubled total immediately, not just on the next keystroke
 }
@@ -10842,6 +10887,7 @@ async function addExpense(){
   const category = document.getElementById('expenseCategory').value.trim();
   const note = document.getElementById('expenseNote').value.trim();
   if(amount<=0){ alert('Enter a valid amount.'); return; }
+  if(!category){ alert('Pick what the money was spent on.'); return; }
   const payload = { p_branch_id: currentBranchId, p_amount: amount, p_category: category, p_note: note };
 
   let queued = false;
@@ -10869,6 +10915,10 @@ async function addExpense(){
   renderExpenseLog();
   document.getElementById('expenseAmount').value = '';
   document.getElementById('expenseNote').value = '';
+  // Clear the picked tile too, or the next expense silently lands in the
+  // same category.
+  document.getElementById('expenseCategory').value = '';
+  document.querySelectorAll('.exp-tile.active').forEach(b => b.classList.remove('active'));
 
   // New expense lands today, so refresh the day/month browser too (only
   // when it's actually showing the current month — no need to touch it
