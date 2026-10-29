@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-9">
+<meta name="app-build" content="2026-10-29-10">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -9113,6 +9113,10 @@ async function toggleVip(){
 // (used for auto-pricing) always uses the full result set.
 let lastPriceHistoryData = [];
 const PRICE_HISTORY_DISPLAY_LIMIT = 60;
+// get_price_history also returns the rates saved in the old
+// customer_pricing table (before 18/10/2026), marked with this note.
+const OLD_RATE_NOTE = 'Old record (saved before 18/10/2026)';
+const isOldRate = r => r.note === OLD_RATE_NOTE && !r.order_code;
 
 async function checkPriceHistory(){
   const phone = document.getElementById('phoneInput').value.trim();
@@ -9137,7 +9141,12 @@ async function checkPriceHistory(){
   // Small pill badge instead of dumping every line inline — click opens
   // the full history in a modal. Keeps the New Order screen the same
   // size whether a customer has 3 past orders or 300.
-  box.innerHTML = `<button type="button" class="returning-badge-btn" onclick="openPriceHistoryModal()">🔁 Returning customer — ${data.length} special rate${data.length===1?'':'s'} on file</button>`;
+  const oldCount = data.filter(isOldRate).length;
+  const specialCount = data.length - oldCount;
+  const parts = [];
+  if(specialCount) parts.push(`${specialCount} special rate${specialCount===1?'':'s'}`);
+  if(oldCount) parts.push(`${oldCount} usual rate${oldCount===1?'':'s'}`);
+  box.innerHTML = `<button type="button" class="returning-badge-btn" onclick="openPriceHistoryModal()">🔁 Returning customer — ${parts.join(' · ')} on file</button>`;
   renderMenuPanel();
 }
 
@@ -9149,7 +9158,7 @@ function openPriceHistoryModal(){
     const diff = std !== null ? Number(r.price) - std : null;
     return `<div class="price-history-line">
       <div><b>${escHtml(r.service)}</b>: <b>Rs ${moneyText(r.price)}</b>${diff ? ` <span class="ph-diff ${diff > 0 ? 'is-up' : 'is-down'}">${diff > 0 ? '+' : '−'}Rs ${moneyText(Math.abs(diff))} vs rate list Rs ${moneyText(std)}</span>` : ''}</div>
-      ${r.note ? `<div class="ph-note">💬 ${escHtml(r.note)}</div>` : ''}
+      ${isOldRate(r) ? '<div class="small" style="color:var(--muted);">Old record (before 18/10/2026) <span class="kk-ur">پرانا ریکارڈ</span></div>' : (r.note ? `<div class="ph-note">💬 ${escHtml(r.note)}</div>` : '')}
       <div class="small" style="color:var(--muted);">${formatAppDate(r.updated_at)} · ${escHtml(r.branch_name)}${r.order_code ? ` · Order ${escHtml(r.order_code)}` : ''}</div>
     </div>`;
   }).join('') || '<div class="small">No history to show.</div>';
