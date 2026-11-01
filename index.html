@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-01-4">
+<meta name="app-build" content="2026-11-01-5">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -501,6 +501,7 @@
   .dash-tile[data-section="monthlyreport"].active{background:var(--blue);border-color:var(--blue);color:#fff;}
   .dash-tile[data-section="cameras"].active{background:var(--purple);border-color:var(--purple);color:#fff;}
   .dash-tile[data-section="editworker"].active{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
+  .dash-tile[data-section="storage"].active{background:#13804A;border-color:#13804A;color:#fff;}
   .dash-tile.active .dash-tile-sub{color:rgba(255,255,255,0.85);}
   .dash-tile .dash-tile-icon{font-size:26px;display:block;margin-bottom:8px;}
   .dash-tile .dash-tile-label{font-weight:700;font-size:14.5px;display:block;}
@@ -2147,6 +2148,39 @@
   .st-danger{color:var(--accent-2);border-color:var(--accent-2);width:100%;}
   @media (max-width:760px){ .kk-total.is-left{grid-column:1 / -1;} }
 
+  /* ---- Admin → Storage meter ---- */
+  #storageMeter b{font-variant-numeric:normal;}
+  .sm-total{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:14px;border-top:6px solid var(--ready);}
+  .sm-total.is-warn{border-top-color:var(--printed);}
+  .sm-total.is-due{border-top-color:var(--accent-2);}
+  .sm-total-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+  .sm-total-top .kk-ur{display:block;font-size:18px;line-height:1.7;}
+  .sm-total-top .kk-en{font-size:13px;color:var(--muted);font-weight:600;}
+  .sm-total-top > b{font-size:32px;font-weight:800;letter-spacing:-.02em;}
+  .sm-total-top small{font-size:15px;color:var(--muted);font-weight:600;}
+  .sm-meter{height:18px;border-radius:999px;background:var(--paper-2);overflow:hidden;margin:12px 0;}
+  .sm-meter span{display:block;height:100%;border-radius:999px;background:var(--ready);}
+  .sm-total.is-warn .sm-meter span{background:var(--printed);}
+  .sm-total.is-due .sm-meter span{background:var(--accent-2);}
+  .sm-total-facts{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:14px;color:var(--ink-soft);}
+  .sm-total-facts .kk-ur{font-size:14px;line-height:1.6;}
+  .sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
+  .sm-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:6px;align-content:start;}
+  .sm-card.is-shared{background:var(--paper-2);}
+  .sm-card-head{display:flex;align-items:center;gap:10px;font-size:16px;}
+  .sm-card-head .kk-avatar{width:36px;height:36px;font-size:14px;}
+  .sm-card-head .kk-ur{font-size:15px;line-height:1.6;}
+  .sm-big{font-size:24px;font-weight:800;}
+  .sm-bar{height:8px;border-radius:999px;background:var(--paper-2);overflow:hidden;}
+  .sm-bar span{display:block;height:100%;background:var(--neel-2);border-radius:999px;}
+  .sm-line{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--muted);}
+  .sm-line b{color:var(--ink);white-space:nowrap;}
+  .sm-line{align-items:flex-end;}
+  .sm-line .kk-ur{display:block;font-size:14px;line-height:1.6;}
+  /* six tiles: wrap as an even grid instead of one stretched tile */
+  .dash-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}
+  .sm-note{margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+
   /* ---- NEW ORDER for low-literacy staff (V4): three numbered steps,
      a picture + Urdu name on every rate card, Urdu beside every label.
      data-ur="…" puts the Urdu word in front of a label without touching
@@ -3081,6 +3115,11 @@
         <span class="dash-tile-label" data-ur="ریٹ لسٹ بدلیں">Edit Worker Dashboard</span>
         <span class="dash-tile-sub">Add / remove rate-list items</span>
       </button>
+      <button type="button" class="dash-tile" data-section="storage" onclick="showAdminSection('storage')">
+        <span class="dash-tile-icon">💾</span>
+        <span class="dash-tile-label" data-ur="ڈیٹا کی جگہ">Storage</span>
+        <span class="dash-tile-sub">Free plan space used per branch</span>
+      </button>
     </div>
 
     <!-- CASH REGISTER SECTION -->
@@ -3134,6 +3173,11 @@
         <p class="small" style="margin-top:0;">Paste each shop's live-view stream link (e.g. the web viewer URL from your IP camera / DVR app, or an embeddable HLS link) and save it — the feed will load below.</p>
       </div>
       <div class="camera-grid" id="cameraGrid"></div>
+    </div>
+
+    <!-- STORAGE SECTION — free-plan database space, per branch -->
+    <div class="dash-section" id="dashSection-storage">
+      <div id="storageMeter"><div class="kk-empty">Loading…</div></div>
     </div>
 
     <!-- EDIT WORKER DASHBOARD SECTION -->
@@ -4645,6 +4689,94 @@ function showAdminSection(name){
   if(name === 'notifications'){ loadNotifications(); clearNotifTileBadge(); }
   if(name === 'cameras') renderCameraGrid();
   if(name === 'editworker') renderEwpPanel();
+  if(name === 'storage') loadStorageMeter();
+}
+
+// ---------- STORAGE METER (admin) ----------
+// How much of the Supabase free plan's 500 MB database is used and how
+// fast each branch fills it. One read-only RPC (get_storage_usage, see
+// supabase/storage_meter.sql), called only when this section is opened.
+// The RPC measures raw row bytes per branch; on disk a row also costs its
+// page and index space, so branch figures are scaled by the app tables'
+// real size ÷ raw row size, kept between 1.5× and 3× (tiny tables are
+// mostly empty pages, which would otherwise exaggerate every branch).
+function storageMB(bytes){
+  const mb = (Number(bytes) || 0) / 1048576;
+  return mb >= 100 ? Math.round(mb) + ' MB' : mb >= 1 ? mb.toFixed(1) + ' MB' : Math.max(1, Math.round(mb * 1024)) + ' KB';
+}
+function storageLastsText(freeBytes, perMonth){
+  if(perMonth <= 0) return 'no growth in the last 30 days';
+  const months = freeBytes / perMonth;
+  if(months > 600) return '50+ years';
+  if(months >= 24) return `about ${Math.round(months / 12)} years`;
+  if(months >= 1) return `about ${Math.round(months)} month${Math.round(months) === 1 ? '' : 's'}`;
+  return `about ${Math.max(1, Math.round(months * 30))} days`;
+}
+async function loadStorageMeter(){
+  const box = document.getElementById('storageMeter');
+  box.innerHTML = '<div class="kk-empty">Loading…</div>';
+  const { data, error } = await sb.rpc('get_storage_usage');
+  if(error){
+    box.innerHTML = `<div class="kk-empty is-error">${escHtml(error.message)}${/get_storage_usage|schema cache/i.test(error.message || '') ? ' — run supabase/storage_meter.sql in the Supabase SQL Editor once.' : ''}</div>`;
+    return;
+  }
+  const used = Number(data.db_bytes) || 0, limit = Number(data.limit_bytes) || 524288000;
+  const free = Math.max(0, limit - used);
+  const pct = Math.min(100, used / limit * 100);
+  const rowsBytes = Number(data.rows_bytes) || 1;
+  const factor = Math.min(3, Math.max(1.5, (Number(data.tables_bytes) || 0) / rowsBytes));
+  const now = new Date(data.now || Date.now());
+  // Monthly pace from the last 30 days (or since the first row, if newer).
+  const paceOf = r => {
+    const days = r.first_at ? Math.min(30, Math.max(1, (now - new Date(r.first_at)) / 86400000)) : 30;
+    return (Number(r.recent) || 0) * factor / days * 30;
+  };
+  const rows = data.rows || [];
+  const totalPace = rows.reduce((t, r) => t + paceOf(r), 0);
+  const level = pct >= 90 ? 'is-due' : pct >= 70 ? 'is-warn' : 'is-clear';
+  const branchRows = rows.filter(r => r.b !== null).sort((a, b) => b.bytes - a.bytes);
+  const shared = rows.find(r => r.b === null);
+  const appData = rows.reduce((t, r) => t + Number(r.bytes || 0) * factor, 0);
+
+  const cards = branchRows.map(r => {
+    const name = String(branchName(r.b));
+    const size = Number(r.bytes) * factor, pace = paceOf(r);
+    return `<div class="sm-card">
+      <div class="sm-card-head"><span class="oo-avatar kk-avatar ${avatarColorClass(name)}">${escHtml(initialsFor(name))}</span><b>${escHtml(name)}</b></div>
+      <div class="sm-big">${storageMB(size)}</div>
+      <div class="sm-bar" title="Share of all branch data"><span style="width:${Math.max(1, size / Math.max(appData, 1) * 100).toFixed(1)}%"></span></div>
+      <div class="sm-line"><span><span class="kk-ur">ہر مہینے</span> Adds per month</span><b>${storageMB(pace)}</b></div>
+      <div class="sm-line"><span><span class="kk-ur">اکیلی برانچ</span> Alone, lasts</span><b>${storageLastsText(free, pace)}</b></div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="sm-total ${level}">
+      <div class="sm-total-top">
+        <div><span class="kk-ur">ڈیٹا کی جگہ</span><span class="kk-en">Database used — Supabase free plan</span></div>
+        <b>${storageMB(used)} <small>of ${storageMB(limit)}</small></b>
+      </div>
+      <div class="sm-meter"><span style="width:${Math.max(1, pct).toFixed(1)}%"></span></div>
+      <div class="sm-total-facts">
+        <span><span class="kk-ur">خالی</span> Free <b>${storageMB(free)}</b></span>
+        <span><span class="kk-ur">رفتار</span> All branches add <b>${storageMB(totalPace)}</b> / month</span>
+        <span><span class="kk-ur">کب تک</span> At this pace, full in <b>${storageLastsText(free, totalPace)}</b></span>
+      </div>
+    </div>
+    <div class="sm-grid">${cards || '<div class="kk-empty">No branch data yet.</div>'}
+      <div class="sm-card is-shared">
+        <div class="sm-card-head"><b><span class="kk-ur">سب کا</span> Shared</b></div>
+        <div class="sm-big">${storageMB(Number(shared ? shared.bytes : 0) * factor)}</div>
+        <div class="sm-line"><span>Customers, rate list, settings — used by every branch</span></div>
+      </div>
+      <div class="sm-card is-shared">
+        <div class="sm-card-head"><b><span class="kk-ur">سسٹم</span> Supabase system</b></div>
+        <div class="sm-big">${storageMB(Math.max(0, used - appData))}</div>
+        <div class="sm-line"><span>Fixed space every Supabase project takes (logins, settings). It hardly grows.</span></div>
+      </div>
+    </div>
+    <p class="small sm-note">Branch sizes are estimates (row size × ${factor.toFixed(1)} for indexes and page space). The top number is the real size Supabase counts. Photos are never stored, so only text data grows.
+      <button type="button" class="btn-secondary" onclick="loadStorageMeter()">Refresh</button></p>`;
 }
 
 // ---------- LIVE ACTIVITY / NOTIFICATIONS ----------
