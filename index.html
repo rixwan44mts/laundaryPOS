@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-01-5">
+<meta name="app-build" content="2026-11-01-6">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2148,6 +2148,20 @@
   .st-danger{color:var(--accent-2);border-color:var(--accent-2);width:100%;}
   @media (max-width:760px){ .kk-total.is-left{grid-column:1 / -1;} }
 
+  /* ---- Worker header storage bar: icon, Urdu word, bar, percent ---- */
+  .storage-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:13px;}
+  .storage-pill[hidden]{display:none !important;}
+  .storage-pill svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;color:var(--ready);}
+  .storage-pill .kk-ur{font-size:14px;line-height:1.5;margin:0;}
+  .storage-pill-bar{width:64px;height:9px;border-radius:999px;background:var(--paper-2);overflow:hidden;}
+  .storage-pill-bar span{display:block;height:100%;border-radius:999px;background:var(--ready);}
+  .storage-pill b{font-weight:800;font-variant-numeric:normal;}
+  .storage-pill.is-warn svg{color:var(--printed);}
+  .storage-pill.is-warn .storage-pill-bar span{background:var(--printed);}
+  .storage-pill.is-due{border-color:var(--accent-2);}
+  .storage-pill.is-due svg, .storage-pill.is-due b{color:var(--accent-2);}
+  .storage-pill.is-due .storage-pill-bar span{background:var(--accent-2);}
+
   /* ---- Admin → Storage meter ---- */
   #storageMeter b{font-variant-numeric:normal;}
   .sm-total{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:14px;border-top:6px solid var(--ready);}
@@ -2637,6 +2651,12 @@
       <button class="btn-secondary page-help-btn" onclick="showPageHelp()" title="Help for this page" data-ur="مدد">❔ Help</button>
       <span class="badge" id="connBadge" style="display:none;"></span>
       <button class="btn-secondary" id="syncNowBtn" style="display:none;" onclick="syncAllPending(false)" title="Push offline-booked orders, dispatches, and ready-marks to the server now">🔄 Sync Now (<span id="pendingCount">0</span>)</button>
+      <span class="storage-pill worker-only" id="storagePill" hidden role="meter" aria-label="Storage used">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/></svg>
+        <span class="kk-ur">ڈیٹا</span>
+        <span class="storage-pill-bar"><span id="storagePillFill"></span></span>
+        <b id="storagePillPct"></b>
+      </span>
       <span class="badge" id="userBadge"></span>
       <select id="branchSelect" style="display:none;"></select>
       <span class="badge" id="branchNameFixed"></span>
@@ -4611,6 +4631,7 @@ function setupRoleView(){
   const isAdmin = profile.role === 'admin';
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('.worker-only').forEach(el => el.style.display = isAdmin ? 'none' : '');
+  if(!isAdmin) loadStoragePill();
   // KARKHANA belongs to the Get Smart shop only — hidden for every other branch's staff.
   document.querySelector('.tabbtn[data-tab="karkhana"]').style.display = (isAdmin || KARKHANA_BRANCH_IDS.includes(profile.branch_id)) ? '' : 'none';
   document.getElementById('userBadge').textContent = `${profile.name || profile.role} (${profile.role})`;
@@ -4777,6 +4798,26 @@ async function loadStorageMeter(){
     </div>
     <p class="small sm-note">Branch sizes are estimates (row size × ${factor.toFixed(1)} for indexes and page space). The top number is the real size Supabase counts. Photos are never stored, so only text data grows.
       <button type="button" class="btn-secondary" onclick="loadStorageMeter()">Refresh</button></p>`;
+}
+
+// Worker header: only a bar and a percent (get_storage_percent returns
+// just the database size and the limit). Checked at login and then once
+// an hour; stays hidden if offline or the RPC is missing.
+let storagePillTimer = null;
+async function loadStoragePill(){
+  if(!storagePillTimer) storagePillTimer = setInterval(() => { if(profile && profile.role !== 'admin') loadStoragePill(); }, 3600000);
+  const pill = document.getElementById('storagePill');
+  try{
+    const { data, error } = await sb.rpc('get_storage_percent');
+    if(error || !data) return;
+    const pct = Math.min(100, (Number(data.db_bytes) || 0) / (Number(data.limit_bytes) || 524288000) * 100);
+    pill.className = 'storage-pill worker-only ' + (pct >= 90 ? 'is-due' : pct >= 70 ? 'is-warn' : 'is-clear');
+    document.getElementById('storagePillFill').style.width = Math.max(3, pct).toFixed(1) + '%';
+    document.getElementById('storagePillPct').textContent = (pct < 10 ? pct.toFixed(1) : Math.round(pct)) + '%';
+    pill.title = `Storage used: ${storageMB(data.db_bytes)} of ${storageMB(data.limit_bytes)}`;
+    pill.setAttribute('aria-valuenow', Math.round(pct));
+    pill.hidden = false;
+  }catch(e){ /* offline — leave hidden */ }
 }
 
 // ---------- LIVE ACTIVITY / NOTIFICATIONS ----------
