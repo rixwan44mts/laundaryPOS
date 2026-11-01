@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-10-29-10">
+<meta name="app-build" content="2026-11-01-3">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -2084,6 +2084,68 @@
     .kk-total{grid-template-columns:1fr;padding:10px 12px;}
   }
 
+  /* ---- STAFF salary khata: reuses the KARKHANA kk-* layout.
+     Green = salary still to give, red with a minus = taken extra
+     (to be cut from next month's salary). ---- */
+  #tab-staff b, #stSheet b{font-variant-numeric:normal !important;}
+  .kk-total.is-left{background:var(--ready);border-color:var(--ready);color:#fff;grid-template-columns:1fr;}
+  .kk-total.is-left .kk-en{color:rgba(255,255,255,.88);}
+  .kk-total.is-left b{font-size:30px;}
+  .kk-total.is-recover{border-color:var(--accent-2);background:var(--accent-2-soft);}
+  .kk-total.is-recover b, .kk-total.is-recover .kk-ico{color:var(--accent-2);}
+  .st-card-sub{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .st-card-sub .kk-ur{font-size:13px;line-height:1.6;}
+  .st-card.is-gone{opacity:.62;}
+  .st-card .kk-shop-bal{flex-wrap:wrap;}
+  .st-card .kk-shop-bal b{white-space:nowrap;}
+  .st-warn{display:flex;gap:12px;align-items:flex-start;background:var(--accent-2-soft);color:var(--accent-2);border:1px solid var(--accent-2);border-radius:14px;padding:12px 16px;margin:0 0 14px;font-size:14.5px;line-height:1.5;font-weight:500;}
+  .st-warn .kk-ur{display:block;font-size:16px;line-height:1.9;margin:0;}
+  .st-warn-ico{flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent-2);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:17px;}
+  .st-warn.is-info{background:var(--neel-soft);color:var(--neel);border-color:var(--neel-2);}
+  .st-warn.is-info .st-warn-ico{background:var(--neel-2);}
+  .kk-left .st-warn{margin:10px 0 0;}
+  .st-facts{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:14px;color:var(--muted);}
+  .st-gone-chip{background:var(--paper-2);border-radius:999px;padding:2px 10px;font-weight:600;color:var(--ink-soft);}
+  .st-gone-chip .kk-ur{font-size:13px;line-height:1.6;}
+  .st-salary-pill{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font:700 15px var(--font-ui);color:var(--ready-ink);background:var(--ready-soft);border:none;border-radius:999px;padding:6px 14px;cursor:pointer;}
+  .st-salary-pill .kk-ur{font-size:14px;line-height:1.6;}
+  .st-edit{font-size:12.5px;font-weight:600;color:var(--neel-2);text-decoration:underline;}
+  .st-monthbar{display:flex;align-items:center;justify-content:center;gap:14px;margin:4px 0 12px;font-size:17px;}
+  .st-month-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line-strong);background:var(--panel);font-size:24px;font-weight:700;cursor:pointer;color:var(--ink);}
+  .st-month-btn:disabled{opacity:.35;cursor:default;}
+  .st-math{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;}
+  .st-math > div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px;display:grid;gap:2px;}
+  .st-math span{font-size:13px;color:var(--muted);font-weight:600;}
+  .st-math .kk-ur{font-size:14px;line-height:1.6;}
+  .st-math b{font-size:20px;font-weight:800;}
+  .st-math .is-due b{color:var(--accent-2);}
+  .st-math-eq.is-clear{background:var(--ready-soft);border-color:var(--ready) !important;}
+  .st-math-eq.is-clear b{color:var(--ready-ink);}
+  .st-math-eq.is-due{background:var(--accent-2-soft);border-color:var(--accent-2) !important;}
+  .st-actions{grid-template-columns:1fr;}
+  .kk-line.st-over .kk-line-ico{background:var(--accent-2-soft);color:var(--accent-2);}
+  .st-type{display:flex;gap:8px;margin:0 0 12px;}
+  .st-type .kk-chip{flex:1;}
+  .st-type .kk-chip.is-on{background:var(--neel-2);border-color:var(--neel-2);color:#fff;}
+  .st-type .kk-ur{font-size:15px;line-height:1.5;}
+  .st-history{margin-top:16px;}
+  .st-history .kk-lines-list{overflow-x:auto;}
+  .st-history-table td,.st-history-table th{padding:8px 12px;white-space:nowrap;}
+  .st-bal{font-weight:800;}
+  .st-bal.is-clear{color:var(--ready);}
+  .st-bal.is-due{color:var(--accent-2);}
+  .st-tools{margin-top:18px;display:flex;justify-content:flex-end;}
+  .st-days{font-size:12.5px;font-weight:600;color:var(--muted);}
+  .st-month-name{display:grid;justify-items:center;gap:0;}
+  .st-month-name .kk-ur{font-size:16px;line-height:1.6;}
+  .st-month-name > span{font-size:13.5px;color:var(--muted);font-weight:600;}
+  .st-math .is-plus b{color:var(--ready);}
+  .st-changes{list-style:none;margin:0 0 6px;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .st-changes li{display:flex;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--line);font-size:14px;}
+  .st-changes li:last-child{border-bottom:none;}
+  .st-danger{color:var(--accent-2);border-color:var(--accent-2);width:100%;}
+  @media (max-width:760px){ .kk-total.is-left{grid-column:1 / -1;} }
+
   /* ---- NEW ORDER for low-literacy staff (V4): three numbered steps,
      a picture + Urdu name on every rate card, Urdu beside every label.
      data-ur="…" puts the Urdu word in front of a label without touching
@@ -3759,62 +3821,28 @@
     </div>
   </div>
 
-  <!-- STAFF (employee records + cash log book) -->
+  <!-- STAFF (employee records + salary khata) — same card → khata → sheet
+       layout as KARKHANA, so it reads by colour and numbers. -->
   <div id="tab-staff" class="tab admin-only">
     <button type="button" class="btn-secondary" style="margin-bottom:12px;" onclick="backToAdminDashboard()">&larr; Back to Admin Dashboard</button>
 
-    <div class="panel">
-      <label for="staffBranchSelect">Branch</label>
-      <div class="row">
-        <div class="field">
-          <select id="staffBranchSelect" style="width:200px;" onchange="onStaffBranchChange()"></select>
-        </div>
+    <!-- Home: every worker and what is left of this month's salary -->
+    <div id="stHome">
+      <div class="kk-top">
+        <div id="stTotals" class="kk-totals"></div>
+        <select id="staffBranchSelect" onchange="onStaffBranchChange()" style="width:auto;" aria-label="Branch"></select>
       </div>
+      <div id="stNotice"></div>
+      <div id="staffListBody" class="kk-shop-grid"><div class="kk-empty">Loading workers…</div></div>
     </div>
 
-    <div class="panel">
-      <label>Add Worker</label>
-      <div class="row">
-        <div class="field"><label for="staffNewName">Name</label><input type="text" id="staffNewName" style="width:160px;"></div>
-        <div class="field"><label for="staffNewPhone">Phone (optional)</label><input type="text" id="staffNewPhone" style="width:140px;"></div>
-        <div class="field"><label for="staffNewJoinDate">Joining Date</label><input type="date" id="staffNewJoinDate" style="width:150px;"></div>
-        <div class="field"><button class="btn-secondary" onclick="addStaffMember()">+ Add Worker</button></div>
-      </div>
-    </div>
+    <!-- One worker's salary khata -->
+    <div id="stKhata" hidden></div>
 
-    <div class="panel">
-      <label>Workers — <span id="staffBranchLabel"></span></label>
-      <table>
-        <thead><tr><th>Name</th><th>Phone</th><th>Joined</th><th>Leaving Date</th><th>Status</th><th></th></tr></thead>
-        <tbody id="staffListBody"></tbody>
-      </table>
+    <!-- Entry sheet (Give money / New worker / Change salary / Settings) -->
+    <div id="stSheet" class="kk-sheet-overlay" hidden onclick="if(event.target === this) closeStSheet()">
+      <div class="kk-sheet" id="stSheetBox" role="dialog" aria-modal="true"></div>
     </div>
-
-    <div class="panel" id="staffLedgerPanel" style="display:none;">
-      <label>Log Book — <span id="staffLedgerName"></span></label>
-      <div class="row">
-        <div class="field"><label for="staffLedgerDate">Date</label><input type="date" id="staffLedgerDate" style="width:150px;"></div>
-        <div class="field"><label for="staffLedgerAmount">Amount</label><input type="number" id="staffLedgerAmount" style="width:120px;"></div>
-        <div class="field">
-          <label for="staffLedgerType">Type</label>
-          <select id="staffLedgerType" style="width:120px;">
-            <option value="advance">Advance</option>
-            <option value="salary">Salary</option>
-          </select>
-        </div>
-        <div class="field"><label for="staffLedgerNote">Note (optional)</label><input type="text" id="staffLedgerNote" style="width:200px;"></div>
-        <div class="field"><button class="btn-secondary" onclick="runBusy(this, addStaffLedgerEntry)">+ Add Entry</button></div>
-      </div>
-      <table style="margin-top:10px;">
-        <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th><th></th></tr></thead>
-        <tbody id="staffLedgerBody"></tbody>
-      </table>
-      <div class="row" style="margin-top:8px;justify-content:flex-end;">
-        <div class="field" id="staffLedgerTotal" style="font-weight:bold;"></div>
-        <button class="btn-secondary" onclick="closeStaffLedgerPanel()">Close Log Book</button>
-      </div>
-    </div>
-
   </div>
 
   </div><!-- /mainContent -->
@@ -12689,22 +12717,117 @@ async function submitMrExpense(){
   loadMonthlyRegister();
 }
 
-// ---------- STAFF (employee records + cash log book) ----------
-// "Staff" is deliberately not called "Workers" in the UI/code — that word
+// ---------- STAFF (employee records + salary khata) ----------
+// "Staff" is deliberately not called "Workers" in the code — that word
 // is already taken in this app for the login role (worker vs admin) and
 // for the "Edit Worker Rate List" dashboard panel (dashboard-editworker),
-// which is about service prices, not employees. Using a different name
-// here avoids colliding with either of those.
+// which is about service prices, not employees.
 //
-// The log book reuses the existing salary_payments table (worker_id +
-// payment_date are new columns — see the accompanying SQL) instead of a
-// separate ledger table, so every entry still counts toward
-// monthly_register.total_salaries / net_cash exactly like it does today.
-// Writes only ever go through RPCs (never a direct .insert()/.update()/
-// .delete() on the workers table), matching how salary_payments itself
-// is only ever written through add_salary_payment/delete_salary_payment.
+// Money given to a worker reuses the existing salary_payments table
+// (worker_id + payment_date), so every entry still counts toward
+// monthly_register.total_salaries / net_cash exactly like before. The
+// agreed salary is workers.salary_history — [{from:'YYYY-MM-DD', amount}],
+// each change applying to salary months that start on or after that date,
+// so a raise never rewrites past months (supabase/staff_monthly_salary.sql).
+// Writes only ever go through RPCs, never a direct insert/update/delete.
+//
+// A salary month is not a calendar month: it is 30 days counted from the
+// joining date (joined 21 Sep → 21 Sep–20 Oct, 21 Oct–19 Nov, …). Each one
+// earns the full salary, except the one cut short by a leaving date, which
+// earns salary / 30 × days worked. left = earned + last month's balance −
+// money taken; the balance carries both ways (unpaid salary adds to the
+// next month, an over-payment is cut from it).
 let staffRows = [];               // cached workers for the currently selected branch
-let currentStaffLedgerWorkerId = null;
+let staffPays = [];               // their salary_payments rows, oldest first
+let currentStaffLedgerWorkerId = null;  // worker whose khata is open
+let stViewCycle = null;           // index of the salary month shown in the open khata
+let stSheet = null;               // the open entry sheet's state
+let stHasSalaryColumn = true;     // false until staff_monthly_salary.sql is run
+
+const ST_CYCLE_DAYS = 30;
+function stDayNum(d){ const [y, m, dd] = d.split('-').map(Number); return Date.UTC(y, m - 1, dd) / 86400000; }
+function stDayStr(n){ return new Date(n * 86400000).toISOString().slice(0, 10); }
+function stDateText(d){ return d ? formatAppDate(d + 'T00:00:00') : ''; }
+function stPayDate(p){ return p.payment_date || (String(p.month || '').slice(0, 7) + '-01'); }
+
+// Day the worker's first salary month starts.
+function stStart(w){
+  if(w.joining_date) return w.joining_date;
+  const first = staffPays.find(p => p.worker_id === w.id);
+  return first ? stPayDate(first) : localDateStr(new Date());
+}
+function stCycleOf(w, date){ return Math.max(0, Math.floor((stDayNum(date) - stDayNum(stStart(w))) / ST_CYCLE_DAYS)); }
+function stCycleStart(w, k){ return stDayStr(stDayNum(stStart(w)) + ST_CYCLE_DAYS * k); }
+function stCycleEnd(w, k){ return stDayStr(stDayNum(stStart(w)) + ST_CYCLE_DAYS * k + ST_CYCLE_DAYS - 1); }
+function stCycleRange(r){ return `${stDateText(r.start)} – ${stDateText(r.end)}`; }
+function stCycleLabel(r){ return `Month ${r.k + 1}: ${stCycleRange(r)}`; }
+
+// Salary changes, oldest first. A salary saved before history existed
+// counts from the start.
+function stHistory(w){
+  const h = (Array.isArray(w.salary_history) ? w.salary_history : [])
+    .filter(x => x && x.from)
+    .map(x => { const f = String(x.from); return { from: f.length === 7 ? f + '-01' : f.slice(0, 10), amount: Number(x.amount) || 0 }; });
+  if(!h.length && Number(w.monthly_salary)) h.push({ from: '0000-00-00', amount: Number(w.monthly_salary) });
+  return h.sort((a, b) => a.from.localeCompare(b.from));
+}
+// Full monthly salary for a salary month starting on `date` (before any
+// recorded change, the first amount).
+function stSalaryFor(w, date){
+  const h = stHistory(w);
+  let amt = h.length ? h[0].amount : 0;
+  h.forEach(x => { if(x.from <= date) amt = x.amount; });
+  return amt;
+}
+
+// Salary-month-by-salary-month account for one worker. throughCycle
+// stretches the table forward (a payment dated into a later month).
+function stLedger(w, throughCycle){
+  const hasSalary = stHistory(w).length > 0;
+  const pays = staffPays.filter(p => p.worker_id === w.id);
+  const today = localDateStr(new Date());
+  const leave = w.leaving_date || null;
+  const nowCycle = stCycleOf(w, leave && leave < today ? leave : today);
+  let end = nowCycle;
+  pays.forEach(p => { end = Math.max(end, stCycleOf(w, stPayDate(p))); });
+  if(throughCycle != null && throughCycle > end) end = throughCycle;
+  const months = [];
+  let carry = 0;
+  for(let k = 0; k <= end && k < 1000; k++){
+    const start = stCycleStart(w, k), last = stCycleEnd(w, k);
+    const mp = pays.filter(p => stCycleOf(w, stPayDate(p)) === k);
+    const taken = mp.reduce((t, p) => t + (Number(p.amount) || 0), 0);
+    const full = stSalaryFor(w, start);
+    let days = null; // null = full salary month
+    if(leave && leave < start) days = 0;
+    else if(leave && leave < last) days = stDayNum(leave) - stDayNum(start) + 1;
+    const earned = days === null ? full : Math.round(full / ST_CYCLE_DAYS * days);
+    const bal = hasSalary ? earned + carry - taken : -taken;
+    months.push({ k, start, end: last, full, days, earned, carryIn: carry, taken, bal, pays: mp });
+    carry = hasSalary ? bal : 0;
+  }
+  return { hasSalary, salary: stSalaryFor(w, stCycleStart(w, nowCycle)), months, nowCycle, current: months[nowCycle] };
+}
+
+// Plain-words salary balance: left to give (green), nothing, or taken extra (red).
+function stBalanceLabel(bal, hasSalary){
+  if(!hasSalary) return { cls:'is-advance', ur:'تنخواہ نہیں لکھی', en:'Salary not set' };
+  if(bal > 0) return { cls:'is-clear', ur:'بقایا تنخواہ', en:'Salary left' };
+  if(bal < 0) return { cls:'is-due', ur:'زیادہ لے لیے', en:'Taken extra' };
+  return { cls:'is-clear', ur:'حساب کتاب', en:'Fully paid' };
+}
+function stSignedMoney(bal){ return bal < 0 ? '− ' + kkMoney(-bal) : kkMoney(bal); }
+function stRecoverWarning(amount, nextStart){
+  return `<div class="st-warn" role="alert">
+    <span class="st-warn-ico">!</span>
+    <div><b><span class="kk-ur">${kkMoney(amount)} واپس لینے ہیں — اگلے مہینے کی تنخواہ سے کاٹیں</span></b>
+    ${kkMoney(amount)} taken over the salary. Recover it from next month's salary (starts ${escHtml(stDateText(nextStart))}).</div>
+  </div>`;
+}
+// "Rs 35,000" or "Rs 11,667 (10 of 30 days)" for a month cut short by leaving.
+function stEarnedText(r){
+  return r.days === null ? kkMoney(r.earned) : `${kkMoney(r.earned)} <span class="st-days">(${r.days} of 30 days)</span>`;
+}
 
 function populateStaffBranchSelect(){
   const sel = document.getElementById('staffBranchSelect');
@@ -12720,56 +12843,382 @@ function onStaffBranchChange(){
 
 async function loadStaffList(){
   if(!currentBranchId) return;
-  document.getElementById('staffBranchLabel').textContent = branchName(currentBranchId);
-  const { data, error } = await sb.from('workers').select('*')
-    .eq('branch_id', currentBranchId)
-    .is('deleted_at', null)
-    .order('leaving_date', { ascending: true, nullsFirst: true })
-    .order('name', { ascending: true });
-  if(error){ document.getElementById('staffListBody').innerHTML = `<tr><td colspan="6" class="error">${escHtml(error.message)}</td></tr>`; return; }
-  staffRows = data || [];
-  document.getElementById('staffListBody').innerHTML = staffRows.map(w => `
-    <tr>
-      <td>${escHtml(w.name)}</td>
-      <td>${escHtml(w.phone || '')}</td>
-      <td>${w.joining_date ? formatAppDate(w.joining_date + 'T00:00:00') : ''}</td>
-      <td>
-        <input type="date" id="staffLeaveInput_${w.id}" style="width:140px;" value="${w.leaving_date || ''}">
-        <button class="btn-secondary" onclick="saveStaffLeavingDate(${w.id})">Save</button>
-      </td>
-      <td>${w.leaving_date ? 'Left' : 'Active'}</td>
-      <td>
-        <button class="btn-secondary" onclick="openStaffLedger(${w.id})">Log Book</button>
-        <button class="btn-secondary" onclick="openDeleteStaffModal(${w.id})">Delete</button>
-      </td>
-    </tr>`).join('') || '<tr><td colspan="6" class="small">No workers added yet for this branch.</td></tr>';
-
-  const joinInput = document.getElementById('staffNewJoinDate');
-  if(!joinInput.value){
-    const now = new Date();
-    joinInput.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const branchId = currentBranchId;
+  let workers, pays;
+  try{
+    [workers, pays] = await Promise.all([
+      fetchAllRows(() => sb.from('workers').select('*')
+        .eq('branch_id', branchId).is('deleted_at', null).order('id', { ascending: true })),
+      fetchAllRows(() => sb.from('salary_payments')
+        .select('id, worker_id, amount, payment_type, payment_date, month, note, created_at')
+        .eq('branch_id', branchId).not('worker_id', 'is', null).is('deleted_at', null)
+        .order('payment_date', { ascending: true }).order('created_at', { ascending: true }))
+    ]);
+  }catch(error){
+    document.getElementById('staffListBody').innerHTML = `<div class="kk-empty is-error">${escHtml(error.message || String(error))}</div>`;
+    return;
   }
+  if(branchId !== currentBranchId) return; // branch changed while loading
+  staffRows = workers;
+  staffPays = pays;
+  stHasSalaryColumn = !workers.length || 'salary_history' in workers[0];
+  renderStaffHome();
+  if(currentStaffLedgerWorkerId) renderStaffKhata();
+}
+// Kept under its old name: the delete-confirm flow calls it after removing an entry.
+function loadStaffLedger(){ return loadStaffList(); }
+
+function renderStaffHome(){
+  const today = localDateStr(new Date());
+  let toGive = 0, givenNow = 0, toRecover = 0;
+  const info = staffRows.map(w => {
+    const L = stLedger(w);
+    const cur = L.current;
+    const isActive = !w.leaving_date || w.leaving_date >= today;
+    if(isActive) givenNow += cur.taken;
+    if(L.hasSalary && cur.bal > 0) toGive += cur.bal;
+    if(L.hasSalary && cur.bal < 0) toRecover += -cur.bal;
+    return { w, L, cur, isActive };
+  });
+  document.getElementById('stTotals').innerHTML = `
+    <div class="kk-total is-left"><span class="kk-ur">تنخواہ دینی ہے</span><span class="kk-en">Salary still to give</span><b>${kkMoney(toGive)}</b></div>
+    <div class="kk-total is-pay">${kkIcon('money')}<span class="kk-ur">اس مہینے دی</span><span class="kk-en">Given in each worker's current month</span><b>${kkMoney(givenNow)}</b></div>
+    <div class="kk-total ${toRecover ? 'is-recover' : 'is-pay'}">${kkIcon(toRecover ? 'back' : 'check')}<span class="kk-ur">واپس لینے ہیں</span><span class="kk-en">To recover</span><b>${toRecover ? '− ' + kkMoney(toRecover) : kkMoney(0)}</b></div>`;
+
+  document.getElementById('stNotice').innerHTML = stHasSalaryColumn ? '' :
+    `<div class="st-warn"><span class="st-warn-ico">!</span><div><b>Salaries are not switched on yet.</b> Run <code>supabase/staff_monthly_salary.sql</code> in the Supabase SQL Editor once, then refresh.</div></div>`;
+
+  info.sort((a, b) => (b.isActive - a.isActive) || a.w.name.localeCompare(b.w.name));
+  const cards = info.map(({ w, L, cur, isActive }) => {
+    const b = stBalanceLabel(cur.bal, L.hasSalary);
+    return `<button type="button" class="kk-shop st-card ${b.cls}${isActive ? '' : ' is-gone'}" onclick="openStaffLedger(${Number(w.id)})">
+      <span class="oo-avatar kk-avatar ${avatarColorClass(w.name)}">${escHtml(initialsFor(w.name))}</span>
+      <span class="kk-shop-name">${escHtml(w.name)}
+        <span class="st-card-sub">${isActive ? (L.hasSalary ? `${kkMoney(L.salary)} / month · till ${escHtml(stDateText(cur.end))}` : '') : '<span class="kk-ur">چھوڑ گیا</span> Left'}</span></span>
+      <span class="kk-shop-bal"><span class="kk-ur">${b.ur}</span>${L.hasSalary ? `<b>${cur.bal ? stSignedMoney(cur.bal) : kkIcon('check')}</b>` : ''}</span>
+    </button>`;
+  }).join('');
+  document.getElementById('staffListBody').innerHTML =
+    `<button type="button" class="kk-shop kk-shop-add" onclick="openStSheet('newworker')">
+      <span class="kk-avatar kk-add-ico">+</span>
+      <span class="kk-shop-name"><span class="kk-ur">نیا ملازم</span> New worker</span>
+    </button>` + cards
+    + (!staffRows.length ? `<div class="kk-empty">No workers yet for ${escHtml(branchName(currentBranchId))}. Tap New worker to add the first one.</div>` : '');
 }
 
-async function addStaffMember(){
-  const name = document.getElementById('staffNewName').value.trim();
-  const phone = document.getElementById('staffNewPhone').value.trim();
-  const joinDate = document.getElementById('staffNewJoinDate').value;
+// ---- one worker's khata ----
+function openStaffLedger(workerId){
+  const w = staffRows.find(r => r.id === workerId);
+  if(!w) return;
+  currentStaffLedgerWorkerId = workerId;
+  stViewCycle = stLedger(w).nowCycle;
+  document.getElementById('stHome').hidden = true;
+  document.getElementById('stKhata').hidden = false;
+  renderStaffKhata();
+  document.getElementById('stKhata').scrollIntoView({ block: 'start' });
+}
+function closeStaffLedgerPanel(){
+  currentStaffLedgerWorkerId = null;
+  closeStSheet();
+  const k = document.getElementById('stKhata'), h = document.getElementById('stHome');
+  if(k) k.hidden = true;
+  if(h) h.hidden = false;
+}
+function stGoCycle(by){ stViewCycle = Math.max(0, stViewCycle + by); renderStaffKhata(); }
+function stPickCycle(k){ stViewCycle = k; renderStaffKhata(); document.getElementById('stKhata').scrollIntoView({ block: 'start' }); }
+
+function renderStaffKhata(){
+  const w = staffRows.find(r => r.id === currentStaffLedgerWorkerId);
+  if(!w){ closeStaffLedgerPanel(); renderStaffHome(); return; }
+  const L = stLedger(w, stViewCycle);
+  const row = L.months[stViewCycle];
+  const b = stBalanceLabel(row.bal, L.hasSalary);
+  const lastCycle = Math.max(L.nowCycle, L.months.length - 1);
+
+  // Running "left" after each payment in the month, then newest first.
+  let run = row.earned + row.carryIn;
+  const lines = row.pays.map(p => { run -= Number(p.amount) || 0; return { p, after: run }; }).reverse();
+  const lineHtml = lines.map(({ p, after }) => {
+    const isSalary = p.payment_type === 'salary';
+    const a = stBalanceLabel(after, L.hasSalary);
+    return `<div class="kk-line is-pay${L.hasSalary && after < 0 ? ' st-over' : ''}">
+      <span class="kk-line-ico">${kkIcon('money')}</span>
+      <div class="kk-line-main">
+        <div class="kk-line-title"><span class="kk-ur">${isSalary ? 'تنخواہ' : 'ایڈوانس'}</span> ${isSalary ? 'Salary' : 'Advance'}</div>
+        ${p.note ? `<div class="kk-line-sub">${escHtml(p.note)}</div>` : ''}
+        <div class="kk-line-when">${escHtml(stDateText(stPayDate(p)))} <span>${kkTime(p.created_at)}</span></div>
+      </div>
+      <div class="kk-line-amt"><b>${kkMoney(p.amount)}</b>${L.hasSalary ? `<span class="kk-line-after ${a.cls}">${a.ur} ${after ? stSignedMoney(after) : ''}</span>` : ''}</div>
+      <button type="button" class="kk-del" title="Delete this entry" aria-label="Delete this entry" onclick="openDeleteStaffLedgerModal(${Number(p.id)})">×</button>
+    </div>`;
+  }).join('');
+
+  const carryBox = !row.carryIn ? '' : row.carryIn > 0
+    ? `<div class="is-plus"><span><span class="kk-ur">پچھلی بقایا</span> Unpaid from last month</span><b>+ ${kkMoney(row.carryIn)}</b></div>`
+    : `<div class="is-due"><span><span class="kk-ur">پچھلے مہینے کا</span> Cut for last month</span><b>− ${kkMoney(-row.carryIn)}</b></div>`;
+  const math = L.hasSalary ? `<div class="st-math">
+      <div><span><span class="kk-ur">تنخواہ</span> Salary${row.days === null ? '' : ` (${kkMoney(row.full)} ÷ 30 × ${row.days})`}</span><b>${stEarnedText(row)}</b></div>
+      ${carryBox}
+      <div><span><span class="kk-ur">لیے</span> Taken</span><b>− ${kkMoney(row.taken)}</b></div>
+      <div class="st-math-eq ${b.cls}"><span><span class="kk-ur">${b.ur}</span> ${b.en}</span><b>${stSignedMoney(row.bal)}</b></div>
+    </div>` : `<div class="st-warn is-info"><span class="st-warn-ico">i</span><div><b><span class="kk-ur">پہلے تنخواہ لکھیں</span></b> Set this worker's monthly salary to see how much is left each month. Taken in this month: <b>${kkMoney(row.taken)}</b></div></div>`;
+
+  const history = L.hasSalary && L.months.length > 1 ? `
+    <details class="kk-reports st-history">
+      <summary><span class="kk-ur">ہر مہینہ</span> Every month</summary>
+      <div class="kk-lines-list"><table class="st-history-table">
+        <thead><tr><th>Salary month</th><th>Salary</th><th>From last month</th><th>Taken</th><th>Left</th></tr></thead>
+        <tbody>${[...L.months].reverse().map(r => {
+          const c = stBalanceLabel(r.bal, true).cls;
+          return `<tr class="kk-shop-row${r.k === stViewCycle ? ' active' : ''}" onclick="stPickCycle(${r.k})">
+            <td><b>${r.k + 1}</b> · ${escHtml(stCycleRange(r))}</td><td>${stEarnedText(r)}</td>
+            <td class="st-bal ${r.carryIn < 0 ? 'is-due' : ''}">${r.carryIn ? (r.carryIn > 0 ? '+ ' : '') + stSignedMoney(r.carryIn) : '—'}</td><td>${kkMoney(r.taken)}</td>
+            <td class="st-bal ${c}">${stSignedMoney(r.bal)}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </details>` : '';
+
+  document.getElementById('stKhata').innerHTML = `
+    <button type="button" class="kk-back" onclick="closeStaffLedgerPanel();renderStaffHome()">${kkIcon('back')}<span class="kk-ur">سب ملازم</span> All workers</button>
+    <div class="kk-khata-head">
+      <div class="kk-khata-shop">
+        <span class="oo-avatar kk-avatar ${avatarColorClass(w.name)}">${escHtml(initialsFor(w.name))}</span>
+        <div>
+          <h2>${escHtml(w.name)}</h2>
+          <div class="st-facts">
+            ${w.phone ? `<a class="kk-phone" href="tel:${escHtml(String(w.phone).replace(/[^\d+]/g, ''))}">${kkIcon('phone')}${escHtml(w.phone)}</a>` : ''}
+            ${w.joining_date ? `<span>Joined ${escHtml(stDateText(w.joining_date))}</span>` : ''}
+            ${w.leaving_date ? `<span class="st-gone-chip"><span class="kk-ur">چھوڑ گیا</span> Left ${escHtml(stDateText(w.leaving_date))}</span>` : ''}
+          </div>
+          <button type="button" class="st-salary-pill" onclick="openStSheet('salary')">
+            <span class="kk-ur">ماہانہ تنخواہ</span> ${L.hasSalary ? `${kkMoney(row.full)} / month` : 'Set salary'} <span class="st-edit">Change</span>
+          </button>
+        </div>
+      </div>
+      <div class="kk-bigbal ${b.cls}"><span class="kk-ur">${b.ur}</span><span class="kk-en">${b.en} — month ${row.k + 1}</span><b>${L.hasSalary ? (row.bal ? stSignedMoney(row.bal) : kkIcon('check')) : kkMoney(row.taken)}</b></div>
+    </div>
+    ${L.hasSalary && row.bal < 0 ? stRecoverWarning(-row.bal, stCycleStart(w, row.k + 1)) : ''}
+    <div class="st-monthbar">
+      <button type="button" class="st-month-btn" onclick="stGoCycle(-1)" ${stViewCycle <= 0 ? 'disabled' : ''} aria-label="Previous salary month">‹</button>
+      <div class="st-month-name"><b><span class="kk-ur">مہینہ</span> Month ${row.k + 1}</b><span>${escHtml(stCycleRange(row))}</span></div>
+      <button type="button" class="st-month-btn" onclick="stGoCycle(1)" ${stViewCycle >= lastCycle ? 'disabled' : ''} aria-label="Next salary month">›</button>
+    </div>
+    ${math}
+    <div class="kk-actions st-actions">
+      <button type="button" class="kk-act is-pay" onclick="openStSheet('money')">${kkIcon('money')}<span class="kk-ur">پیسے دیے</span><span class="kk-en">Give money (salary / advance)</span></button>
+    </div>
+    <h3 class="kk-khata-title"><span class="kk-ur">کھاتہ</span> Month ${row.k + 1}, newest first</h3>
+    <div class="kk-lines-list">${lineHtml || `<div class="kk-empty">No money given in this salary month.</div>`}</div>
+    ${history}
+    <div class="st-tools">
+      <button type="button" class="btn-secondary" onclick="openStSheet('settings')">Leaving date / Delete worker</button>
+    </div>`;
+}
+
+// ---- entry sheets ----
+function openStSheet(type){
+  const w = staffRows.find(r => r.id === currentStaffLedgerWorkerId);
+  const today = localDateStr(new Date());
+  const box = document.getElementById('stSheetBox');
+  const head = (ico, ur, en) => `<div class="kk-sheet-head"><h2>${ico}<span class="kk-ur">${ur}</span> ${en}</h2><button type="button" class="modal-close-btn" onclick="closeStSheet()" aria-label="Close">×</button></div>`;
+  const salaryField = (val) => `<label class="kk-field kk-money-field"><span><span class="kk-ur">ماہانہ تنخواہ</span> Monthly salary agreed (Rs)</span>
+      <input type="number" id="stSalaryAmt" min="0" inputmode="numeric" placeholder="0" value="${val ? moneyInputValue(val) : ''}"></label>`;
+  if(type === 'newworker'){
+    stSheet = { type };
+    box.className = 'kk-sheet is-pay is-newshop';
+    box.innerHTML = head('', 'نیا ملازم', 'New worker') + `
+      <div class="kk-sheet-body">
+        <label class="kk-field"><span><span class="kk-ur">نام</span> Name</span><input type="text" id="stNewName" maxlength="60" autocomplete="off"></label>
+        ${salaryField(0)}
+        <div class="kk-row2">
+          <label class="kk-field"><span><span class="kk-ur">آنے کی تاریخ</span> Joining date</span><input type="date" id="stNewJoin" value="${today}"></label>
+          <label class="kk-field"><span><span class="kk-ur">فون</span> Phone (optional)</span><input type="tel" id="stNewPhone" placeholder="03xx-xxxxxxx" inputmode="tel"></label>
+        </div>
+        <p class="kk-hint">Each salary month is 30 days counted from the joining date.</p>
+      </div>
+      <div class="kk-sheet-foot"><button type="button" class="btn-main kk-save is-pay" onclick="runBusy(this, stSaveNewWorker)">${kkIcon('check')} Add worker</button></div>`;
+  } else if(type === 'salary' && w){
+    const nowK = stLedger(w).nowCycle;
+    const pickK = Math.max(stViewCycle || 0, nowK);
+    const opts = [];
+    for(let k = 0; k <= nowK + 2; k++){
+      const r = { k, start: stCycleStart(w, k), end: stCycleEnd(w, k) };
+      opts.push(`<option value="${r.start}"${k === pickK ? ' selected' : ''}>${escHtml(stCycleLabel(r))}</option>`);
+    }
+    const changes = stHistory(w).filter(x => x.from !== '0000-00-00');
+    stSheet = { type };
+    box.className = 'kk-sheet is-pay is-newshop';
+    box.innerHTML = head(kkIcon('money'), 'تنخواہ بدلیں', `Salary of ${escHtml(w.name)}`) + `
+      <div class="kk-sheet-body">
+        ${salaryField(stSalaryFor(w, stCycleStart(w, pickK)))}
+        <label class="kk-field"><span><span class="kk-ur">کس مہینے سے</span> From which salary month?</span><select id="stSalaryFrom">${opts.join('')}</select></label>
+        <p class="kk-hint">Earlier salary months keep their old salary.</p>
+        ${changes.length ? `<ul class="st-changes">${changes.map(x => `<li><span>From ${escHtml(stDateText(x.from))}</span><b>${kkMoney(x.amount)}</b></li>`).join('')}</ul>` : ''}
+      </div>
+      <div class="kk-sheet-foot"><button type="button" class="btn-main kk-save is-pay" onclick="runBusy(this, stSaveSalary)">${kkIcon('check')} Save salary</button></div>`;
+  } else if(type === 'settings' && w){
+    stSheet = { type };
+    box.className = 'kk-sheet is-newshop';
+    box.innerHTML = head('', 'ملازم', escHtml(w.name)) + `
+      <div class="kk-sheet-body">
+        <label class="kk-field"><span><span class="kk-ur">چھوڑنے کی تاریخ</span> Leaving date (leave empty if still working)</span>
+          <input type="date" id="staffLeaveInput_${w.id}" value="${w.leaving_date || ''}"></label>
+        <p class="kk-hint">If they leave before a salary month's 30 days are over, that month is paid only for the days worked: salary ÷ 30 × days.</p>
+        <button type="button" class="btn-main kk-save" style="width:100%;margin:0 0 18px;" onclick="runBusy(this, saveStaffLeavingDate, ${Number(w.id)})">${kkIcon('check')} Save leaving date</button>
+        <p class="kk-hint">Deleting removes the worker and their whole khata. It needs your password.</p>
+        <button type="button" class="btn-secondary st-danger" onclick="closeStSheet();openDeleteStaffModal(${Number(w.id)})">Delete worker</button>
+      </div>`;
+  } else if(type === 'money' && w){
+    const k = stViewCycle || 0;
+    const start = stCycleStart(w, k), last = stCycleEnd(w, k);
+    const date = today >= start && today <= last ? today : start;
+    stSheet = { type, payType: 'advance' };
+    box.className = 'kk-sheet is-pay';
+    box.innerHTML = head(kkIcon('money'), 'پیسے دیے', `Money to ${escHtml(w.name)}`) + `
+      <div class="kk-sheet-body">
+        <div id="stLeftNow"></div>
+        <label class="kk-field kk-money-field"><span><span class="kk-ur">کتنے پیسے دیے؟</span> How much did you give? (Rs)</span>
+          <input type="number" id="stMoneyAmt" min="0" inputmode="numeric" placeholder="0" oninput="stUpdateMoneyLeft()"></label>
+        <div class="kk-quick" id="stQuick"></div>
+        <div class="st-type">
+          <button type="button" class="kk-chip is-on" id="stTypeAdvance" onclick="stSetType('advance')"><span class="kk-ur">ایڈوانس</span> Advance</button>
+          <button type="button" class="kk-chip" id="stTypeSalary" onclick="stSetType('salary')"><span class="kk-ur">تنخواہ</span> Salary</button>
+        </div>
+        <div class="kk-left" id="stMoneyLeft"></div>
+        <div class="kk-row2">
+          <label class="kk-field"><span><span class="kk-ur">تاریخ</span> Date</span><input type="date" id="stMoneyDate" value="${date}" onchange="stUpdateMoneyLeft()"></label>
+          <label class="kk-field"><span><span class="kk-ur">نوٹ</span> Note (optional)</span><input type="text" id="stMoneyNote" placeholder="e.g. for Eid"></label>
+        </div>
+      </div>
+      <div class="kk-sheet-foot"><button type="button" class="btn-main kk-save is-pay" onclick="runBusy(this, stSaveMoney)">${kkIcon('check')} Save</button></div>`;
+    stUpdateMoneyLeft();
+  } else return;
+  document.getElementById('stSheet').hidden = false;
+  document.body.classList.add('kk-sheet-open');
+  const firstInput = box.querySelector('#stMoneyAmt, #stNewName, #stSalaryAmt, input');
+  if(firstInput) firstInput.focus();
+}
+function closeStSheet(){
+  stSheet = null;
+  const o = document.getElementById('stSheet');
+  if(o) o.hidden = true;
+  document.body.classList.remove('kk-sheet-open');
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && stSheet) closeStSheet(); });
+
+function stSetType(t){
+  stSheet.payType = t;
+  document.getElementById('stTypeAdvance').classList.toggle('is-on', t === 'advance');
+  document.getElementById('stTypeSalary').classList.toggle('is-on', t === 'salary');
+}
+function stSetMoney(v){ document.getElementById('stMoneyAmt').value = v; stUpdateMoneyLeft(); }
+// "Left now" and "after this" for the salary month the payment is dated in.
+function stMoneyMonthRow(){
+  const w = staffRows.find(r => r.id === currentStaffLedgerWorkerId);
+  const date = document.getElementById('stMoneyDate').value || localDateStr(new Date());
+  const k = stCycleOf(w, date);
+  const L = stLedger(w, k);
+  return { w, L, k, row: L.months[k] };
+}
+function stUpdateMoneyLeft(){
+  if(!stSheet || stSheet.type !== 'money') return;
+  const { w, L, k, row } = stMoneyMonthRow();
+  const amt = Number(document.getElementById('stMoneyAmt').value) || 0;
+  const nowB = stBalanceLabel(row.bal, L.hasSalary);
+  document.getElementById('stLeftNow').innerHTML = L.hasSalary
+    ? `<div class="kk-owes ${nowB.cls}"><span class="kk-ur">${nowB.ur}</span> ${nowB.en} in month ${k + 1} (${escHtml(stCycleRange(row))}): <b>${stSignedMoney(row.bal)}</b></div>`
+    : `<div class="kk-owes is-advance">Salary not set — this is only recorded, no balance is worked out.</div>`;
+  document.getElementById('stQuick').innerHTML =
+    (L.hasSalary && row.bal > 0 ? `<button type="button" class="kk-chip is-full" onclick="stSetMoney(${row.bal})">All left ${kkMoney(row.bal)}</button>` : '')
+    + [500, 1000, 2000, 5000].map(v => `<button type="button" class="kk-chip" onclick="stSetMoney(${v})">${kkMoney(v)}</button>`).join('');
+  if(!L.hasSalary){ document.getElementById('stMoneyLeft').innerHTML = ''; return; }
+  const after = row.bal - amt;
+  const a = stBalanceLabel(after, true);
+  document.getElementById('stMoneyLeft').innerHTML =
+    `After this: <span class="${a.cls}"><span class="kk-ur">${a.ur}</span> ${a.en} ${stSignedMoney(after)}</span>`
+    + (after < 0 && amt ? stRecoverWarning(-after, stCycleStart(w, k + 1)) : '');
+}
+
+function stSalarySqlHint(err){
+  return /set_staff_salary|monthly_salary|salary_history|schema cache/i.test(err.message || '') ? ' (run supabase/staff_monthly_salary.sql in Supabase first)' : '';
+}
+
+async function stSaveNewWorker(){
+  const name = document.getElementById('stNewName').value.trim();
+  const phone = document.getElementById('stNewPhone').value.trim();
+  const joinDate = document.getElementById('stNewJoin').value;
+  const salary = Number(document.getElementById('stSalaryAmt').value) || 0;
   if(!name){ alert('Enter worker name.'); return; }
   if(!currentBranchId){ alert('Select a branch first.'); return; }
-  const { error } = await sb.rpc('add_staff_member', {
+  if(salary < 0){ alert('Enter a valid amount.'); return; }
+  const { data: newId, error } = await sb.rpc('add_staff_member', {
     p_branch_id: currentBranchId, p_name: name, p_phone: phone || null,
     p_joining_date: joinDate || null
   });
   if(error){ alert('Failed: ' + error.message); return; }
-  await logActivity('staff_added', `Added worker "${name}"`, currentBranchId);
-  document.getElementById('staffNewName').value = '';
-  document.getElementById('staffNewPhone').value = '';
-  loadStaffList();
+  await logActivity('staff_added', `Added worker "${name}"${salary ? ' — salary Rs ' + moneyText(salary) + '/month' : ''}`, currentBranchId);
+  closeStSheet();
+  if(salary && newId){
+    const { error: sErr } = await sb.rpc('set_staff_salary', {
+      p_id: newId, p_monthly_salary: salary, p_from_date: joinDate || localDateStr(new Date())
+    });
+    if(sErr) alert('Failed: worker added, but the salary was not saved — ' + sErr.message + stSalarySqlHint(sErr));
+  }
+  await loadStaffList();
+  if(newId) openStaffLedger(Number(newId));
+}
+
+async function stSaveSalary(){
+  const w = staffRows.find(r => r.id === currentStaffLedgerWorkerId);
+  if(!w) return;
+  const raw = document.getElementById('stSalaryAmt').value;
+  const from = document.getElementById('stSalaryFrom').value;
+  const salary = raw === '' ? null : Number(raw);
+  if(salary !== null && !(salary >= 0)){ alert('Enter a valid amount.'); return; }
+  if(!from){ alert('Select a month.'); return; }
+  const before = stSalaryFor(w, from);
+  const { error } = await sb.rpc('set_staff_salary', { p_id: w.id, p_monthly_salary: salary, p_from_date: from });
+  if(error){ alert('Failed: ' + error.message + stSalarySqlHint(error)); return; }
+  await logActivity('staff_salary_set', `Salary of "${w.name}" from ${from}: ${salary !== null ? 'Rs ' + moneyText(salary) : 'change removed'} (was Rs ${moneyText(before)})`, currentBranchId);
+  playSfx('ok');
+  closeStSheet();
+  await loadStaffList();
+}
+
+async function stSaveMoney(){
+  const w = staffRows.find(r => r.id === currentStaffLedgerWorkerId);
+  if(!w){ alert('Open a worker\'s log book first.'); return; }
+  const date = document.getElementById('stMoneyDate').value;
+  const amount = Number(document.getElementById('stMoneyAmt').value) || 0;
+  const note = document.getElementById('stMoneyNote').value.trim();
+  const type = stSheet.payType;
+  if(!date){ alert('Select a date.'); return; }
+  if(amount <= 0){ alert('Enter a valid amount.'); return; }
+  const { L, k, row } = stMoneyMonthRow();
+  const after = row.bal - amount;
+  if(L.hasSalary && after < 0){
+    const ok = await appConfirm({ tone: 'warn', pic: 'warn', urTitle: 'تنخواہ سے زیادہ', title: 'More than the salary left',
+      ur: `${kkMoney(-after)} زیادہ دیے جا رہے ہیں۔ یہ اگلے مہینے کی تنخواہ سے کاٹے جائیں گے۔`,
+      message: `This gives ${kkMoney(-after)} more than the salary left. It will show in red and be cut from next month's salary (starts ${stDateText(stCycleStart(w, k + 1))}).`,
+      okText: 'Give anyway' });
+    if(!ok) return;
+  }
+  const { error } = await sb.rpc('add_salary_payment', {
+    p_branch_id: currentBranchId, p_worker_name: w.name, p_amount: amount,
+    p_payment_type: type, p_month: date.slice(0, 7) + '-01', p_note: note, // calendar month still feeds the Monthly Register
+    p_worker_id: w.id, p_payment_date: date
+  });
+  if(error){ alert('Failed: ' + error.message); return; }
+  await logActivity('staff_ledger_entry_added', `Logged ${type} of Rs ${moneyText(amount)} for "${w.name}" on ${date}`, currentBranchId);
+  playSfx('ok');
+  closeStSheet();
+  stViewCycle = k;
+  await loadStaffList();
+  loadMonthlyRegister(); // keep the Monthly Register totals in sync if it's reloaded next
 }
 
 // Setting (or clearing, by emptying the date field) a leaving date is a
-// non-destructive edit — the worker record and their whole log book stay
+// non-destructive edit — the worker record and their whole khata stay
 // intact either way — so unlike Delete it does not go through the
 // password re-entry modal.
 async function saveStaffLeavingDate(workerId){
@@ -12778,71 +13227,8 @@ async function saveStaffLeavingDate(workerId){
   if(error){ alert('Failed: ' + error.message); return; }
   const w = staffRows.find(r => r.id === workerId);
   await logActivity('staff_leaving_date_set', `${val ? 'Set leaving date' : 'Cleared leaving date'} for "${w ? w.name : workerId}"${val ? ' — ' + val : ''}`, currentBranchId);
-  loadStaffList();
-}
-
-function openStaffLedger(workerId){
-  const w = staffRows.find(r => r.id === workerId);
-  if(!w) return;
-  currentStaffLedgerWorkerId = workerId;
-  document.getElementById('staffLedgerName').textContent = w.name;
-  document.getElementById('staffLedgerPanel').style.display = 'block';
-  const dateInput = document.getElementById('staffLedgerDate');
-  const now = new Date();
-  dateInput.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  document.getElementById('staffLedgerAmount').value = '';
-  document.getElementById('staffLedgerNote').value = '';
-  loadStaffLedger();
-}
-
-function closeStaffLedgerPanel(){
-  currentStaffLedgerWorkerId = null;
-  const panel = document.getElementById('staffLedgerPanel');
-  if(panel) panel.style.display = 'none';
-}
-
-async function loadStaffLedger(){
-  if(!currentStaffLedgerWorkerId) return;
-  const { data, error } = await sb.from('salary_payments').select('*')
-    .eq('worker_id', currentStaffLedgerWorkerId)
-    .is('deleted_at', null)
-    .order('payment_date', { ascending: false })
-    .order('created_at', { ascending: false });
-  if(error){ document.getElementById('staffLedgerBody').innerHTML = `<tr><td colspan="5" class="error">${escHtml(error.message)}</td></tr>`; return; }
-  const rows = data || [];
-  document.getElementById('staffLedgerBody').innerHTML = rows.map(r => `
-    <tr>
-      <td>${r.payment_date ? formatAppDate(r.payment_date + 'T00:00:00') : formatMonthLabel(String(r.month || '').slice(0,7))}</td>
-      <td>${escHtml(r.payment_type)}</td>
-      <td>Rs ${moneyText(r.amount)}</td>
-      <td>${escHtml(r.note || '')}</td>
-      <td><button class="btn-secondary" onclick="openDeleteStaffLedgerModal(${r.id})">Delete</button></td>
-    </tr>`).join('') || '<tr><td colspan="5" class="small">No entries logged yet.</td></tr>';
-  const total = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
-  document.getElementById('staffLedgerTotal').textContent = 'Total: Rs ' + total;
-}
-
-async function addStaffLedgerEntry(){
-  if(!currentStaffLedgerWorkerId){ alert('Open a worker\'s log book first.'); return; }
-  const w = staffRows.find(r => r.id === currentStaffLedgerWorkerId);
-  const date = document.getElementById('staffLedgerDate').value;
-  const amount = parseFloat(document.getElementById('staffLedgerAmount').value) || 0;
-  const type = document.getElementById('staffLedgerType').value;
-  const note = document.getElementById('staffLedgerNote').value.trim();
-  if(!date){ alert('Select a date.'); return; }
-  if(amount <= 0){ alert('Enter a valid amount.'); return; }
-  const monthVal = date.slice(0, 7) + '-01'; // still feeds monthly_register's month bucket
-  const { error } = await sb.rpc('add_salary_payment', {
-    p_branch_id: currentBranchId, p_worker_name: w ? w.name : '', p_amount: amount,
-    p_payment_type: type, p_month: monthVal, p_note: note,
-    p_worker_id: currentStaffLedgerWorkerId, p_payment_date: date
-  });
-  if(error){ alert('Failed: ' + error.message + (error.message && error.message.includes('p_worker_id') ? ' — the add_salary_payment function in Supabase needs the p_worker_id/p_payment_date parameters added (see SQL notes).' : '')); return; }
-  await logActivity('staff_ledger_entry_added', `Logged ${type} of Rs ${moneyText(amount)} for "${w ? w.name : ''}" on ${date}`, currentBranchId);
-  document.getElementById('staffLedgerAmount').value = '';
-  document.getElementById('staffLedgerNote').value = '';
-  loadStaffLedger();
-  loadMonthlyRegister(); // keep the Monthly Register totals in sync if it's reloaded next
+  closeStSheet();
+  await loadStaffList();
 }
 
 // ---------- DELETE WORKER / LOG BOOK ENTRY (admin, password re-entry required) ----------
@@ -14169,10 +14555,12 @@ const PAGE_HELP = {
   staff: {
     title: "Staff",
     topics: [
-      { label:"Add Worker", text:"Naya worker naam, phone aur joining date ke sath add karta hai." },
-      { label:"Log Book", text:"Us worker ka cash log book kholta hai — kis din kitni advance ya salary di gayi, sab yahan dikhta hai." },
-      { label:"Leaving Date", text:"Worker ki leaving date set karta hai — record delete nahi hota, sirf 'Left' mark ho jata hai." },
-      { label:"Delete Worker", text:"Worker ka record hamesha ke liye hata deta hai — sirf admin, apna password dobara likh kar, yeh kar sakta hai." },
+      { label:"New Worker", text:"Naya worker naam, phone, joining date aur shuru mein tay ki gayi mahana salary ke sath add karta hai. Salary ka mahina joining date se 30 din ka hota hai (calendar ka mahina nahi)." },
+      { label:"Salary Left (green)", text:"Card par hara number = baqi salary. Jo salary is mahine nahi di gayi woh agle mahine mein jud jati hai." },
+      { label:"Taken Extra (red)", text:"Salary se zyada paise le liye to number laal aur minus mein dikhta hai — yeh agle mahine ki salary se kaat liye jate hain." },
+      { label:"Give Money", text:"Worker ke khate mein 'Paise diye' dabayein — advance ya salary, raqam aur tareekh likh kar save karein." },
+      { label:"Change Salary", text:"Salary par click kar ke nayi salary aur 'kis mahine se' chunein. Pichle mahine purani salary par hi rehte hain." },
+      { label:"Leaving Date / Delete", text:"30 din poore hone se pehle chhor de to us mahine ki salary sirf kaam ke dinon ki: salary / 30 x din. Delete sirf admin apna password dobara likh kar kar sakta hai." },
     ],
   },
 };
