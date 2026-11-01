@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-01-3">
+<meta name="app-build" content="2026-11-01-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -161,11 +161,12 @@
      colors. */
   #overdueBody tr.row-overdue-red td{background:var(--accent-2-soft);}
   #overdueBody tr.row-overdue-red td:first-child{box-shadow:inset 6px 0 0 0 var(--accent-2);}
-  #overdueBody tr.row-overdue-green td{background:var(--accent-soft);}
-  #overdueBody tr.row-overdue-green td:first-child{box-shadow:inset 6px 0 0 0 var(--accent);}
+  /* Real green, not --accent: V4 re-points --accent to indigo. */
+  #overdueBody tr.row-overdue-green td{background:var(--ready-soft, #DDF3E6);}
+  #overdueBody tr.row-overdue-green td:first-child{box-shadow:inset 6px 0 0 0 var(--ready, #1B9655);}
   .overdue-state-badge{padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:700;white-space:nowrap;}
   .overdue-state-badge.badge-red{background:var(--accent-2);color:#fff;}
-  .overdue-state-badge.badge-green{background:var(--accent);color:#fff;}
+  .overdue-state-badge.badge-green{background:#13804A;color:#fff;} /* same green as the Ready tag; white text clears 4.5:1 */
   /* Count badge on the nav tab button itself — hidden at 0 so the nav bar
      doesn't show a permanent "0" when nothing is overdue. */
   .tabbtn .overdue-nav-badge{background:var(--accent-2);color:#fff;font-size:11px;font-weight:700;
@@ -5879,7 +5880,7 @@ function renderOverdueTab(){
     // Red-vs-green tint on the nav badge itself so a worker can tell, at
     // a glance from any tab, whether anything actually needs action right
     // now versus just waiting on customers who were already notified.
-    navBadge.style.background = redCount > 0 ? 'var(--accent-2)' : (rows.length > 0 ? 'var(--accent)' : '');
+    navBadge.style.background = redCount > 0 ? 'var(--accent-2)' : (rows.length > 0 ? '#13804A' : '');
   }
 
   if(!rows.length){
