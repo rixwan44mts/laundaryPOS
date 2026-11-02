@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-01-6">
+<meta name="app-build" content="2026-11-02-1">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -502,6 +502,7 @@
   .dash-tile[data-section="cameras"].active{background:var(--purple);border-color:var(--purple);color:#fff;}
   .dash-tile[data-section="editworker"].active{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
   .dash-tile[data-section="storage"].active{background:#13804A;border-color:#13804A;color:#fff;}
+  .dash-tile[data-section="msgterms"].active{background:var(--neel-2, #3443A8);border-color:var(--neel-2, #3443A8);color:#fff;}
   .dash-tile.active .dash-tile-sub{color:rgba(255,255,255,0.85);}
   .dash-tile .dash-tile-icon{font-size:26px;display:block;margin-bottom:8px;}
   .dash-tile .dash-tile-label{font-weight:700;font-size:14.5px;display:block;}
@@ -3140,6 +3141,11 @@
         <span class="dash-tile-label" data-ur="ڈیٹا کی جگہ">Storage</span>
         <span class="dash-tile-sub">Free plan space used per branch</span>
       </button>
+      <button type="button" class="dash-tile" data-section="msgterms" onclick="showAdminSection('msgterms')">
+        <span class="dash-tile-icon">📝</span>
+        <span class="dash-tile-label" data-ur="میسج کی شرائط">Message terms</span>
+        <span class="dash-tile-sub">Terms &amp; conditions in customer messages</span>
+      </button>
     </div>
 
     <!-- CASH REGISTER SECTION -->
@@ -3193,6 +3199,11 @@
         <p class="small" style="margin-top:0;">Paste each shop's live-view stream link (e.g. the web viewer URL from your IP camera / DVR app, or an embeddable HLS link) and save it — the feed will load below.</p>
       </div>
       <div class="camera-grid" id="cameraGrid"></div>
+    </div>
+
+    <!-- MESSAGE TERMS SECTION — terms & conditions at the end of customer messages -->
+    <div class="dash-section" id="dashSection-msgterms">
+      <div id="msgTermsBody"><div class="kk-empty">Loading…</div></div>
     </div>
 
     <!-- STORAGE SECTION — free-plan database space, per branch -->
@@ -4211,7 +4222,25 @@ window.alert = function(msg){
 // Cancel = SMS". The chosen button's own click opens WhatsApp, so the
 // browser treats it as a user action and doesn't block the new tab.
 // Escape / closing does nothing (the old confirm() sent an SMS).
+// Every customer message ends with the bill-expiry warning (Urdu) and the
+// branch's terms & conditions (Admin Dashboard → Message terms). WhatsApp
+// and SMS cannot show colour, so the terms are in _italics_. Not added to
+// the final "Order Dispatched" message: the clothes are already collected.
+const MSG_EXPIRY_LINE_UR = 'بل کی میعاد (Expiry) ختم ہونے کے بعد کپڑوں کی حفاظت کی ذمہ داری دکان پر نہیں ہوگی۔ براہِ کرم اپنے کپڑے جلد از جلد وصول کر لیں۔';
+function withMessageFooter(msg){
+  let text = String(msg || '');
+  if(/^\*✅ Order Dispatched\*/.test(text)) return text;
+  const branch = (branches || []).find(b => b.id === currentBranchId);
+  text += `\n\n${WA_DIVIDER}\n\n⚠️ ${MSG_EXPIRY_LINE_UR}`;
+  const terms = branch && branch.terms ? String(branch.terms).split(/\r?\n/).map(l => l.trim()).filter(Boolean) : [];
+  if(terms.length){
+    text += '\n\n_Terms & Conditions / شرائط و ضوابط:_\n' + terms.map(l => '_' + l.replace(/_/g, ' ') + '_').join('\n');
+  }
+  return text;
+}
+
 function chooseWhatsAppOrSms(formattedPhone, msg, what){
+  msg = withMessageFooter(msg);
   appDialog({
     tone: 'info', pic: 'chat', urTitle: 'گاہک کو میسج', title: what || 'Message the customer',
     ur: 'میسج کیسے بھیجیں؟', message: 'Choose how to send the message.',
@@ -4711,6 +4740,52 @@ function showAdminSection(name){
   if(name === 'cameras') renderCameraGrid();
   if(name === 'editworker') renderEwpPanel();
   if(name === 'storage') loadStorageMeter();
+  if(name === 'msgterms') renderMessageTerms();
+}
+
+// ---------- MESSAGE TERMS (admin) ----------
+// Per-branch terms & conditions shown at the end of customer messages,
+// after the fixed Urdu bill-expiry line (see withMessageFooter). Stored in
+// branches.terms (supabase/branch_terms.sql).
+function renderMessageTerms(){
+  const body = document.getElementById('msgTermsBody');
+  body.innerHTML = `<div class="panel"><label><span class="kk-ur">میسج کی شرائط</span> End of every customer message</label>
+      <p class="small" style="margin-top:0;">Every booking, ready and release message ends with this line, then the branch's terms below (in italics — WhatsApp and SMS cannot show colours):</p>
+      <p class="kk-ur" style="font-size:16px;line-height:2;margin:0;">⚠️ ${escHtml(MSG_EXPIRY_LINE_UR)}</p></div>` +
+    branches.map(b => `<div class="panel" data-terms-branch="${b.id}">
+      <label for="msgTerms_${b.id}">${escHtml(b.name)} — terms &amp; conditions (one per line, English or Urdu)</label>
+      <textarea id="msgTerms_${b.id}" rows="5" maxlength="1500" style="width:100%;font:inherit;padding:10px;">${escHtml(b.terms || '')}</textarea>
+      <div class="row" style="margin-top:8px;">
+        <button type="button" class="btn-main" onclick="runBusy(this, saveMessageTerms, ${b.id})">Save ${escHtml(b.name)}</button>
+        <button type="button" class="btn-secondary" onclick="previewMessageTerms(${b.id})">Preview message</button>
+      </div>
+      <pre id="msgTermsPreview_${b.id}" hidden style="white-space:pre-wrap;background:var(--paper-2);border-radius:12px;padding:12px;margin-top:10px;font-family:inherit;font-size:14px;line-height:1.6;"></pre>
+    </div>`).join('');
+}
+async function saveMessageTerms(branchId){
+  const terms = document.getElementById('msgTerms_' + branchId).value.trim() || null;
+  const { error } = await sb.from('branches').update({ terms }).eq('id', branchId);
+  if(error){
+    alert('Failed: ' + error.message + (/terms/.test(error.message || '') ? ' — run supabase/branch_terms.sql in the Supabase SQL Editor once.' : ''));
+    return;
+  }
+  const b = branches.find(x => x.id === branchId);
+  if(b) b.terms = terms;
+  await logActivity('message_terms_updated', `Updated message terms for ${b ? b.name : branchId}`, branchId);
+  playSfx('ok');
+  alert('Saved. New messages from this branch end with these terms.');
+}
+function previewMessageTerms(branchId){
+  const b = branches.find(x => x.id === branchId);
+  const keep = b ? b.terms : null;
+  const saved = currentBranchId;
+  if(b) b.terms = document.getElementById('msgTerms_' + branchId).value.trim() || null;
+  currentBranchId = branchId;
+  try{
+    const out = document.getElementById('msgTermsPreview_' + branchId);
+    out.textContent = withMessageFooter(buildReadyMessage('1234', getBranchInfo(b ? b.name : '')));
+    out.hidden = false;
+  } finally { if(b) b.terms = keep; currentBranchId = saved; }
 }
 
 // ---------- STORAGE METER (admin) ----------
