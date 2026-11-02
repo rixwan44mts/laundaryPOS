@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-02-1">
+<meta name="app-build" content="2026-11-02-2">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -502,6 +502,18 @@
   .dash-tile[data-section="cameras"].active{background:var(--purple);border-color:var(--purple);color:#fff;}
   .dash-tile[data-section="editworker"].active{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
   .dash-tile[data-section="storage"].active{background:#13804A;border-color:#13804A;color:#fff;}
+  .baqaya-box{border:2px solid var(--accent-2);background:var(--accent-2-soft);color:var(--ink);border-radius:14px;padding:10px 14px;margin:8px 0 12px;}
+  .baqaya-box .bq-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;color:var(--accent-2);}
+  .baqaya-box .bq-head b{font-size:20px;}
+  .baqaya-box .kk-ur{font-size:16px;line-height:1.8;}
+  .baqaya-box ul{list-style:none;margin:6px 0 0;padding:0;}
+  .baqaya-box li{margin:3px 0;}
+  .baqaya-box .bq-link{background:none;border:none;padding:0;font:inherit;color:var(--neel-2,#3443A8);text-decoration:underline;cursor:pointer;text-align:left;}
+  .baqaya-box .bq-collect{display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:700;}
+  .baqaya-box .bq-collect input{width:20px;height:20px;}
+  .dc-carry{width:100%;margin-top:12px;border-color:var(--accent-2);color:var(--accent-2);font-weight:700;}
+  .dc-carry .kk-ur{font-size:15px;line-height:1.6;}
+  .dash-tile[data-section="baqaya"].active{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
   .dash-tile[data-section="msgterms"].active{background:var(--neel-2, #3443A8);border-color:var(--neel-2, #3443A8);color:#fff;}
   .dash-tile.active .dash-tile-sub{color:rgba(255,255,255,0.85);}
   .dash-tile .dash-tile-icon{font-size:26px;display:block;margin-bottom:8px;}
@@ -2694,6 +2706,7 @@
         <label data-i18n="lbl_phone" data-ur="فون نمبر" for="phoneInput">Customer Phone</label>
         <input type="tel" id="phoneInput" placeholder="03XXXXXXXXX" maxlength="11">
         <div id="phoneError" class="small error"></div>
+        <div id="baqayaBox" class="baqaya-box" hidden></div>
       </div>
       <div class="field">
         <label data-i18n="lbl_name" data-ur="نام" for="nameInput">Customer Name</label>
@@ -3141,6 +3154,11 @@
         <span class="dash-tile-label" data-ur="ڈیٹا کی جگہ">Storage</span>
         <span class="dash-tile-sub">Free plan space used per branch</span>
       </button>
+      <button type="button" class="dash-tile" data-section="baqaya" onclick="showAdminSection('baqaya')">
+        <span class="dash-tile-icon">📒</span>
+        <span class="dash-tile-label" data-ur="بقایا">Baqaya</span>
+        <span class="dash-tile-sub">Customers who owe, credit limit</span>
+      </button>
       <button type="button" class="dash-tile" data-section="msgterms" onclick="showAdminSection('msgterms')">
         <span class="dash-tile-icon">📝</span>
         <span class="dash-tile-label" data-ur="میسج کی شرائط">Message terms</span>
@@ -3199,6 +3217,11 @@
         <p class="small" style="margin-top:0;">Paste each shop's live-view stream link (e.g. the web viewer URL from your IP camera / DVR app, or an embeddable HLS link) and save it — the feed will load below.</p>
       </div>
       <div class="camera-grid" id="cameraGrid"></div>
+    </div>
+
+    <!-- BAQAYA SECTION — customers who took clothes without paying -->
+    <div class="dash-section" id="dashSection-baqaya">
+      <div id="baqayaAdminBody"><div class="kk-empty">Loading…</div></div>
     </div>
 
     <!-- MESSAGE TERMS SECTION — terms & conditions at the end of customer messages -->
@@ -3589,6 +3612,7 @@
         <div class="row" style="justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border,#ddd);">
           <span class="small" data-ur="بقایا">Balance Due</span><strong id="dcBalanceDue" style="color:var(--warn);font-size:18px;">Rs 0</strong>
         </div>
+        <div id="dcPrevBox" class="baqaya-box" hidden></div>
 
         <div class="field">
           <label for="dcAmountReceived">Amount Received From Customer</label>
@@ -3611,6 +3635,7 @@
         </div>
         <p id="dcWarning" class="small" style="color:var(--warn);display:none;margin-top:8px;"></p>
 
+        <button type="button" class="btn-secondary dc-carry" id="dcCarryBtn" onclick="carryForwardDispatch()" hidden>📒 <span class="kk-ur">بقایا اگلے بل میں</span> Give clothes, add balance to next bill</button>
         <div class="row" style="margin-top:16px;justify-content:flex-end;gap:8px;align-items:stretch;">
           <button class="btn-secondary" onclick="closeDispatchCashModal()">Cancel</button>
           <button class="btn-main" id="dcConfirmBtn" onclick="confirmDispatchCash()">Confirm &amp; Dispatch</button>
@@ -4741,6 +4766,49 @@ function showAdminSection(name){
   if(name === 'editworker') renderEwpPanel();
   if(name === 'storage') loadStorageMeter();
   if(name === 'msgterms') renderMessageTerms();
+  if(name === 'baqaya') renderBaqayaAdmin();
+}
+
+// ---------- BAQAYA (admin) ----------
+// Customers who took clothes without paying, per branch, and the credit
+// limit workers may allow (branches.credit_limit, supabase/baqaya_credit.sql).
+async function renderBaqayaAdmin(){
+  const body = document.getElementById('baqayaAdminBody');
+  body.innerHTML = '<div class="kk-empty">Loading…</div>';
+  const parts = await Promise.all(branches.map(async b => {
+    const { data, error } = await sb.rpc('get_baqaya_list', { p_branch_id: b.id });
+    return { b, rows: data || [], error };
+  }));
+  const missing = parts.find(x => x.error && /get_baqaya_list|schema cache/i.test(x.error.message || ''));
+  if(missing){ body.innerHTML = '<div class="kk-empty is-error">Run supabase/baqaya_credit.sql in the Supabase SQL Editor once.</div>'; return; }
+  body.innerHTML = `<div class="panel"><label><span class="kk-ur">بقایا</span> Baqaya — clothes given without payment</label>
+      <p class="small" style="margin-top:0;">Workers may give clothes on baqaya while the customer's total baqaya at that branch stays within the credit limit. The owner has no limit. Baqaya is collected with the customer's next order.</p></div>` +
+    parts.map(({ b, rows }) => {
+      const byCustomer = {};
+      rows.forEach(r => { (byCustomer[r.customer_phone] = byCustomer[r.customer_phone] || []).push(r); });
+      const total = rows.reduce((s, r) => s + Number(r.balance_due || 0), 0);
+      return `<div class="panel"><label>${escHtml(b.name)} — total baqaya <b style="color:var(--accent-2)">Rs ${moneyText(total)}</b></label>
+        <div class="row" style="align-items:flex-end;">
+          <div class="field"><label for="creditLimit_${b.id}">Credit limit per customer (Rs)</label><input type="number" min="0" id="creditLimit_${b.id}" value="${b.credit_limit != null ? moneyInputValue(b.credit_limit) : 2000}" style="width:140px;"></div>
+          <div class="field"><button type="button" class="btn-secondary" onclick="runBusy(this, saveCreditLimit, ${b.id})">Save limit</button></div>
+        </div>
+        ${rows.length ? `<div class="table-scroll"><table><thead><tr><th>Customer</th><th>Phone</th><th>Orders</th><th>Baqaya</th></tr></thead><tbody>` +
+          Object.values(byCustomer).map(list => `<tr><td>${escHtml(list[0].customer_name || '—')}</td><td>${escHtml(list[0].customer_phone || '')}</td>
+            <td>${list.map(r => `${r.serial_no ? fmtSerial(r.serial_no) + ' · ' : ''}Code ${escHtml(r.code || String(r.id))} (${formatAppDate(r.created_at)}) Rs ${moneyText(r.balance_due)}`).join('<br>')}</td>
+            <td><b>Rs ${moneyText(list.reduce((s, r) => s + Number(r.balance_due || 0), 0))}</b></td></tr>`).join('') +
+          '</tbody></table></div>' : '<p class="small">Nobody owes baqaya here.</p>'}
+      </div>`;
+    }).join('');
+}
+async function saveCreditLimit(branchId){
+  const v = parseFloat(document.getElementById('creditLimit_' + branchId).value);
+  if(isNaN(v) || v < 0){ alert('Enter a valid amount (0 or more).'); return; }
+  const { error } = await sb.from('branches').update({ credit_limit: v }).eq('id', branchId);
+  if(error){ alert('Failed: ' + error.message + (/credit_limit/.test(error.message || '') ? ' — run supabase/baqaya_credit.sql first.' : '')); return; }
+  const b = branches.find(x => x.id === branchId); if(b) b.credit_limit = v;
+  await logActivity('credit_limit_updated', `Baqaya credit limit for ${b ? b.name : branchId} set to Rs ${moneyText(v)}`, branchId);
+  playSfx('ok');
+  alert('Saved.');
 }
 
 // ---------- MESSAGE TERMS (admin) ----------
@@ -6837,6 +6905,10 @@ function buildBookingMessage(code, branchInfo, items, total, advancePaid, balanc
     `\n${WA_DIVIDER}\n\n` +
     `*🧾 Order Details*\n\n${itemsText}\n\n` +
     paymentBlock +
+    (bookingPrevBaqaya.length
+      ? `\n\n*📒 Previous Baqaya / پچھلا بقایا*\n` + bookingPrevBaqaya.map(r => `• Code ${r.code || r.id} (${formatAppDate(r.created_at)}) — Rs ${moneyText(r.balance_due)}`).join('\n') +
+        `\n*Total to pay at pickup: Rs ${moneyText(balanceDue + baqayaTotal(bookingPrevBaqaya))}*`
+      : '') +
     datesBlock +
     `\n\n${WA_DIVIDER}\n\n` +
     `ہم آپ کو مطلع کریں گے جب آپ کا آرڈر تیار ہو جائے گا۔\n\n` +
@@ -7132,25 +7204,70 @@ function confirmDispatchReceiver(){
   const cachedOrder = allOpenOrders.find(o => o.id === orderId) || null;
   const balanceDue = cachedOrder ? Number(cachedOrder.balance_due || 0) : 0;
 
-  if(balanceDue > 0){
-    openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue);
-  } else {
-    closeOrder(orderId, phone, code, receiverName, receiverPhone);
-  }
+  // Earlier orders this customer took without paying (baqaya) are offered
+  // for collection too — so the payment step opens even if this order is paid.
+  fetchCustomerBaqaya(phone, orderId).then(prev => {
+    if(balanceDue > 0 || prev.length){
+      openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue, prev);
+    } else {
+      closeOrder(orderId, phone, code, receiverName, receiverPhone);
+    }
+  });
 }
+
+// ---------- BAQAYA (customer took clothes without paying) ----------
+// The unpaid balance stays on that order (marked carried forward by
+// close_order) and is shown on the customer's next New Order and collected
+// at their next dispatch. Each order keeps its own money, so the registers
+// count baqaya only on the day it is actually paid.
+async function fetchCustomerBaqaya(phone, exceptOrderId){
+  if(!phone || !currentBranchId || !isReallyOnline()) return [];
+  try{
+    const { data, error } = await sb.rpc('get_customer_baqaya', { p_phone: phone, p_branch_id: currentBranchId });
+    if(error || !data) return [];
+    return data.filter(r => r.id !== exceptOrderId && Number(r.balance_due) > 0);
+  }catch(e){ return []; }
+}
+function baqayaTotal(list){ return (list || []).reduce((t, r) => t + Number(r.balance_due || 0), 0); }
+function baqayaLabel(r){
+  return `${r.serial_no ? fmtSerial(r.serial_no) + ' · ' : ''}Code ${r.code || r.id} · ${formatAppDate(r.created_at)}`;
+}
+// Small bill of an old unpaid order (opened from the baqaya links).
+function showBaqayaBill(r){
+  const items = (r.items || []).map(it => `• ${it.service} × ${it.qty}`).join('\n');
+  appDialog({
+    tone: 'info', pic: 'tag', urTitle: 'پرانا بل', title: 'Order ' + baqayaLabel(r),
+    ur: `بقایا: Rs ${moneyText(r.balance_due)}`,
+    message: `${items}\n\nTotal Rs ${moneyText(r.total)} · Advance Rs ${moneyText(r.advance_paid)} · Baqaya Rs ${moneyText(r.balance_due)}` +
+      (r.carried_forward_at ? `\nClothes taken on ${formatAppDate(r.carried_forward_at)} without paying.` : '')
+  });
+}
+function renderBaqayaList(list, withCollect){
+  return `<div class="bq-head"><span><span class="kk-ur">پچھلا بقایا</span> Previous baqaya</span><b>Rs ${moneyText(baqayaTotal(list))}</b></div>
+    <ul>${list.map((r, i) => `<li><button type="button" class="bq-link" onclick="showBaqayaBill(window.__bqList[${i}])">${escHtml(baqayaLabel(r))}</button> — Rs ${moneyText(r.balance_due)}</li>`).join('')}</ul>` +
+    (withCollect ? `<label class="bq-collect"><input type="checkbox" id="dcPrevCollect" checked onchange="updateDispatchChangeDisplay()"> <span class="kk-ur">ابھی وصول کریں</span> Collect it now too</label>` : '');
+}
+
 
 // ---------- COLLECT PAYMENT MODAL (replaces the old prompt()/alert() flow) ----------
 // Holds the order this modal is currently open for, so confirmDispatchCash()
 // and the quick-note buttons know what they're calculating against.
 let pendingCashDispatch = null;
 
-function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue){
-  pendingCashDispatch = { orderId, phone, code, receiverName, receiverPhone, balanceDue };
+function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue, prev){
+  prev = prev || [];
+  pendingCashDispatch = { orderId, phone, code, receiverName, receiverPhone, balanceDue, prev };
+  const prevBox = document.getElementById('dcPrevBox');
+  window.__bqList = prev;
+  prevBox.innerHTML = prev.length ? renderBaqayaList(prev, true) : '';
+  prevBox.hidden = !prev.length;
+  // "Add to next bill" needs the server (credit limit check), so online only.
+  document.getElementById('dcCarryBtn').hidden = !(balanceDue > 0 && isReallyOnline());
   fillOrderIdCard('dcOrderCard', orderId, code);
   document.getElementById('dcTotal').textContent = 'Rs ' + moneyText((cachedOrder ? cachedOrder.total : '—'));
   document.getElementById('dcAdvance').textContent = 'Rs ' + moneyText((cachedOrder ? cachedOrder.advance_paid : '—'));
   document.getElementById('dcBalanceDue').textContent = 'Rs ' + moneyText(balanceDue);
-  document.getElementById('dcAmountReceived').value = balanceDue;
+  document.getElementById('dcAmountReceived').value = balanceDue + baqayaTotal(prev);
   document.getElementById('dcAmountReceived').dataset.autofill = '1';
   document.getElementById('dcWarning').style.display = 'none';
   document.getElementById('dcConfirmBtn').disabled = false;
@@ -7177,9 +7294,14 @@ function dcAddNote(amount){
   input.value = noteTapBase(input) + amount;
   updateDispatchChangeDisplay();
 }
+function dcExpected(){
+  if(!pendingCashDispatch) return 0;
+  const box = document.getElementById('dcPrevCollect');
+  return pendingCashDispatch.balanceDue + (box && box.checked ? baqayaTotal(pendingCashDispatch.prev) : 0);
+}
 function dcSetExact(){
   if(!pendingCashDispatch) return;
-  document.getElementById('dcAmountReceived').value = pendingCashDispatch.balanceDue;
+  document.getElementById('dcAmountReceived').value = dcExpected();
   document.getElementById('dcAmountReceived').dataset.autofill = '1';
   updateDispatchChangeDisplay();
 }
@@ -7191,7 +7313,8 @@ function dcClearAmount(){
 function updateDispatchChangeDisplay(){
   if(!pendingCashDispatch) return;
   const received = parseFloat(document.getElementById('dcAmountReceived').value) || 0;
-  const change = received - pendingCashDispatch.balanceDue;
+  const expected = dcExpected();
+  const change = received - expected;
   const changeEl = document.getElementById('dcChange');
   const warnEl = document.getElementById('dcWarning');
   const confirmBtn = document.getElementById('dcConfirmBtn');
@@ -7199,7 +7322,8 @@ function updateDispatchChangeDisplay(){
     changeEl.textContent = `Short by Rs ${fmtMoney(Math.abs(change))}`;
     changeEl.style.color = 'var(--warn)';
     warnEl.style.display = 'block';
-    warnEl.textContent = `Rs ${fmtMoney(Math.abs(change))} short of the Rs ${moneyText(pendingCashDispatch.balanceDue)} balance due. Full balance must be collected before dispatch.`;
+    warnEl.textContent = `Rs ${fmtMoney(Math.abs(change))} short of the Rs ${moneyText(expected)} due. Collect it in full` +
+      (pendingCashDispatch.balanceDue > 0 ? ', or use "add balance to next bill".' : ', or untick "Collect it now too".');
     confirmBtn.disabled = true;
   } else {
     changeEl.textContent = `Rs ${fmtMoney(change)}`;
@@ -7213,16 +7337,37 @@ function confirmDispatchCash(){
   if(!pendingCashDispatch) return;
   const received = parseFloat(document.getElementById('dcAmountReceived').value);
   if(isNaN(received) || received < 0){ alert('Enter a valid, non-negative amount.'); return; }
-  if(received < pendingCashDispatch.balanceDue){
+  const expected = dcExpected();
+  if(received < expected){
     // Shouldn't normally happen (button is disabled in this state), but
     // guards against a stale click.
-    alert(`Rs ${moneyText(received)} is short of the Rs ${moneyText(pendingCashDispatch.balanceDue)} balance due.`);
+    alert(`Rs ${moneyText(received)} is short of the Rs ${moneyText(expected)} due.`);
     return;
   }
-  const { orderId, phone, code, receiverName, receiverPhone } = pendingCashDispatch;
+  const { orderId, phone, code, receiverName, receiverPhone, prev, balanceDue } = pendingCashDispatch;
+  const collectPrev = document.getElementById('dcPrevCollect') && document.getElementById('dcPrevCollect').checked ? prev : [];
+  if(collectPrev.length && !isReallyOnline()){ alert('Previous baqaya can only be collected while online. Untick "Collect it now too" to continue.'); return; }
   document.getElementById('dispatchCashModal').classList.remove('open');
   pendingCashDispatch = null;
-  closeOrder(orderId, phone, code, receiverName, receiverPhone, received);
+  // This order gets what's left after the previous baqaya (any change stays with it).
+  const forThisOrder = received - baqayaTotal(collectPrev);
+  closeOrder(orderId, phone, code, receiverName, receiverPhone, balanceDue > 0 ? forThisOrder : undefined,
+    { collectPrev, changeIfNoBalance: balanceDue > 0 ? 0 : forThisOrder });
+}
+
+// Give the clothes now; this order's balance stays as baqaya for next time.
+async function carryForwardDispatch(){
+  if(!pendingCashDispatch) return;
+  const { orderId, phone, code, receiverName, receiverPhone, balanceDue, prev } = pendingCashDispatch;
+  const owed = balanceDue + baqayaTotal(prev);
+  const ok = await appConfirm({ tone: 'warn', pic: 'warn', urTitle: 'بقایا اگلے بل میں؟', title: 'Give clothes without payment?',
+    ur: `Rs ${moneyText(balanceDue)} اگلے بل میں جمع ہو جائیں گے۔ گاہک کا کل بقایا: Rs ${moneyText(owed)}`,
+    message: `Rs ${moneyText(balanceDue)} stays as baqaya and is shown on this customer's next order. Their total baqaya will be Rs ${moneyText(owed)}.`,
+    okText: 'Give clothes' });
+  if(!ok) return;
+  document.getElementById('dispatchCashModal').classList.remove('open');
+  pendingCashDispatch = null;
+  closeOrder(orderId, phone, code, receiverName, receiverPhone, undefined, { carryForward: true, carriedAmount: balanceDue });
 }
 
 // ---------- PARTIAL DISPATCH MODAL (Step 2) ----------
@@ -8201,7 +8346,8 @@ function closeDispatchChangeModal(){
   document.getElementById('dispatchChangeModal').classList.remove('open');
 }
 
-async function closeOrder(orderId, phone, code, receiverName, receiverPhone, presetAmountReceived){
+async function closeOrder(orderId, phone, code, receiverName, receiverPhone, presetAmountReceived, opts){
+  opts = opts || {};
   // The native confirm() that used to sit here is gone — the "Who's
   // Collecting" modal and (when there's a balance due) the "Collect
   // Payment" modal already require a deliberate "Confirm & Dispatch"
@@ -8230,7 +8376,9 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
     const balanceDue = balanceInfo ? Number(balanceInfo.balance_due) : 0;
     let collected = 0, change = 0;
 
-    if(balanceDue > 0){
+    if(balanceDue > 0 && opts.carryForward){
+      // Nothing collected: close_order checks the branch's credit limit.
+    } else if(balanceDue > 0){
       // Amount was already collected via the Collect Payment modal before
       // this function was called. Still re-validate against the just-fetched
       // SERVER balance (not the cached figure the modal was shown with) —
@@ -8273,8 +8421,15 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
 
     let closeError;
     try{
-      ({ error: closeError } = await sb.rpc('close_order', { p_order_id: orderId }));
+      ({ error: closeError } = await sb.rpc('close_order', opts.carryForward
+        ? { p_order_id: orderId, p_receiver_name: receiverName || null, p_receiver_phone: receiverPhone || null, p_carry_forward: true }
+        : { p_order_id: orderId }));
     }catch(networkErr){ closeError = networkErr; }
+    if(opts.carryForward && closeError){
+      const m = String(closeError.message || closeError);
+      alert(m.startsWith('CREDIT_LIMIT:') ? 'Cannot give the clothes on baqaya: ' + m.replace('CREDIT_LIMIT: ', '') : 'Failed: ' + m);
+      return;
+    }
 
     if(closeError && isNetworkError(closeError)){
       // Balance (if any) is already settled server-side at this point —
@@ -8300,11 +8455,21 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
     if(receiverName || receiverPhone){
       orderReceivers[orderId] = { name: receiverName || '', phone: receiverPhone || '' };
     }
+    if(opts.carryForward){
+      await logActivity('baqaya_carried', `Order ${code || orderId}: clothes given without payment — Rs ${moneyText(balanceDue)} baqaya carried to next bill [oid:${orderId}]`);
+    }
+    // Previous baqaya paid now: each old order records its own payment.
+    for(const old of (opts.collectPrev || [])){
+      const { error: bqErr } = await sb.rpc('collect_balance_payment', { p_order_id: old.id, p_amount_collected: Number(old.balance_due) });
+      if(bqErr) alert(`Could not record the baqaya for order ${old.code || old.id}: ${bqErr.message}`);
+      else await logActivity('baqaya_collected', `Baqaya Rs ${moneyText(old.balance_due)} collected for order ${old.code || old.id} (with order ${code || orderId}) [oid:${old.id}]`);
+    }
     if(phone){
       notifyCustomer(phone, code, 'dispatched', receiverName, receiverPhone);
     }
     loadOpenOrders();
-    if(change > 0) showDispatchChangeModal(code, orderId, change);
+    const changeBack = change > 0 ? change : (opts.changeIfNoBalance > 0 ? opts.changeIfNoBalance : 0);
+    if(changeBack > 0) showDispatchChangeModal(code, orderId, changeBack);
     return;
   }
 
@@ -9328,6 +9493,18 @@ document.getElementById('phoneInput').addEventListener('blur', loadCustomerVipSt
 
 // ---------- VIP STATUS (New Order screen) ----------
 let currentVipPhone = null;
+// Baqaya of the customer on New Order (shown in red under the phone, added to the receipt and message).
+let currentPrevBaqaya = [];
+let bookingPrevBaqaya = [];
+async function loadCustomerBaqaya(phone){
+  const box = document.getElementById('baqayaBox');
+  currentPrevBaqaya = phone && isValidPakPhone(phone) ? await fetchCustomerBaqaya(phone, null) : [];
+  if(document.getElementById('phoneInput').value.trim() !== phone) return; // number changed meanwhile
+  window.__bqList = currentPrevBaqaya;
+  box.innerHTML = currentPrevBaqaya.length ? renderBaqayaList(currentPrevBaqaya, false) +
+    '<div class="small" style="margin-top:6px;">Added to this bill and collected when the clothes are picked up.</div>' : '';
+  box.hidden = !currentPrevBaqaya.length;
+}
 let currentVipStatus = false;
 
 function updateVipButton(){
@@ -9354,6 +9531,7 @@ function resetVipButton(){
 async function loadCustomerVipStatus(){
   const phone = document.getElementById('phoneInput').value.trim();
   const btn = document.getElementById('vipToggleBtn');
+  loadCustomerBaqaya(phone);
   if(!phone || !isValidPakPhone(phone)){ resetVipButton(); return; }
   currentVipPhone = phone;
   currentVipStatus = false;
@@ -9695,6 +9873,8 @@ function closePriceNotes(ok){
 // the offline-queue path below — same form, same reset either way.
 function resetOrderForm(){
   currentItems = [];
+  currentPrevBaqaya = [];
+  const bqBox = document.getElementById('baqayaBox'); if(bqBox){ bqBox.hidden = true; bqBox.innerHTML = ''; }
   document.getElementById('phoneInput').value = '';
   document.getElementById('nameInput').value = '';
   document.getElementById('codeInput').value = '';
@@ -9716,6 +9896,8 @@ function resetOrderForm(){
 }
 
 async function saveAndPrint(){
+  // Receipt + booking message list this customer's previous baqaya.
+  bookingPrevBaqaya = (currentPrevBaqaya || []).slice();
   const phone = document.getElementById('phoneInput').value.trim();
   const name = document.getElementById('nameInput').value.trim();
   const code = document.getElementById('codeInput').value.trim();
@@ -9893,6 +10075,7 @@ async function saveAndPrint(){
 
     resetOrderForm();
   } finally {
+    bookingPrevBaqaya = [];
     saveBtn.disabled = false;
   }
 }
@@ -11313,6 +11496,8 @@ function printReceipt(orderId, phone, name, code, subtotal, discountPct, discoun
       <div class="receipt-row"><span>BALANCE DUE</span><span>Rs ${moneyText(balanceDue)}</span></div>
       <hr>
       ${balanceLine}
+      ${bookingPrevBaqaya.length && !items ? `<hr>${bookingPrevBaqaya.map(r => `<div class="receipt-row"><span>PREVIOUS BAQAYA ${escHtml(r.serial_no ? fmtSerial(r.serial_no) : (r.code || ''))} (${formatAppDate(r.created_at)})</span><span>Rs ${moneyText(r.balance_due)}</span></div>`).join('')}
+      <div class="receipt-row receipt-total"><b>TOTAL TO PAY AT PICKUP</b><b>Rs ${moneyText(balanceDue + baqayaTotal(bookingPrevBaqaya))}</b></div>` : ''}
       ${expiryLine}
       ${receiptQrHtml(offlinePending ? 0 : orderId, code)}
       <hr>
