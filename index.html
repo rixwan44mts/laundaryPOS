@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-02-2">
+<meta name="app-build" content="2026-11-02-3">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -513,6 +513,15 @@
   .baqaya-box .bq-collect input{width:20px;height:20px;}
   .dc-carry{width:100%;margin-top:12px;border-color:var(--accent-2);color:var(--accent-2);font-weight:700;}
   .dc-carry .kk-ur{font-size:15px;line-height:1.6;}
+  .dc-method{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 8px;}
+  .dc-m{font:700 16px var(--font-ui);padding:12px;border-radius:12px;border:2px solid var(--line-strong);background:#fff;cursor:pointer;color:var(--ink);}
+  .dc-m .kk-ur{font-size:16px;line-height:1.5;}
+  .dc-m.is-on{border-color:var(--ready,#1B9655);background:var(--ready-soft,#DDF3E6);}
+  .dc-accounts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;}
+  .dc-acct{display:grid;text-align:left;gap:2px;font:inherit;padding:10px 14px;border-radius:12px;border:2px solid var(--line-strong);background:#fff;cursor:pointer;min-width:140px;}
+  .dc-acct span{font-size:12.5px;color:var(--muted);}
+  .dc-acct.is-on{border-color:var(--neel-2,#3443A8);background:var(--neel-soft,#E7EAF8);}
+  .dash-tile[data-section="payaccounts"].active{background:var(--ready,#1B9655);border-color:var(--ready,#1B9655);color:#fff;}
   .dash-tile[data-section="baqaya"].active{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
   .dash-tile[data-section="msgterms"].active{background:var(--neel-2, #3443A8);border-color:var(--neel-2, #3443A8);color:#fff;}
   .dash-tile.active .dash-tile-sub{color:rgba(255,255,255,0.85);}
@@ -3159,6 +3168,11 @@
         <span class="dash-tile-label" data-ur="بقایا">Baqaya</span>
         <span class="dash-tile-sub">Customers who owe, credit limit</span>
       </button>
+      <button type="button" class="dash-tile" data-section="payaccounts" onclick="showAdminSection('payaccounts')">
+        <span class="dash-tile-icon">💳</span>
+        <span class="dash-tile-label" data-ur="اکاؤنٹس">Accounts</span>
+        <span class="dash-tile-sub">Online payment accounts and what came in</span>
+      </button>
       <button type="button" class="dash-tile" data-section="msgterms" onclick="showAdminSection('msgterms')">
         <span class="dash-tile-icon">📝</span>
         <span class="dash-tile-label" data-ur="میسج کی شرائط">Message terms</span>
@@ -3222,6 +3236,11 @@
     <!-- BAQAYA SECTION — customers who took clothes without paying -->
     <div class="dash-section" id="dashSection-baqaya">
       <div id="baqayaAdminBody"><div class="kk-empty">Loading…</div></div>
+    </div>
+
+    <!-- PAYMENT ACCOUNTS SECTION — accounts that receive online payments -->
+    <div class="dash-section" id="dashSection-payaccounts">
+      <div id="payAccountsBody"><div class="kk-empty">Loading…</div></div>
     </div>
 
     <!-- MESSAGE TERMS SECTION — terms & conditions at the end of customer messages -->
@@ -3614,6 +3633,11 @@
         </div>
         <div id="dcPrevBox" class="baqaya-box" hidden></div>
 
+        <div class="dc-method" id="dcMethodRow">
+          <button type="button" class="dc-m is-on" id="dcMCash" onclick="dcSetMethod('cash')">💵 <span class="kk-ur">نقد</span> Cash</button>
+          <button type="button" class="dc-m" id="dcMOnline" onclick="dcSetMethod('online')">📱 <span class="kk-ur">آن لائن</span> Online</button>
+        </div>
+        <div id="dcAccounts" class="dc-accounts" hidden></div>
         <div class="field">
           <label for="dcAmountReceived">Amount Received From Customer</label>
           <input type="number" id="dcAmountReceived" style="width:100%;font-size:20px;" inputmode="decimal" oninput="this.dataset.autofill='';updateDispatchChangeDisplay()">
@@ -4767,6 +4791,7 @@ function showAdminSection(name){
   if(name === 'storage') loadStorageMeter();
   if(name === 'msgterms') renderMessageTerms();
   if(name === 'baqaya') renderBaqayaAdmin();
+  if(name === 'payaccounts') renderPayAccountsAdmin();
 }
 
 // ---------- BAQAYA (admin) ----------
@@ -4809,6 +4834,71 @@ async function saveCreditLimit(branchId){
   await logActivity('credit_limit_updated', `Baqaya credit limit for ${b ? b.name : branchId} set to Rs ${moneyText(v)}`, branchId);
   playSfx('ok');
   alert('Saved.');
+}
+
+// ---------- PAYMENT ACCOUNTS (admin) ----------
+// Accounts that receive online payments (JazzCash, Easypaisa, bank…).
+// Workers tap one at Collect Payment; here the owner adds or switches them
+// off and sees what came in (payments.method = 'online').
+async function renderPayAccountsAdmin(){
+  const body = document.getElementById('payAccountsBody');
+  body.innerHTML = '<div class="kk-empty">Loading…</div>';
+  const { data: accts, error } = await sb.from('payment_accounts').select('*').order('id');
+  if(error){ body.innerHTML = `<div class="kk-empty is-error">${escHtml(error.message)}${/payment_accounts/.test(error.message || '') ? ' — run supabase/payments_online.sql in the Supabase SQL Editor once.' : ''}</div>`; return; }
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const todayKey = localDateStr(now);
+  const { data: pays } = await sb.from('payments').select('id, order_id, amount, created_at, account_id, branch_id')
+    .eq('method', 'online').gte('created_at', monthStart).order('created_at', { ascending: false });
+  const rows = pays || [];
+  const ids = [...new Set(rows.slice(0, 40).map(r => r.order_id).filter(Boolean))];
+  let codes = {};
+  if(ids.length){
+    const { data: os } = await sb.from('orders').select('id, code, serial_no').in('id', ids);
+    (os || []).forEach(o => { codes[o.id] = o; });
+  }
+  const sum = (list) => list.reduce((t, r) => t + Number(r.amount || 0), 0);
+  body.innerHTML = `<div class="panel"><label><span class="kk-ur">اکاؤنٹس</span> Online payment accounts</label>
+      <p class="small" style="margin-top:0;">Workers tap one of these when a customer pays online at Collect Payment. Switch an account off to hide it from workers; its past payments stay.</p>
+      <div class="table-scroll"><table><thead><tr><th>Account</th><th>Details</th><th>Today</th><th>This month</th><th>Status</th><th></th></tr></thead><tbody>
+      ${(accts || []).map(a => {
+        const mine = rows.filter(r => r.account_id === a.id);
+        return `<tr><td><b>${escHtml(a.name)}</b></td><td>${escHtml(a.details || '')}</td>
+          <td>Rs ${moneyText(sum(mine.filter(r => localDateStr(new Date(r.created_at)) === todayKey)))}</td>
+          <td><b>Rs ${moneyText(sum(mine))}</b></td>
+          <td>${a.active ? 'On' : '<span style="color:var(--warn)">Off</span>'}</td>
+          <td><button type="button" class="btn-secondary" onclick="runBusy(this, setPayAccountActive, ${a.id}, ${a.active ? 'false' : 'true'})">${a.active ? 'Switch off' : 'Switch on'}</button></td></tr>`;
+      }).join('') || '<tr><td colspan="6" class="small">No accounts yet — add one below.</td></tr>'}
+      </tbody></table></div>
+      <div class="row" style="margin-top:12px;align-items:flex-end;">
+        <div class="field"><label for="payAcctName">Name (e.g. JazzCash, Easypaisa, Meezan Bank)</label><input id="payAcctName" type="text" maxlength="60" style="width:220px;"></div>
+        <div class="field"><label for="payAcctDetails">Number / account title (optional)</label><input id="payAcctDetails" type="text" maxlength="120" style="width:240px;"></div>
+        <div class="field"><button type="button" class="btn-main" onclick="runBusy(this, addPayAccount)">+ Add account</button></div>
+      </div></div>
+    <div class="panel"><label>Online payments this month</label>
+      ${rows.length ? `<div class="table-scroll"><table><thead><tr><th>When</th><th>Order</th><th>Account</th><th>Amount</th></tr></thead><tbody>
+        ${rows.slice(0, 40).map(r => {
+          const o = codes[r.order_id];
+          const a = (accts || []).find(x => x.id === r.account_id);
+          return `<tr><td>${escHtml(formatAppDateTime(r.created_at))}</td><td>${o ? (o.serial_no ? fmtSerial(o.serial_no) + ' · ' : '') + 'Code ' + escHtml(o.code || String(o.id)) : '#' + r.order_id}</td><td>${escHtml(a ? a.name : '—')}</td><td>Rs ${moneyText(r.amount)}</td></tr>`;
+        }).join('')}</tbody></table></div>` : '<p class="small">No online payments this month.</p>'}
+    </div>`;
+}
+async function addPayAccount(){
+  const name = document.getElementById('payAcctName').value.trim();
+  const details = document.getElementById('payAcctDetails').value.trim() || null;
+  if(!name){ alert('Enter the account name.'); return; }
+  const { error } = await sb.from('payment_accounts').insert({ name, details });
+  if(error){ alert('Failed: ' + error.message); return; }
+  await logActivity('payment_account_added', `Online payment account added: ${name}${details ? ' (' + details + ')' : ''}`, null);
+  playSfx('ok');
+  renderPayAccountsAdmin();
+}
+async function setPayAccountActive(id, active){
+  const { error } = await sb.from('payment_accounts').update({ active }).eq('id', id);
+  if(error){ alert('Failed: ' + error.message); return; }
+  await logActivity('payment_account_' + (active ? 'on' : 'off'), `Online payment account #${id} switched ${active ? 'on' : 'off'}`, null);
+  renderPayAccountsAdmin();
 }
 
 // ---------- MESSAGE TERMS (admin) ----------
@@ -7255,14 +7345,13 @@ function renderBaqayaList(list, withCollect){
 let pendingCashDispatch = null;
 
 function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone, cachedOrder, balanceDue, prev){
-  prev = prev || [];
-  pendingCashDispatch = { orderId, phone, code, receiverName, receiverPhone, balanceDue, prev };
+  // Oldest baqaya first: money handed over pays the oldest debt first.
+  prev = (prev || []).slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+  pendingCashDispatch = { orderId, phone, code, receiverName, receiverPhone, balanceDue, prev, method: 'cash', accountId: null };
   const prevBox = document.getElementById('dcPrevBox');
   window.__bqList = prev;
   prevBox.innerHTML = prev.length ? renderBaqayaList(prev, true) : '';
   prevBox.hidden = !prev.length;
-  // "Add to next bill" needs the server (credit limit check), so online only.
-  document.getElementById('dcCarryBtn').hidden = !(balanceDue > 0 && isReallyOnline());
   fillOrderIdCard('dcOrderCard', orderId, code);
   document.getElementById('dcTotal').textContent = 'Rs ' + moneyText((cachedOrder ? cachedOrder.total : '—'));
   document.getElementById('dcAdvance').textContent = 'Rs ' + moneyText((cachedOrder ? cachedOrder.advance_paid : '—'));
@@ -7271,13 +7360,49 @@ function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone
   document.getElementById('dcAmountReceived').dataset.autofill = '1';
   document.getElementById('dcWarning').style.display = 'none';
   document.getElementById('dcConfirmBtn').disabled = false;
+  // Online payments and "add to next bill" need the server, so online only.
+  document.getElementById('dcMethodRow').hidden = !isReallyOnline();
   document.getElementById('dispatchCashModal').classList.add('open');
-  updateDispatchChangeDisplay();
+  dcSetMethod('cash');
+  if(isReallyOnline()) loadPaymentAccounts().then(() => { if(pendingCashDispatch && pendingCashDispatch.method === 'online') dcSetMethod('online'); });
 }
 
 function closeDispatchCashModal(){
   document.getElementById('dispatchCashModal').classList.remove('open');
   pendingCashDispatch = null;
+}
+
+// ---------- CASH / ONLINE ----------
+// Online payments name the account that received them (Admin Dashboard →
+// Accounts). Stored on the payment row (method, account_id).
+let paymentAccounts = [];
+async function loadPaymentAccounts(){
+  try{
+    const { data, error } = await sb.from('payment_accounts').select('*').eq('active', true).order('id');
+    paymentAccounts = error ? [] : (data || []);
+  }catch(e){ paymentAccounts = []; }
+  return paymentAccounts;
+}
+function dcSetMethod(m){
+  if(!pendingCashDispatch) return;
+  pendingCashDispatch.method = m;
+  if(m === 'cash') pendingCashDispatch.accountId = null;
+  document.getElementById('dcMCash').classList.toggle('is-on', m === 'cash');
+  document.getElementById('dcMOnline').classList.toggle('is-on', m === 'online');
+  const box = document.getElementById('dcAccounts');
+  box.hidden = m !== 'online';
+  if(m === 'online'){
+    box.innerHTML = paymentAccounts.length
+      ? '<div class="small" style="width:100%;"><span class="kk-ur">کس اکاؤنٹ میں آئے؟</span> Which account received it?</div>' +
+        paymentAccounts.map(a => `<button type="button" class="dc-acct${a.id === pendingCashDispatch.accountId ? ' is-on' : ''}" onclick="dcPickAccount(${a.id})"><b>${escHtml(a.name)}</b>${a.details ? `<span>${escHtml(a.details)}</span>` : ''}</button>`).join('')
+      : '<div class="small">No online accounts yet — the owner adds them in Admin Dashboard → Accounts.</div>';
+  }
+  updateDispatchChangeDisplay();
+}
+function dcPickAccount(id){
+  if(!pendingCashDispatch) return;
+  pendingCashDispatch.accountId = id;
+  dcSetMethod('online');
 }
 
 // Quick-add buttons: tap the denomination the customer physically handed
@@ -7294,10 +7419,29 @@ function dcAddNote(amount){
   input.value = noteTapBase(input) + amount;
   updateDispatchChangeDisplay();
 }
+function dcPrevChecked(){
+  const box = document.getElementById('dcPrevCollect');
+  return !!(box && box.checked);
+}
 function dcExpected(){
   if(!pendingCashDispatch) return 0;
-  const box = document.getElementById('dcPrevCollect');
-  return pendingCashDispatch.balanceDue + (box && box.checked ? baqayaTotal(pendingCashDispatch.prev) : 0);
+  return pendingCashDispatch.balanceDue + (dcPrevChecked() ? baqayaTotal(pendingCashDispatch.prev) : 0);
+}
+// Splits the money handed over: previous baqaya first (oldest first, part
+// payments allowed), then this bill; anything left is change.
+function dcAllocate(received){
+  const s = pendingCashDispatch;
+  let left = Math.max(0, received);
+  const prevPayments = [];
+  if(dcPrevChecked()){
+    for(const r of s.prev){
+      const amt = Math.min(left, Number(r.balance_due || 0));
+      if(amt > 0){ prevPayments.push({ id: r.id, code: r.code, amount: amt, full: amt === Number(r.balance_due) }); left -= amt; }
+    }
+  }
+  const current = Math.min(left, s.balanceDue);
+  left -= current;
+  return { prevPayments, current, extra: left };
 }
 function dcSetExact(){
   if(!pendingCashDispatch) return;
@@ -7311,63 +7455,78 @@ function dcClearAmount(){
 }
 
 function updateDispatchChangeDisplay(){
-  if(!pendingCashDispatch) return;
+  const s = pendingCashDispatch;
+  if(!s) return;
   const received = parseFloat(document.getElementById('dcAmountReceived').value) || 0;
-  const expected = dcExpected();
-  const change = received - expected;
+  const a = dcAllocate(received);
   const changeEl = document.getElementById('dcChange');
   const warnEl = document.getElementById('dcWarning');
   const confirmBtn = document.getElementById('dcConfirmBtn');
-  if(change < 0){
-    changeEl.textContent = `Short by Rs ${fmtMoney(Math.abs(change))}`;
+  const carryBtn = document.getElementById('dcCarryBtn');
+  const needAccount = s.method === 'online' && !s.accountId;
+  const currentShort = s.balanceDue - a.current;
+  const prevLeft = baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0);
+  let warn = '';
+  if(currentShort > 0){
+    changeEl.textContent = `Short by Rs ${fmtMoney(dcExpected() - received)}`;
     changeEl.style.color = 'var(--warn)';
-    warnEl.style.display = 'block';
-    warnEl.textContent = `Rs ${fmtMoney(Math.abs(change))} short of the Rs ${moneyText(expected)} due. Collect it in full` +
-      (pendingCashDispatch.balanceDue > 0 ? ', or use "add balance to next bill".' : ', or untick "Collect it now too".');
-    confirmBtn.disabled = true;
+    warn = `This bill still needs Rs ${fmtMoney(currentShort)}. Collect it, or give the clothes and add the rest to the next bill.`;
   } else {
-    changeEl.textContent = `Rs ${fmtMoney(change)}`;
+    changeEl.textContent = `Rs ${fmtMoney(a.extra)}`;
     changeEl.style.color = 'var(--good)';
-    warnEl.style.display = 'none';
-    confirmBtn.disabled = false;
+    if(dcPrevChecked() && prevLeft > 0) warn = `Rs ${fmtMoney(prevLeft)} of the old baqaya stays for later.`;
   }
+  if(needAccount) warn = 'Tap the account that received the online payment.' + (warn ? ' ' + warn : '');
+  warnEl.textContent = warn;
+  warnEl.style.display = warn ? 'block' : 'none';
+  confirmBtn.disabled = currentShort > 0 || needAccount;
+  // "Add the rest to next bill": only while this bill is short, and online.
+  carryBtn.hidden = !(currentShort > 0 && isReallyOnline());
+  carryBtn.disabled = needAccount && received > 0;
+  carryBtn.innerHTML = `📒 <span class="kk-ur">باقی اگلے بل میں</span> Give clothes, add the rest (Rs ${fmtMoney(currentShort)}) to next bill`;
 }
 
 function confirmDispatchCash(){
-  if(!pendingCashDispatch) return;
+  const s = pendingCashDispatch;
+  if(!s) return;
   const received = parseFloat(document.getElementById('dcAmountReceived').value);
   if(isNaN(received) || received < 0){ alert('Enter a valid, non-negative amount.'); return; }
-  const expected = dcExpected();
-  if(received < expected){
+  const a = dcAllocate(received);
+  if(a.current < s.balanceDue){
     // Shouldn't normally happen (button is disabled in this state), but
     // guards against a stale click.
-    alert(`Rs ${moneyText(received)} is short of the Rs ${moneyText(expected)} due.`);
+    alert(`This bill still needs Rs ${moneyText(s.balanceDue - a.current)}.`);
     return;
   }
-  const { orderId, phone, code, receiverName, receiverPhone, prev, balanceDue } = pendingCashDispatch;
-  const collectPrev = document.getElementById('dcPrevCollect') && document.getElementById('dcPrevCollect').checked ? prev : [];
-  if(collectPrev.length && !isReallyOnline()){ alert('Previous baqaya can only be collected while online. Untick "Collect it now too" to continue.'); return; }
+  if(s.method === 'online' && !s.accountId){ alert('Tap the account that received the online payment.'); return; }
+  if(a.prevPayments.length && !isReallyOnline()){ alert('Previous baqaya can only be collected while online. Untick "Collect it now too" to continue.'); return; }
+  const { orderId, phone, code, receiverName, receiverPhone, balanceDue, method, accountId } = s;
   document.getElementById('dispatchCashModal').classList.remove('open');
   pendingCashDispatch = null;
-  // This order gets what's left after the previous baqaya (any change stays with it).
-  const forThisOrder = received - baqayaTotal(collectPrev);
-  closeOrder(orderId, phone, code, receiverName, receiverPhone, balanceDue > 0 ? forThisOrder : undefined,
-    { collectPrev, changeIfNoBalance: balanceDue > 0 ? 0 : forThisOrder });
+  closeOrder(orderId, phone, code, receiverName, receiverPhone, balanceDue > 0 ? a.current + a.extra : undefined,
+    { prevPayments: a.prevPayments, method, accountId, changeIfNoBalance: balanceDue > 0 ? 0 : a.extra });
 }
 
-// Give the clothes now; this order's balance stays as baqaya for next time.
+// Give the clothes now: what was paid is recorded, the rest of this bill
+// stays as baqaya for next time (credit limit checked by close_order).
 async function carryForwardDispatch(){
-  if(!pendingCashDispatch) return;
-  const { orderId, phone, code, receiverName, receiverPhone, balanceDue, prev } = pendingCashDispatch;
-  const owed = balanceDue + baqayaTotal(prev);
-  const ok = await appConfirm({ tone: 'warn', pic: 'warn', urTitle: 'بقایا اگلے بل میں؟', title: 'Give clothes without payment?',
-    ur: `Rs ${moneyText(balanceDue)} اگلے بل میں جمع ہو جائیں گے۔ گاہک کا کل بقایا: Rs ${moneyText(owed)}`,
-    message: `Rs ${moneyText(balanceDue)} stays as baqaya and is shown on this customer's next order. Their total baqaya will be Rs ${moneyText(owed)}.`,
+  const s = pendingCashDispatch;
+  if(!s) return;
+  const received = parseFloat(document.getElementById('dcAmountReceived').value) || 0;
+  if(received > 0 && s.method === 'online' && !s.accountId){ alert('Tap the account that received the online payment.'); return; }
+  const a = dcAllocate(received);
+  const rest = s.balanceDue - a.current;
+  const owedAfter = rest + baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0);
+  const ok = await appConfirm({ tone: 'warn', pic: 'warn', urTitle: 'باقی اگلے بل میں؟', title: 'Give clothes, rest to next bill?',
+    ur: `ابھی ملے: Rs ${moneyText(received)}۔ Rs ${moneyText(rest)} اگلے بل میں جمع ہوں گے۔ گاہک کا کل بقایا: Rs ${moneyText(owedAfter)}`,
+    message: `Paid now: Rs ${moneyText(received)}. Rs ${moneyText(rest)} of this bill stays as baqaya for the next order. The customer's total baqaya will be Rs ${moneyText(owedAfter)}.`,
     okText: 'Give clothes' });
   if(!ok) return;
+  const { orderId, phone, code, receiverName, receiverPhone, method, accountId } = s;
   document.getElementById('dispatchCashModal').classList.remove('open');
   pendingCashDispatch = null;
-  closeOrder(orderId, phone, code, receiverName, receiverPhone, undefined, { carryForward: true, carriedAmount: balanceDue });
+  closeOrder(orderId, phone, code, receiverName, receiverPhone, undefined,
+    { carryForward: true, currentPartial: a.current, prevPayments: a.prevPayments, method, accountId });
 }
 
 // ---------- PARTIAL DISPATCH MODAL (Step 2) ----------
@@ -8376,8 +8535,24 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
     const balanceDue = balanceInfo ? Number(balanceInfo.balance_due) : 0;
     let collected = 0, change = 0;
 
+    const payMethod = { p_method: opts.method || 'cash', p_account_id: opts.method === 'online' ? (opts.accountId || null) : null };
+    // Previous baqaya first (oldest first, part payments allowed): each old
+    // order records its own payment. Done before closing this one, so the
+    // credit-limit check below already sees it paid.
+    for(const pp of (opts.prevPayments || [])){
+      const { error: bqErr } = await sb.rpc('pay_order_balance', Object.assign({ p_order_id: pp.id, p_amount: pp.amount }, payMethod));
+      if(bqErr){ alert(`Could not record the baqaya payment for order ${pp.code || pp.id}: ${bqErr.message}`); loadOpenOrders(); return; }
+      await logActivity('baqaya_collected', `Baqaya Rs ${moneyText(pp.amount)} ${payMethod.p_method === 'online' ? 'received online' : 'collected'} for order ${pp.code || pp.id} (with order ${code || orderId})${pp.full ? '' : ' — part payment'} [oid:${pp.id}]`);
+    }
+
     if(balanceDue > 0 && opts.carryForward){
-      // Nothing collected: close_order checks the branch's credit limit.
+      // Part of this bill paid now (if anything); the rest stays as baqaya.
+      const part = Math.min(Number(opts.currentPartial || 0), balanceDue);
+      if(part > 0){
+        const { error: partErr } = await sb.rpc('pay_order_balance', Object.assign({ p_order_id: orderId, p_amount: part }, payMethod));
+        if(partErr){ alert('Failed to record the part payment: ' + partErr.message); loadOpenOrders(); return; }
+        collected = part;
+      }
     } else if(balanceDue > 0){
       // Amount was already collected via the Collect Payment modal before
       // this function was called. Still re-validate against the just-fetched
@@ -8403,7 +8578,7 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
       // change compute as Rs 0, no matter what the customer actually paid.
       let collectError;
       try{
-        ({ error: collectError } = await sb.rpc('collect_balance_payment', { p_order_id: orderId, p_amount_collected: collected }));
+        ({ error: collectError } = await sb.rpc('collect_balance_payment', Object.assign({ p_order_id: orderId, p_amount_collected: collected }, payMethod)));
       }catch(networkErr){ collectError = networkErr; }
 
       if(collectError && isNetworkError(collectError)){
@@ -8456,19 +8631,15 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
       orderReceivers[orderId] = { name: receiverName || '', phone: receiverPhone || '' };
     }
     if(opts.carryForward){
-      await logActivity('baqaya_carried', `Order ${code || orderId}: clothes given without payment — Rs ${moneyText(balanceDue)} baqaya carried to next bill [oid:${orderId}]`);
-    }
-    // Previous baqaya paid now: each old order records its own payment.
-    for(const old of (opts.collectPrev || [])){
-      const { error: bqErr } = await sb.rpc('collect_balance_payment', { p_order_id: old.id, p_amount_collected: Number(old.balance_due) });
-      if(bqErr) alert(`Could not record the baqaya for order ${old.code || old.id}: ${bqErr.message}`);
-      else await logActivity('baqaya_collected', `Baqaya Rs ${moneyText(old.balance_due)} collected for order ${old.code || old.id} (with order ${code || orderId}) [oid:${old.id}]`);
+      await logActivity('baqaya_carried', `Order ${code || orderId}: clothes given — paid Rs ${moneyText(collected)}${collected && payMethod.p_method === 'online' ? ' online' : ''}, Rs ${moneyText(balanceDue - collected)} baqaya carried to next bill [oid:${orderId}]`);
+    } else if(balanceDue > 0 && payMethod.p_method === 'online'){
+      await logActivity('payment_online', `Order ${code || orderId}: Rs ${moneyText(balanceDue)} received online [oid:${orderId}]`);
     }
     if(phone){
       notifyCustomer(phone, code, 'dispatched', receiverName, receiverPhone);
     }
     loadOpenOrders();
-    const changeBack = change > 0 ? change : (opts.changeIfNoBalance > 0 ? opts.changeIfNoBalance : 0);
+    const changeBack = opts.carryForward ? 0 : (change > 0 ? change : (opts.changeIfNoBalance > 0 ? opts.changeIfNoBalance : 0));
     if(changeBack > 0) showDispatchChangeModal(code, orderId, changeBack);
     return;
   }
