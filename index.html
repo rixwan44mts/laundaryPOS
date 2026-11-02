@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-02-3">
+<meta name="app-build" content="2026-11-02-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -513,6 +513,10 @@
   .baqaya-box .bq-collect input{width:20px;height:20px;}
   .dc-carry{width:100%;margin-top:12px;border-color:var(--accent-2);color:var(--accent-2);font-weight:700;}
   .dc-carry .kk-ur{font-size:15px;line-height:1.6;}
+  .baqaya-tag{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:var(--accent-2);color:#fff;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .baqaya-tag span{font-family:'Noto Nastaliq Urdu','Noto Naskh Arabic',serif;font-weight:600;}
+  .dues-link{background:none;border:none;padding:0;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;color:inherit;}
+  .dues-contact{display:inline-block;margin:3px 6px 0 0;padding:3px 10px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;font-weight:700;text-decoration:none;color:var(--ink);}
   .dc-method{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 8px;}
   .dc-m{font:700 16px var(--font-ui);padding:12px;border-radius:12px;border:2px solid var(--line-strong);background:#fff;cursor:pointer;color:var(--ink);}
   .dc-m .kk-ur{font-size:16px;line-height:1.5;}
@@ -4836,6 +4840,59 @@ async function saveCreditLimit(branchId){
   alert('Saved.');
 }
 
+// ---------- DUES LIST (admin, from Daily Cash Register) ----------
+// Everyone who owes money at a branch, with phone numbers to call or
+// WhatsApp: baqaya (clothes already given) and bills still in the shop.
+async function openDuesModal(branchId){
+  const branch = branches.find(b => b.id === branchId);
+  let ov = document.getElementById('duesModal');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'duesModal';
+    ov.className = 'modal-overlay';
+    ov.onclick = e => { if(e.target === ov) ov.classList.remove('open'); };
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div class="modal-box" style="max-width:880px;"><div class="modal-header"><h2><span class="kk-ur">کس کے ذمے ہے</span> Who owes — ${escHtml(branch ? branch.name : '')}</h2>
+    <button type="button" class="modal-close-btn" aria-label="Close" onclick="document.getElementById('duesModal').classList.remove('open')">×</button></div>
+    <div class="modal-body" id="duesBody"><div class="kk-empty">Loading…</div></div></div>`;
+  ov.classList.add('open');
+  let orders, names = {};
+  try{
+    orders = await fetchAllRows(() => sb.from('orders')
+      .select('id, code, serial_no, customer_phone, created_at, dispatched_at, carried_forward_at, total, balance_due, status')
+      .eq('branch_id', branchId).gt('balance_due', 0).order('created_at'));
+    const phones = [...new Set(orders.map(o => o.customer_phone).filter(Boolean))];
+    if(phones.length){
+      const { data: cs } = await sb.from('customers').select('phone, name').in('phone', phones);
+      (cs || []).forEach(c => { names[c.phone] = c.name; });
+    }
+  }catch(e){
+    document.getElementById('duesBody').innerHTML = `<div class="kk-empty is-error">${escHtml(e.message || String(e))}</div>`;
+    return;
+  }
+  const given = orders.filter(o => TERMINAL_STATUSES.includes(o.status));
+  const inShop = orders.filter(o => !TERMINAL_STATUSES.includes(o.status));
+  const sum = list => list.reduce((s, o) => s + Number(o.balance_due || 0), 0);
+  const section = (title, ur, note, list, cls) => {
+    const byPhone = {};
+    list.forEach(o => { (byPhone[o.customer_phone || '—'] = byPhone[o.customer_phone || '—'] || []).push(o); });
+    const rows = Object.entries(byPhone).sort((a, b) => sum(b[1]) - sum(a[1])).map(([phone, os]) => {
+      const wa = phone && phone !== '—' ? phone.replace(/[\s-]/g, '').replace(/^0/, '92') : '';
+      return `<tr><td><b>${escHtml(names[phone] || '—')}</b><br>
+          ${wa ? `<a class="dues-contact" href="tel:${escHtml(phone)}">📞 ${escHtml(phone)}</a> <a class="dues-contact" href="https://wa.me/${escHtml(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : '—'}</td>
+        <td>${os.map(o => `${o.serial_no ? fmtSerial(o.serial_no) + ' · ' : ''}Code ${escHtml(o.code || String(o.id))} · ${formatAppDate(o.created_at)}${o.carried_forward_at ? ` · given ${formatAppDate(o.carried_forward_at)}` : ''} — <b>Rs ${moneyText(o.balance_due)}</b>`).join('<br>')}</td>
+        <td class="money-cell ${cls}"><b>Rs ${moneyText(sum(os))}</b></td></tr>`;
+    }).join('');
+    return `<h3 style="margin:14px 0 4px;"><span class="kk-ur">${ur}</span> ${title} — <span class="${cls}">Rs ${moneyText(sum(list))}</span></h3>
+      <p class="small" style="margin:0 0 6px;">${note}</p>
+      ${list.length ? `<div class="table-scroll"><table><thead><tr><th>Customer</th><th>Orders</th><th>Owes</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="small">Nobody.</p>'}`;
+  };
+  document.getElementById('duesBody').innerHTML =
+    section('Baqaya — clothes already given', 'بقایا', 'Collected with the customer\'s next order. Call or WhatsApp to remind them.', given, 'amt-owed') +
+    section('Due at pickup — clothes still in the shop', 'وصولی پر', 'Paid when the customer collects these clothes.', inShop, '');
+}
+
 // ---------- PAYMENT ACCOUNTS (admin) ----------
 // Accounts that receive online payments (JazzCash, Easypaisa, bank…).
 // Workers tap one at Collect Payment; here the owner adds or switches them
@@ -6033,14 +6090,14 @@ async function renderOpenOrdersRows(list){
     }
 
     return `<tr class="${rowClass}${urgentRowClass}${openReturn ? ' row-returned' : ''}${idx % 2 === 1 ? ' zebra-b' : ''}">
-      <td class="serial-code-cell">${serialCodeCell(o.serial_no, o.code)}</td>
+      <td class="serial-code-cell">${serialCodeCell(o.serial_no, o.code)}${isTerminal && balanceDue > 0 ? `<span class="baqaya-tag" title="Clothes given; Rs ${moneyText(balanceDue)} still owed">📒 <span lang="ur">بقایا</span> Rs ${moneyText(balanceDue)}</span>` : ''}</td>
       <td>${escHtml(o.customer_phone)}</td>
       <td>${isVip ? `<div class="vip-badge" tabindex="0" role="button" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(o.items)}</td>
       <td class="money-cell"><span class="rs-label">Rs</span>${moneyText(o.total)}</td>
       <td class="money-cell"><span class="rs-label">Rs</span>${moneyText(advancePaid)}</td>
       <td class="money-cell ${balanceDue > 0 ? 'amt-owed' : 'amt-good'}"><span class="rs-label">Rs</span>${moneyText(balanceDue)}</td>
-      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isDormant ? `<br><span class="dormant-tag">⏳ 30+ days <span lang="ur">مہینے سے پڑا ہے</span></span>` : ''}${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
+      <td><span class="status-tag ${status}" title="Action Time: ${formattedActionTime}">${status}</span>${isTerminal && balanceDue > 0 ? `<br><span class="baqaya-tag" title="Clothes given; Rs ${moneyText(balanceDue)} still owed — collected with the customer's next order">📒 <span lang="ur">بقایا</span> Rs ${moneyText(balanceDue)}</span>` : ''}${isDormant ? `<br><span class="dormant-tag">⏳ 30+ days <span lang="ur">مہینے سے پڑا ہے</span></span>` : ''}${isPartiallyDispatched ? `${o._pdRemaining != null ? `<br><span class="small" style="color:var(--muted);">${o._pdRemaining} pcs left in shop</span>` : ''}<br><button type="button" class="btn-secondary" style="padding:1px 6px;font-size:11px;margin-top:2px;" onclick="openDispatchHistoryModal(${o.id}, '${jsArg(o.code || '')}', '${jsArg(o.customer_name || '')}')" title="View partial release history">🕘 History</button>` : ''}</td>
       <td>${urgentCell}${returnBadge}</td>
       <td>${formatAppDateTime(o.created_at)}</td>
       <td>${isTerminal ? (o.dispatched_at ? formatAppDateTime(o.dispatched_at) : '<span style="color:var(--muted);">—</span>') : ''}</td>
@@ -6398,6 +6455,9 @@ const WA_DIVIDER = '──────────────';
 // captured at dispatch time, a short line naming who collected the
 // order is appended — useful when someone other than the customer
 // (family member, staff, courier) physically picks the clothes up.
+// Set by closeOrder() just before the "dispatched" message when clothes go
+// out with money still owed, so the customer is told their baqaya.
+let dispatchBaqayaNote = 0;
 function buildUrduMessage(status, code, receiverName, receiverPhone, dispatchedAt){
   const branchKey = document.getElementById('branchNameFixed').textContent;
   // Use the full customer-facing branch name/address (BRANCH_INFO) rather
@@ -6414,6 +6474,10 @@ function buildUrduMessage(status, code, receiverName, receiverPhone, dispatchedA
     // only for a brand-new dispatch where dispatched_at isn't set yet.
     const whenText = formatAppDateTime(dispatchedAt ? new Date(dispatchedAt) : new Date());
     msg += '\n\nتاریخ/وقت: *' + whenText + '*';
+    if(dispatchBaqayaNote > 0){
+      msg += '\n\n📒 بقایا: *Rs ' + moneyText(dispatchBaqayaNote) + '* — براہِ کرم اگلے آرڈر کے ساتھ ادا کریں۔';
+      dispatchBaqayaNote = 0;
+    }
     if(receiverName){
       msg += '\nوصول کنندہ: *' + receiverName + '*' + (receiverPhone ? ' (' + receiverPhone + ')' : '');
     }
@@ -7526,7 +7590,8 @@ async function carryForwardDispatch(){
   document.getElementById('dispatchCashModal').classList.remove('open');
   pendingCashDispatch = null;
   closeOrder(orderId, phone, code, receiverName, receiverPhone, undefined,
-    { carryForward: true, currentPartial: a.current, prevPayments: a.prevPayments, method, accountId });
+    { carryForward: true, currentPartial: a.current, prevPayments: a.prevPayments, method, accountId,
+      prevLeft: baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0) });
 }
 
 // ---------- PARTIAL DISPATCH MODAL (Step 2) ----------
@@ -8636,6 +8701,7 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
       await logActivity('payment_online', `Order ${code || orderId}: Rs ${moneyText(balanceDue)} received online [oid:${orderId}]`);
     }
     if(phone){
+      if(opts.carryForward) dispatchBaqayaNote = Math.max(0, balanceDue - collected) + (opts.prevLeft || 0);
       notifyCustomer(phone, code, 'dispatched', receiverName, receiverPhone);
     }
     loadOpenOrders();
@@ -13043,7 +13109,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
           <td>Rs ${fmtMoney(dSum.advance)}</td><td>Rs ${fmtMoney(dSum.balance)}</td><td>Rs ${fmtMoney(dSum.cash)}</td>
           <td>Rs ${fmtMoney(dSum.exp)}</td><td>Rs ${fmtMoney(dSum.pendingBooked)}</td></tr></tfoot>
       </table>
-      <div class="small" style="margin-top:8px;">Cash to be Received right now (all open orders, any booking date), ${escHtml(branch.name)}: <b class="${bPending > 0 ? 'amt-owed' : ''}">Rs ${moneyText(bPending)}</b></div>
+      <div class="small" style="margin-top:8px;">Cash to be Received right now (orders in the shop + baqaya), ${escHtml(branch.name)}: <button type="button" class="dues-link ${bPending > 0 ? 'amt-owed' : ''}" onclick="openDuesModal(${Number(bId)})" title="Show every customer who owes, with phone numbers">Rs ${moneyText(bPending)} — see who owes ›</button></div>
     </div>
 
     <div class="panel">
@@ -13908,6 +13974,9 @@ function auditTagsCell(o, allowClear){
   const chips = [];
   if(o.is_vip)    chips.push(`<span class="vip-chip">★ VIP</span>`);
   if(o.is_urgent) chips.push(`<span class="audit-urgent-chip">🔥 Urgent</span>`);
+  if(['archived', 'dispatched', 'closed'].includes(o.status) && Number(o.balance_due) > 0){
+    chips.push(`<span class="baqaya-tag">📒 Baqaya Rs ${moneyText(o.balance_due)}</span>`);
+  }
   if(o.is_urgent && allowClear){
     chips.push(`<button class="btn-secondary urgent-clear-btn" onclick="event.stopPropagation();openClearUrgentModal(${o.id},'${jsArg(o.code||'')}')">Clear</button>`);
   }
