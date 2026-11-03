@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-03-4">
+<meta name="app-build" content="2026-11-03-5">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -512,6 +512,8 @@
   .baqaya-box .bq-collect{display:flex;align-items:center;gap:10px;margin-top:8px;min-height:44px;font-weight:700;cursor:pointer;}
   .baqaya-box .bq-collect input{width:26px;height:26px;flex:none;}
   #dispatchCashModal .btn-secondary, #dispatchCashModal .btn-main{min-height:44px;}
+  .oo-more-row td{text-align:center;padding:12px;}
+  .oo-more-btn{min-height:48px;padding:10px 22px;font-weight:700;}
   #dcNotesRow[hidden], #dcConfirmBtn[hidden]{display:none !important;}
   .dc-warn-line{display:block;margin-top:4px;}
   .dc-warn-line .kk-ur{display:block;font-size:15px;line-height:1.7;}
@@ -2888,11 +2890,11 @@
       <div class="row" style="margin-top:6px;">
         <div class="field">
           <label for="searchPhoneInput">Search by Phone</label>
-          <input type="text" id="searchPhoneInput" placeholder="03XXXXXXXXX" style="width:160px;" oninput="typingPause(filterOpenOrders)">
+          <input type="text" id="searchPhoneInput" placeholder="03XXXXXXXXX" style="width:160px;" oninput="ooShown={};typingPause(filterOpenOrders)">
         </div>
         <div class="field">
           <label for="searchCodeInput">Search by Code or Serial</label>
-          <input type="text" id="searchCodeInput" placeholder="e.g. 1234" style="width:140px;" oninput="typingPause(filterOpenOrders)">
+          <input type="text" id="searchCodeInput" placeholder="e.g. 1234" style="width:140px;" oninput="ooShown={};typingPause(filterOpenOrders)">
         </div>
         <div class="field">
           <button class="btn-secondary" onclick="clearOpenOrdersSearch()">Clear</button>
@@ -6176,8 +6178,11 @@ async function renderOpenOrdersRows(list){
 
   function sectionHtml(label, orders, key){
     if(!orders.length) return '';
+    const limit = ooShown[key] || OO_PAGE;
+    const hidden = orders.length - limit;
     return `<tr class="section-heading-row sh-${key}"><td colspan="13">${label} (${orders.length})</td></tr>`
-      + orders.map((o, idx) => rowHtml(o, idx)).join('');
+      + orders.slice(0, limit).map((o, idx) => rowHtml(o, idx)).join('')
+      + (hidden > 0 ? `<tr class="oo-more-row"><td colspan="13"><button type="button" class="btn-secondary oo-more-btn" onclick="ooShowMore('${key}')"><span class="kk-ur">مزید دکھائیں</span> Show ${Math.min(OO_PAGE, hidden)} more — ${hidden} older not shown</button></td></tr>` : '');
   }
 
   body.innerHTML = noticeRow + pendingSection + dispatchConflictSection + dispatchPendingSection + partialConflictSection + partialPendingSection
@@ -6201,6 +6206,15 @@ async function renderOpenOrdersRows(list){
 // mutually-exclusive single-filter model where clicking Urgent used to
 // silently replace whichever status filter you had on.
 let activeStatusTab = 'printed'; // 'printed' | 'ready' | 'dispatched' — always exactly one
+// Thousands of rows made Open Orders and search take 10-20 seconds (tests\break-ui.js):
+// each section draws its newest OO_PAGE rows, "Show more" adds another page.
+// Search still looks through every order. Reset on a new tab or search.
+const OO_PAGE = 100;
+let ooShown = {};
+function ooShowMore(key){
+  ooShown[key] = (ooShown[key] || OO_PAGE) + OO_PAGE;
+  filterOpenOrders();
+}
 let activeUrgentOnly = false;
 let activeVipOnly = false;
 
@@ -6212,6 +6226,7 @@ const OPEN_ORDERS_STATUS_TAB_IDS = {
 
 function setOpenOrdersStatusTab(key){
   activeStatusTab = key;
+  ooShown = {};
   Object.values(OPEN_ORDERS_STATUS_TAB_IDS).forEach(id => {
     document.getElementById(id).classList.remove('active');
   });
