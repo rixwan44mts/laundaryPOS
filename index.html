@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-03-1">
+<meta name="app-build" content="2026-11-03-2">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -522,6 +522,7 @@
   .dc-m .kk-ur{font-size:16px;line-height:1.5;}
   .dc-m.is-on{border-color:var(--ready,#1B9655);background:var(--ready-soft,#DDF3E6);}
   .dc-accounts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;}
+  .dc-accounts[hidden], .dc-method[hidden], .dc-paynow[hidden], .dc-carry[hidden]{display:none !important;}
   .dc-acct{display:grid;text-align:left;gap:2px;font:inherit;padding:10px 14px;border-radius:12px;border:2px solid var(--line-strong);background:#fff;cursor:pointer;min-width:140px;}
   .dc-acct span{font-size:12.5px;color:var(--muted);}
   .dc-acct.is-on{border-color:var(--neel-2,#3443A8);background:var(--neel-soft,#E7EAF8);}
@@ -3655,6 +3656,12 @@
           <button type="button" class="btn-secondary" onclick="dcAddNote(5000)">+Rs 5000</button>
           <button type="button" class="btn-secondary" onclick="dcSetExact()">Exact Balance</button>
           <button type="button" class="btn-secondary" onclick="dcClearAmount()">Clear</button>
+        </div>
+
+        <div class="field dc-paynow" id="dcPayNowRow" hidden>
+          <label for="dcPayNow">📒 <span class="kk-ur">ابھی کتنے پیسے رکھیں؟</span> Paying now — keep this much</label>
+          <input type="number" id="dcPayNow" style="width:100%;font-size:20px;" inputmode="decimal" oninput="this.dataset.touched='1';updateDispatchChangeDisplay()">
+          <div class="small">If the customer gave a big note, type what they pay now. The rest is given back as change.</div>
         </div>
 
         <div class="row" style="justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#ddd);align-items:center;">
@@ -7422,6 +7429,8 @@ function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone
   document.getElementById('dcBalanceDue').textContent = 'Rs ' + moneyText(balanceDue);
   document.getElementById('dcAmountReceived').value = balanceDue + baqayaTotal(prev);
   document.getElementById('dcAmountReceived').dataset.autofill = '1';
+  document.getElementById('dcPayNow').value = '';
+  document.getElementById('dcPayNow').dataset.touched = '';
   document.getElementById('dcWarning').style.display = 'none';
   document.getElementById('dcConfirmBtn').disabled = false;
   // Online payments and "add to next bill" need the server, so online only.
@@ -7507,6 +7516,15 @@ function dcAllocate(received){
   left -= current;
   return { prevPayments, current, extra: left };
 }
+// The notes handed over can be more than what is paid now (a Rs 5000 note
+// for a part payment): only the "paying now" amount is recorded, the rest
+// is change. When the bill is fully paid, everything counts as before.
+function dcPayNowAmount(received){
+  const el = document.getElementById('dcPayNow');
+  if(dcAllocate(received).current >= pendingCashDispatch.balanceDue) return received;
+  if(el.dataset.touched !== '1') return received;
+  return Math.min(Math.max(0, parseFloat(el.value) || 0), received);
+}
 function dcSetExact(){
   if(!pendingCashDispatch) return;
   document.getElementById('dcAmountReceived').value = dcExpected();
@@ -7522,7 +7540,12 @@ function updateDispatchChangeDisplay(){
   const s = pendingCashDispatch;
   if(!s) return;
   const received = parseFloat(document.getElementById('dcAmountReceived').value) || 0;
-  const a = dcAllocate(received);
+  const payNow = dcPayNowAmount(received);
+  const a = dcAllocate(payNow);
+  const payNowEl = document.getElementById('dcPayNow');
+  const isShort = a.current < s.balanceDue;
+  document.getElementById('dcPayNowRow').hidden = !(isShort && received > 0 && isReallyOnline());
+  if(payNowEl.dataset.touched !== '1') payNowEl.value = received || '';
   const changeEl = document.getElementById('dcChange');
   const warnEl = document.getElementById('dcWarning');
   const confirmBtn = document.getElementById('dcConfirmBtn');
@@ -7532,8 +7555,8 @@ function updateDispatchChangeDisplay(){
   const prevLeft = baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0);
   let warn = '';
   if(currentShort > 0){
-    changeEl.textContent = `Short by Rs ${fmtMoney(dcExpected() - received)}`;
-    changeEl.style.color = 'var(--warn)';
+    changeEl.textContent = received > payNow ? `Rs ${fmtMoney(received - payNow)}` : `Short by Rs ${fmtMoney(dcExpected() - payNow)}`;
+    changeEl.style.color = received > payNow ? 'var(--good)' : 'var(--warn)';
     warn = `This bill still needs Rs ${fmtMoney(currentShort)}. Collect it, or give the clothes and add the rest to the next bill.`;
   } else {
     changeEl.textContent = `Rs ${fmtMoney(a.extra)}`;
@@ -7546,7 +7569,7 @@ function updateDispatchChangeDisplay(){
   confirmBtn.disabled = currentShort > 0 || needAccount;
   // "Add the rest to next bill": only while this bill is short, and online.
   carryBtn.hidden = !(currentShort > 0 && isReallyOnline());
-  carryBtn.disabled = needAccount && received > 0;
+  carryBtn.disabled = needAccount && payNow > 0;
   carryBtn.innerHTML = `📒 <span class="kk-ur">باقی اگلے بل میں</span> Give clothes, add the rest (Rs ${fmtMoney(currentShort)}) to next bill`;
 }
 
@@ -7577,20 +7600,27 @@ async function carryForwardDispatch(){
   const s = pendingCashDispatch;
   if(!s) return;
   const received = parseFloat(document.getElementById('dcAmountReceived').value) || 0;
-  if(received > 0 && s.method === 'online' && !s.accountId){ alert('Tap the account that received the online payment.'); return; }
-  const a = dcAllocate(received);
+  const payNow = dcPayNowAmount(received);
+  const changeBack = received - payNow;
+  if(payNow > 0 && s.method === 'online' && !s.accountId){ alert('Tap the account that received the online payment.'); return; }
+  const a = dcAllocate(payNow);
   const rest = s.balanceDue - a.current;
   const owedAfter = rest + baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0);
+  const prevByOrder = Object.fromEntries(s.prev.map(r => [r.id, r]));
+  const split = a.prevPayments.map(x => `• Old order ${baqayaLabel(prevByOrder[x.id] || { code: x.code, id: x.id })}: Rs ${moneyText(x.amount)}`)
+    .concat([`• This bill (Code ${s.code || s.orderId}): Rs ${moneyText(a.current)}`]).join('\n');
   const ok = await appConfirm({ tone: 'warn', pic: 'warn', urTitle: 'باقی اگلے بل میں؟', title: 'Give clothes, rest to next bill?',
-    ur: `ابھی ملے: Rs ${moneyText(received)}۔ Rs ${moneyText(rest)} اگلے بل میں جمع ہوں گے۔ گاہک کا کل بقایا: Rs ${moneyText(owedAfter)}`,
-    message: `Paid now: Rs ${moneyText(received)}. Rs ${moneyText(rest)} of this bill stays as baqaya for the next order. The customer's total baqaya will be Rs ${moneyText(owedAfter)}.`,
+    ur: `ابھی ملے: Rs ${moneyText(payNow)}` + (changeBack > 0 ? `۔ واپس دیں: Rs ${moneyText(changeBack)}` : '') + `۔ گاہک کا کل بقایا: Rs ${moneyText(owedAfter)}`,
+    message: `Paying now: Rs ${moneyText(payNow)}\n${split}` +
+      (changeBack > 0 ? `\nGive back as change: Rs ${moneyText(changeBack)}` : '') +
+      `\n\nRs ${moneyText(rest)} of this bill goes to the next order. The customer's total baqaya will be Rs ${moneyText(owedAfter)}.`,
     okText: 'Give clothes' });
   if(!ok) return;
   const { orderId, phone, code, receiverName, receiverPhone, method, accountId } = s;
   document.getElementById('dispatchCashModal').classList.remove('open');
   pendingCashDispatch = null;
   closeOrder(orderId, phone, code, receiverName, receiverPhone, undefined,
-    { carryForward: true, currentPartial: a.current, prevPayments: a.prevPayments, method, accountId,
+    { carryForward: true, currentPartial: a.current, prevPayments: a.prevPayments, method, accountId, carryChange: changeBack,
       prevLeft: baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0) });
 }
 
@@ -8705,7 +8735,7 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
       notifyCustomer(phone, code, 'dispatched', receiverName, receiverPhone);
     }
     loadOpenOrders();
-    const changeBack = opts.carryForward ? 0 : (change > 0 ? change : (opts.changeIfNoBalance > 0 ? opts.changeIfNoBalance : 0));
+    const changeBack = opts.carryForward ? (opts.carryChange || 0) : (change > 0 ? change : (opts.changeIfNoBalance > 0 ? opts.changeIfNoBalance : 0));
     if(changeBack > 0) showDispatchChangeModal(code, orderId, changeBack);
     return;
   }
