@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-02-4">
+<meta name="app-build" content="2026-11-03-1">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -8605,7 +8605,7 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
     // order records its own payment. Done before closing this one, so the
     // credit-limit check below already sees it paid.
     for(const pp of (opts.prevPayments || [])){
-      const { error: bqErr } = await sb.rpc('pay_order_balance', Object.assign({ p_order_id: pp.id, p_amount: pp.amount }, payMethod));
+      const { error: bqErr } = await sb.rpc('pay_order_balance', Object.assign({ p_order_id: pp.id, p_amount: pp.amount, p_with_order_id: orderId }, payMethod));
       if(bqErr){ alert(`Could not record the baqaya payment for order ${pp.code || pp.id}: ${bqErr.message}`); loadOpenOrders(); return; }
       await logActivity('baqaya_collected', `Baqaya Rs ${moneyText(pp.amount)} ${payMethod.p_method === 'online' ? 'received online' : 'collected'} for order ${pp.code || pp.id} (with order ${code || orderId})${pp.full ? '' : ' — part payment'} [oid:${pp.id}]`);
     }
@@ -11494,6 +11494,34 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
   addCloseRelease(releases, items, total, advancePaid, dispatchedAt,
     receiverName || (orderReceivers[orderId] || {}).name, receiverPhone || (orderReceivers[orderId] || {}).phone);
   if(!dispatchedAt && releases.length) dispatchedAt = releases[releases.length - 1].created_at;
+  // Old orders' baqaya paid together with this one, and what this order
+  // itself still owes (clothes given on baqaya).
+  let recovered = [], leftOnOrder = 0;
+  if(Number(orderId) > 0){
+    try{
+      const { data: ex, error: exErr } = await sb.rpc('get_order_bill_extras', { p_order_id: Number(orderId) });
+      if(!exErr){
+        recovered = (ex || []).filter(r => r.kind === 'recovered');
+        leftOnOrder = Number(((ex || []).find(r => r.kind === 'left') || {}).amount || 0);
+      }
+    }catch(e){ /* offline: print without this section */ }
+  }
+  const paidAtPickup = Math.max(0, Number(balanceRecovered) - leftOnOrder);
+  const recoveredTotal = recovered.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const recoveredBlock = recovered.length
+    ? `<div style="border:1px dashed #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
+        <div class="small" style="font-weight:700;">PREVIOUS BAQAYA RECOVERED NOW</div>
+        ${recovered.map(r => `<div class="receipt-row"><span>Order ${r.serial_no ? fmtSerial(r.serial_no) + ' · ' : ''}Code ${escHtml(r.code || String(r.order_id))}</span><span>Rs ${moneyText(r.amount)}</span></div>
+          <div class="small" style="margin:-2px 0 2px;">${formatAppDateTime(new Date(r.paid_at))} · ${r.method === 'online' ? 'Online' + (r.account_name ? ' — ' + escHtml(r.account_name) : '') : 'Cash'}</div>`).join('')}
+        ${recovered.length > 1 ? `<div class="receipt-row"><b>BAQAYA RECOVERED</b><b>Rs ${moneyText(recoveredTotal)}</b></div>` : ''}
+        <div style="border-top:1px dashed #000;margin:4px 0;"></div>
+        <div class="receipt-row"><b>TOTAL PAID NOW</b><b>Rs ${moneyText(paidAtPickup + recoveredTotal)}</b></div>
+      </div>`
+    : '';
+  const leftBlock = leftOnOrder > 0
+    ? `<div class="receipt-row receipt-total"><b>BAQAYA ON THIS ORDER</b><b>Rs ${moneyText(leftOnOrder)}</b></div>
+       <div class="small center">To be paid with the next order — <span lang="ur">اگلے آرڈر کے ساتھ ادا کریں</span></div>`
+    : '';
   const releaseBlock = releases.length > 1
     ? `<div class="small" style="font-weight:700;">CLOTHES RELEASED IN ${releases.length} PARTS</div>${releaseHistoryReceiptHtml(releases, items)}<hr>`
     : '';
@@ -11573,10 +11601,12 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
       <div class="receipt-row receipt-total"><b>TOTAL BILL</b><b>Rs ${moneyText(total)}</b></div>
       <div style="border:1px solid #000;border-radius:4px;padding:4px 8px;margin:6px 0;">
         <div class="receipt-row"><b>ADVANCE PAID</b><b>Rs ${moneyText(advancePaid)}</b></div>
-        <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${moneyText(balanceRecovered)}</b></div>
+        <div class="receipt-row"><b>PAID AT PICKUP</b><b>Rs ${moneyText(paidAtPickup)}</b></div>
         <div style="border-top:1px dashed #000;margin:4px 0;"></div>
-        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${fmtMoney((Number(advancePaid) + Number(balanceRecovered)))}</b></div>
+        <div class="receipt-row"><b>TOTAL RECEIVED</b><b>Rs ${fmtMoney((Number(advancePaid) + paidAtPickup))}</b></div>
       </div>
+      ${leftBlock}
+      ${recoveredBlock}
       ${cashPaidLine}
       ${changeLine}
       <hr>
@@ -11587,7 +11617,7 @@ async function printFinalBill(orderId, code, phone, name, itemsJson, total, adva
         <span style="display:inline-block;border:3px solid #000;color:#000;
           padding:4px 16px;font-weight:700;letter-spacing:2px;
           transform:rotate(-8deg);font-size:15px;">
-          ✓ CLEARED — PAID IN FULL
+          ${leftOnOrder > 0 ? `BAQAYA Rs ${moneyText(leftOnOrder)}` : '✓ CLEARED — PAID IN FULL'}
         </span>
       </div>
       <hr>
