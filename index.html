@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-03-3">
+<meta name="app-build" content="2026-11-03-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -503,14 +503,19 @@
   .dash-tile[data-section="editworker"].active{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
   .dash-tile[data-section="storage"].active{background:#13804A;border-color:#13804A;color:#fff;}
   .baqaya-box{border:2px solid var(--accent-2);background:var(--accent-2-soft);color:var(--ink);border-radius:14px;padding:10px 14px;margin:8px 0 12px;}
-  .baqaya-box .bq-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;color:var(--accent-2);}
+  .baqaya-box .bq-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;color:#9E3418;}
   .baqaya-box .bq-head b{font-size:20px;}
   .baqaya-box .kk-ur{font-size:16px;line-height:1.8;}
   .baqaya-box ul{list-style:none;margin:6px 0 0;padding:0;}
   .baqaya-box li{margin:3px 0;}
-  .baqaya-box .bq-link{background:none;border:none;padding:0;font:inherit;color:var(--neel-2,#3443A8);text-decoration:underline;cursor:pointer;text-align:left;}
-  .baqaya-box .bq-collect{display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:700;}
-  .baqaya-box .bq-collect input{width:20px;height:20px;}
+  .baqaya-box .bq-link{display:inline-flex;align-items:center;min-height:44px;background:none;border:none;padding:0;font:inherit;color:var(--neel-2,#3443A8);text-decoration:underline;cursor:pointer;text-align:left;}
+  .baqaya-box .bq-collect{display:flex;align-items:center;gap:10px;margin-top:8px;min-height:44px;font-weight:700;cursor:pointer;}
+  .baqaya-box .bq-collect input{width:26px;height:26px;flex:none;}
+  #dispatchCashModal .btn-secondary, #dispatchCashModal .btn-main{min-height:44px;}
+  #dcNotesRow[hidden], #dcConfirmBtn[hidden]{display:none !important;}
+  .dc-warn-line{display:block;margin-top:4px;}
+  .dc-warn-line .kk-ur{display:block;font-size:15px;line-height:1.7;}
+  .dc-warn-line.is-block{font-weight:700;}
   .dc-carry{width:100%;margin-top:12px;border-color:var(--accent-2);color:var(--accent-2);font-weight:700;}
   .dc-carry .kk-ur{font-size:15px;line-height:1.6;}
   .baqaya-tag{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:var(--accent-2);color:#fff;font-size:11.5px;font-weight:700;white-space:nowrap;}
@@ -3649,7 +3654,7 @@
           <input type="number" id="dcAmountReceived" style="width:100%;font-size:20px;" inputmode="decimal" oninput="this.dataset.autofill='';updateDispatchChangeDisplay()">
         </div>
 
-        <div class="row" style="gap:6px;margin:10px 0 4px;flex-wrap:wrap;">
+        <div class="row" id="dcNotesRow" style="gap:8px;margin:10px 0 4px;flex-wrap:wrap;">
           <span class="small" style="width:100%;" data-ur="گاہک نے جو نوٹ دیا وہ دبائیں">Quick add — tap the note the customer handed over:</span>
           <button type="button" class="btn-secondary" onclick="dcAddNote(100)">+Rs 100</button>
           <button type="button" class="btn-secondary" onclick="dcAddNote(500)">+Rs 500</button>
@@ -4138,6 +4143,7 @@ function dialogPic(key){ return `<svg viewBox="0 0 24 24" aria-hidden="true">${D
 // alert(). First match wins, so specific patterns sit above general ones.
 // The English text is still shown underneath in small print.
 const URDU_ALERTS = [
+  [/Cannot give the clothes on baqaya/i, 'کپڑے بقایا پر نہیں دے سکتے: گاہک کا بقایا حد سے زیادہ ہو جائے گا۔ کچھ پیسے ابھی لیں، یا مالک سے پوچھیں۔', 'warn'],
   [/^scanned order .* not found/i, 'یہ آرڈر اس برانچ میں نہیں ملا۔ شاید کسی اور برانچ کا ہے یا بہت پرانا ہے۔', 'warn'],
   [/^scanned order/i, 'آرڈر ڈھونڈنے کے لیے کاؤنٹر والے لاگ اِن پر کھلے آرڈر کھولیں۔', 'info'],
   [/saved offline|queued|will sync automatically/i, 'انٹرنیٹ نہیں تھا، اس لیے یہ اسی کمپیوٹر میں محفوظ ہو گیا۔ انٹرنیٹ آتے ہی خود بھیج دیا جائے گا۔', 'wifi'],
@@ -7425,7 +7431,7 @@ function showBaqayaBill(r){
 }
 function renderBaqayaList(list, withCollect){
   return `<div class="bq-head"><span><span class="kk-ur">پچھلا بقایا</span> Previous baqaya</span><b>Rs ${moneyText(baqayaTotal(list))}</b></div>
-    <ul>${list.map((r, i) => `<li><button type="button" class="bq-link" onclick="showBaqayaBill(window.__bqList[${i}])">${escHtml(baqayaLabel(r))}</button> — Rs ${moneyText(r.balance_due)}</li>`).join('')}</ul>` +
+    <ul>${list.map((r, i) => `<li><button type="button" class="bq-link" onclick="showBaqayaBill(window.__bqList[${i}])"><span class="kk-ur">پرانا بل</span>&nbsp;${escHtml(baqayaLabel(r))}</button> — Rs ${moneyText(r.balance_due)}</li>`).join('')}</ul>` +
     (withCollect ? `<label class="bq-collect"><input type="checkbox" id="dcPrevCollect" checked onchange="updateDispatchChangeDisplay()"> <span class="kk-ur">ابھی وصول کریں</span> Collect it now too</label>` : '');
 }
 
@@ -7451,6 +7457,8 @@ function openDispatchCashModal(orderId, phone, code, receiverName, receiverPhone
   document.getElementById('dcAmountReceived').dataset.autofill = '1';
   document.getElementById('dcPayNow').value = '';
   document.getElementById('dcPayNow').dataset.touched = '';
+  document.getElementById('dcNotesRow').hidden = false;
+  document.getElementById('dcConfirmBtn').hidden = false;
   document.getElementById('dcWarning').style.display = 'none';
   document.getElementById('dcConfirmBtn').disabled = false;
   // Online payments and "add to next bill" need the server, so online only.
@@ -7563,6 +7571,7 @@ function updateDispatchChangeDisplay(){
   const payNow = dcPayNowAmount(received);
   const a = dcAllocate(payNow);
   const payNowEl = document.getElementById('dcPayNow');
+  const payNowTyped = payNowEl.dataset.touched === '1' ? (parseFloat(payNowEl.value) || 0) : payNow;
   const isShort = a.current < s.balanceDue;
   document.getElementById('dcPayNowRow').hidden = !(isShort && received > 0 && isReallyOnline());
   if(payNowEl.dataset.touched !== '1') payNowEl.value = received || '';
@@ -7573,23 +7582,48 @@ function updateDispatchChangeDisplay(){
   const needAccount = s.method === 'online' && !s.accountId;
   const currentShort = s.balanceDue - a.current;
   const prevLeft = baqayaTotal(s.prev) - a.prevPayments.reduce((t, x) => t + x.amount, 0);
-  let warn = '';
+  // Each warning in Urdu + English. "block" ones stop both buttons.
+  const warns = [];
+  const negative = (parseFloat(document.getElementById('dcAmountReceived').value) || 0) < 0 || payNowTyped < 0;
+  const payTooMuch = !negative && isShort && payNowTyped > received;
+  if(negative){
+    warns.push({ block: true, ur: 'رقم صفر سے کم نہیں ہو سکتی۔ صاف کریں اور دوبارہ لکھیں۔', en: 'The amount cannot be below 0. Clear it and type it again.' });
+  }
+  if(payTooMuch){
+    warns.push({ block: true, ur: `ابھی رکھنے والی رقم (Rs ${moneyText(payNowTyped)}) ملی ہوئی رقم (Rs ${moneyText(received)}) سے زیادہ ہے۔ ایک کو ٹھیک کریں۔`,
+      en: `Paying now (Rs ${fmtMoney(payNowTyped)}) is more than the money received (Rs ${fmtMoney(received)}). Fix one of them.` });
+  }
+  // Credit limit (workers only — the server checks it too), told BEFORE "Give clothes".
+  const owedAfter = currentShort + prevLeft;
+  const branchNow = branches.find(b => b.id === currentBranchId);
+  const creditLimit = branchNow && branchNow.credit_limit != null ? Number(branchNow.credit_limit) : 2000;
+  const overLimit = currentShort > 0 && !(profile && profile.role === 'admin') && owedAfter > creditLimit;
+  if(overLimit && !negative && !payTooMuch){
+    warns.push({ block: true, ur: `حد سے زیادہ بقایا: گاہک پر Rs ${moneyText(owedAfter)} ہو جائیں گے (حد Rs ${moneyText(creditLimit)})۔ کم از کم Rs ${moneyText(owedAfter - creditLimit)} اور لیں، یا مالک سے پوچھیں۔`,
+      en: `Over the credit limit: the customer would owe Rs ${fmtMoney(owedAfter)} (limit Rs ${fmtMoney(creditLimit)}). Take at least Rs ${fmtMoney(owedAfter - creditLimit)} more, or ask the owner.` });
+  }
   if(currentShort > 0){
     changeEl.textContent = received > payNow ? `Rs ${fmtMoney(received - payNow)}` : `Short by Rs ${fmtMoney(dcExpected() - payNow)}`;
     changeEl.style.color = received > payNow ? 'var(--good)' : 'var(--warn)';
-    warn = `This bill still needs Rs ${fmtMoney(currentShort)}. Collect it, or give the clothes and add the rest to the next bill.`;
+    if(!negative && !payTooMuch && !overLimit) warns.push({ ur: `اس بل کے Rs ${moneyText(currentShort)} باقی ہیں۔ پورے لیں، یا کپڑے دے کر باقی اگلے بل میں ڈالیں۔`,
+      en: `This bill still needs Rs ${fmtMoney(currentShort)}. Collect it, or give the clothes and add the rest to the next bill.` });
   } else {
     changeEl.textContent = `Rs ${fmtMoney(a.extra)}`;
     changeEl.style.color = 'var(--good)';
-    if(dcPrevChecked() && prevLeft > 0) warn = `Rs ${fmtMoney(prevLeft)} of the old baqaya stays for later.`;
+    if(dcPrevChecked() && prevLeft > 0) warns.push({ ur: `پرانے بقایا کے Rs ${moneyText(prevLeft)} بعد میں لیے جائیں گے۔`, en: `Rs ${fmtMoney(prevLeft)} of the old baqaya stays for later.` });
   }
-  if(needAccount) warn = 'Tap the account that received the online payment.' + (warn ? ' ' + warn : '');
-  warnEl.textContent = warn;
-  warnEl.style.display = warn ? 'block' : 'none';
-  confirmBtn.disabled = currentShort > 0 || needAccount;
+  if(needAccount) warns.unshift({ ur: 'جس اکاؤنٹ میں پیسے آئے، وہ دبائیں۔', en: 'Tap the account that received the online payment.' });
+  const blocked = warns.some(w => w.block);
+  warnEl.innerHTML = warns.map(w => `<span class="dc-warn-line${w.block ? ' is-block' : ''}"><span class="kk-ur">${escHtml(w.ur)}</span>${escHtml(w.en)}</span>`).join('');
+  warnEl.style.display = warns.length ? 'block' : 'none';
+  confirmBtn.disabled = currentShort > 0 || needAccount || blocked;
   // "Add the rest to next bill": only while this bill is short, and online.
   carryBtn.hidden = !(currentShort > 0 && isReallyOnline());
-  carryBtn.disabled = needAccount && payNow > 0;
+  carryBtn.disabled = (needAccount && payNow > 0) || blocked;
+  // While short, "Give clothes…" is the only way on: hide the dead Confirm
+  // button, and the note buttons once "paying now" has been typed.
+  confirmBtn.hidden = currentShort > 0 && !carryBtn.hidden;
+  document.getElementById('dcNotesRow').hidden = !document.getElementById('dcPayNowRow').hidden && payNowEl.dataset.touched === '1';
   carryBtn.innerHTML = `📒 <span class="kk-ur">باقی اگلے بل میں</span> Give clothes, add the rest (Rs ${fmtMoney(currentShort)}) to next bill`;
 }
 
@@ -7622,6 +7656,7 @@ async function carryForwardDispatch(){
   const received = parseFloat(document.getElementById('dcAmountReceived').value) || 0;
   const payNow = dcPayNowAmount(received);
   const changeBack = received - payNow;
+  if(document.getElementById('dcCarryBtn').disabled){ updateDispatchChangeDisplay(); return; }
   if(payNow > 0 && s.method === 'online' && !s.accountId){ alert('Tap the account that received the online payment.'); return; }
   const a = dcAllocate(payNow);
   const rest = s.balanceDue - a.current;
