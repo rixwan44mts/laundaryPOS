@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-06-3">
+<meta name="app-build" content="2026-11-06-4">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -529,6 +529,13 @@
   .cc-note{display:flex;flex-direction:column;gap:4px;font-weight:700;}
   .cc-row b, .cc-note > span:first-child{white-space:nowrap;}
   .cc-note input{width:100%;min-height:44px;font-size:18px;}
+  .cc-acct{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:48px;margin:4px 0;padding:8px 12px;
+    border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);color:var(--ink);font:inherit;font-size:15px;text-align:left;cursor:pointer;}
+  .cc-acct b{white-space:nowrap;}
+  .cc-acct[aria-expanded="true"]{border-color:var(--ink);background:var(--hover);}
+  .cc-acct-list{border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;margin:-4px 0 6px;padding:4px 6px;overflow-x:auto;}
+  .cc-acct-list table{width:100%;font-size:13px;}
+  .cc-acct-list td, .cc-acct-list th{padding:5px 6px;vertical-align:top;}
   .cc-diff{font-size:20px;font-weight:700;padding:10px 12px;border-radius:10px;margin:8px 0 12px;text-align:center;}
   .cc-diff.is-ok{background:#e3f5ea;color:#0B5130;}
   .cc-diff.is-short{background:#fde5dc;color:#9E3418;}
@@ -5143,6 +5150,12 @@ async function openCashCount(){
   const body = document.getElementById('cashCountBody');
   if(error){ body.innerHTML = `<div class="kk-empty is-error">${escHtml(error.message)}${/get_cash_status/.test(error.message || '') ? ' — the owner needs to run supabase/production_grade.sql.' : ''}</div>`; return; }
   cashStatus = data;
+  // Today's payments with their order and account (supabase/day_close_accounts.sql).
+  const [dayRes] = await Promise.all([
+    sb.rpc('get_day_payments', { p_branch_id: currentBranchId }).then(r => r, () => ({ data: null })),
+    loadPaymentAccounts()
+  ]);
+  cashDayPays = dayRes && !dayRes.error ? (dayRes.data || []) : null;
   const last = data.last_count;
   const row = (ur, en, amt, sign, big) => `<div class="cc-row${big ? ' is-big' : ''}"><span><span class="kk-ur">${ur}</span> ${en}</span><b>${sign || ''}Rs ${moneyText(amt)}</b></div>`;
   body.innerHTML = `
@@ -5152,8 +5165,9 @@ async function openCashCount(){
       ${row('آج نقد وصول', 'Cash received today', data.cash_in, '+ ')}
       ${row('آج کے خرچے', 'Expenses today', data.expenses, '− ')}
       ${row('دراز میں ہونے چاہییں', 'Should be in the drawer', data.expected, '= ', true)}
-      <div class="small">Online today (not in the drawer): Rs ${moneyText(data.online_in)}</div>
+      ${cashDayPays ? '' : `<div class="small">Online today (not in the drawer): Rs ${moneyText(data.online_in)}</div>`}
     </div>
+    ${cashDayPays ? cashAccountsHtml() : ''}
     <div class="small" style="margin:12px 0 6px;"><span class="kk-ur">ہر نوٹ کتنے ہیں؟</span> How many of each note?</div>
     <div class="cc-notes">${CASH_NOTES.map(n => `<label class="cc-note"><span>Rs ${moneyText(n)} ×</span><input type="number" min="0" step="1" inputmode="numeric" data-note="${n}" oninput="updateCashCount()"></label>`).join('')}
       <label class="cc-note"><span><span class="kk-ur">سکے / باقی</span> Coins / other Rs</span><input type="number" min="0" inputmode="numeric" id="ccOther" oninput="updateCashCount()"></label></div>
@@ -5167,6 +5181,52 @@ async function openCashCount(){
     <div class="row" style="justify-content:flex-end;gap:8px;"><button type="button" class="btn-secondary" onclick="document.getElementById('cashCountModal').classList.remove('open')">Cancel</button>
       <button type="button" class="btn-main" id="ccSaveBtn" style="min-height:48px;" onclick="runBusy(this, saveCashCount)">✓ <span class="kk-ur">حساب محفوظ کریں</span> Save count</button></div>`;
   updateCashCount();
+}
+// Today's money split by where it went: the cash drawer and each online
+// account (all active accounts are listed, even at Rs 0). Tapping an amount
+// opens the orders it is made of.
+let cashDayPays = null;
+function cashAccountGroups(){
+  const pays = cashDayPays || [];
+  const online = pays.filter(p => p.method === 'online');
+  const groups = [{ key: 'cash', icon: '💵', ur: 'نقد — دراز میں', en: 'Cash (drawer)', list: pays.filter(p => p.method !== 'online') }];
+  const ids = [...new Set([...paymentAccounts.map(a => a.id), ...online.map(p => p.account_id)])];
+  ids.forEach(id => {
+    const a = paymentAccounts.find(x => x.id === id);
+    const list = online.filter(p => p.account_id === id);
+    const name = a ? a.name : (list[0] && list[0].account_name) || 'Online (no account)';
+    groups.push({ key: 'a' + (id == null ? 'none' : id), icon: '📱', ur: '', en: name, list });
+  });
+  return groups;
+}
+function cashPayTypeLabel(p){
+  if(p.type === 'advance') return '<span class="kk-ur">ایڈوانس</span> Advance at booking';
+  if(p.with_order_code) return `<span class="kk-ur">پرانا بقایا</span> Old baqaya (paid with order ${escHtml(p.with_order_code)})`;
+  return '<span class="kk-ur">وصولی</span> Paid at pickup';
+}
+function cashAccountsHtml(){
+  const sumOf = list => list.reduce((s, p) => s + Number(p.amount || 0), 0);
+  return `<div class="cc-accts">
+    <div class="small" style="margin:12px 0 6px;"><span class="kk-ur">آج کے پیسے کہاں آئے؟</span> Today's money by account — tap an amount to see the orders</div>
+    ${cashAccountGroups().map(g => `
+      <button type="button" class="cc-acct" id="ccAcct_${g.key}" aria-expanded="false" onclick="toggleCashAccount('${g.key}')">
+        <span>${g.icon} ${g.ur ? `<span class="kk-ur">${g.ur}</span> ` : ''}${escHtml(g.en)} <span class="small">· ${g.list.length} payment${g.list.length === 1 ? '' : 's'}</span></span>
+        <b>Rs ${moneyText(sumOf(g.list))} ›</b>
+      </button>
+      <div class="cc-acct-list" id="ccAcctList_${g.key}" hidden>
+        ${g.list.length ? `<table><thead><tr><th>Time</th><th>Order</th><th>Customer</th><th>For</th><th>Amount</th></tr></thead><tbody>
+          ${g.list.map(p => `<tr><td>${kkTime(p.created_at)}</td><td>${p.serial_no ? fmtSerial(p.serial_no) + ' · ' : ''}Code ${escHtml(p.code || String(p.order_id))}</td>
+            <td>${escHtml(p.customer_name || '—')}<br><span class="small">${escHtml(p.customer_phone || '')}</span></td><td>${cashPayTypeLabel(p)}</td><td><b>Rs ${moneyText(p.amount)}</b></td></tr>`).join('')}
+          </tbody><tfoot><tr><td colspan="4"><b>Total</b></td><td><b>Rs ${moneyText(sumOf(g.list))}</b></td></tr></tfoot></table>`
+          : '<div class="small" style="padding:8px;">No payments today.</div>'}
+      </div>`).join('')}
+  </div>`;
+}
+function toggleCashAccount(key){
+  const list = document.getElementById('ccAcctList_' + key), btn = document.getElementById('ccAcct_' + key);
+  if(!list) return;
+  list.hidden = !list.hidden;
+  btn.setAttribute('aria-expanded', String(!list.hidden));
 }
 function cashCounted(){
   let t = 0;
