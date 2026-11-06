@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-06-2">
+<meta name="app-build" content="2026-11-06-3">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -10382,8 +10382,10 @@ function renderItemsList(){
   const advanceRaw = document.getElementById('advanceInput').value;
   const advance = parseFloat(advanceRaw);
   const hasAdvance = advanceRaw.trim() !== '' && !isNaN(advance);
-  const balance = hasAdvance ? total - advance : total;
-  document.getElementById('advanceDisplay').textContent = hasAdvance ? ('Rs ' + moneyText(advance)) : '—';
+  // Saving refuses an advance above the bill; the preview never shows a minus balance.
+  const balance = hasAdvance ? Math.max(0, total - advance) : total;
+  document.getElementById('advanceDisplay').textContent = hasAdvance
+    ? ('Rs ' + moneyText(advance) + (advance > total ? ' ⚠ بل سے زیادہ — more than the bill' : '')) : '—';
   document.getElementById('balanceDisplay').textContent = 'Rs ' + moneyText(balance);
 
   // Cash Tendered is optional: if the cashier fills it in and it's more
