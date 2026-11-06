@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-06-1">
+<meta name="app-build" content="2026-11-06-2">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -513,6 +513,10 @@
   .baqaya-box .bq-collect input{width:26px;height:26px;flex:none;}
   #dispatchCashModal .btn-secondary, #dispatchCashModal .btn-main{min-height:44px;}
   .oo-more-row td{text-align:center;padding:12px;}
+  .vip-make-btn{display:block;margin-bottom:4px;min-height:32px;padding:2px 10px;border-radius:999px;border:1px dashed var(--line-strong);
+    background:transparent;color:var(--muted);font-weight:700;font-size:12px;cursor:pointer;}
+  .vip-make-btn:hover{color:var(--ink);border-style:solid;}
+  .online-note{display:block;font-size:11.5px;color:var(--muted);font-weight:600;}
   .oo-older-note td{font-size:13px;color:var(--muted);padding:8px 12px;}
   .oo-older-note .kk-ur{margin-right:8px;}
   .tile-sub-alert{color:var(--accent-2) !important;font-weight:700;}
@@ -3366,10 +3370,10 @@
       <div class="row" style="gap:24px;">
         <div class="field"><label>Orders Booked</label><div style="font-size:20px;font-weight:bold;" id="mrLiveOrders">0</div></div>
         <div class="field"><label>Value Booked</label><div style="font-size:20px;font-weight:bold;" id="mrLiveValue">Rs 0</div></div>
-        <div class="field"><label>Cash Collected</label><div style="font-size:20px;font-weight:bold;" id="mrLiveCash">Rs 0</div></div>
+        <div class="field"><label>Collected <span class="small">(cash + online)</span></label><div style="font-size:20px;font-weight:bold;" id="mrLiveCash">Rs 0</div></div>
         <div class="field"><label>Expenses</label><div style="font-size:20px;font-weight:bold;" id="mrLiveExpenses">Rs 0</div></div>
         <div class="field"><label>Salaries</label><div style="font-size:20px;font-weight:bold;" id="mrLiveSalaries">Rs 0</div></div>
-        <div class="field"><label>Net Cash</label><div style="font-size:20px;font-weight:bold;color:var(--accent);" id="mrLiveNet">Rs 0</div></div>
+        <div class="field"><label>Net <span class="small">(collected − expenses − salaries)</span></label><div style="font-size:20px;font-weight:bold;color:var(--accent);" id="mrLiveNet">Rs 0</div></div>
         <div class="field"><label>Pending (uncollected) <span class="small">— this month</span></label><div style="font-size:20px;font-weight:bold;color:var(--accent-2);" id="mrLivePendingMonth">Rs 0</div></div>
         <div class="field"><label>Pending Total <span class="small">— all months</span></label><div style="font-size:20px;font-weight:bold;color:var(--accent-2);" id="mrLivePending">Rs 0</div></div>
       </div>
@@ -3378,7 +3382,7 @@
     <div class="panel">
       <label>Monthly Register — <span id="mrBranchLabel2"></span></label>
       <table>
-        <thead><tr><th>Month</th><th>Orders</th><th>Value Booked</th><th>Advance</th><th>Balance Recovered</th><th>Total Cash</th><th>Expenses</th><th>Salaries</th><th>Net Cash</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Month</th><th>Orders</th><th>Value Booked</th><th>Advance</th><th>Balance Recovered</th><th>Total In <span class="small">(cash + online)</span></th><th>Expenses</th><th>Salaries</th><th>Net</th><th>Status</th><th></th></tr></thead>
         <tbody id="monthlyRegisterBody"></tbody>
       </table>
     </div>
@@ -3480,7 +3484,7 @@
             <thead><tr>
               <th>Time</th><th>Serial / Code</th><th>Customer</th><th>Phone</th><th>Items</th>
               <th>Subtotal</th><th>Discount</th><th>Total</th><th>Advance</th><th>Recovered</th>
-              <th>Total Cash In</th>
+              <th>Total In <span class="small">(cash + online)</span></th>
               <th>Dispatched At</th><th>Received By</th><th>Tags</th><th>Worker</th>
             </tr></thead>
             <tbody id="auditDispatchedBody"></tbody>
@@ -4943,6 +4947,21 @@ async function openDuesModal(branchId){
   document.getElementById('duesBody').innerHTML =
     section('Baqaya — clothes already given', 'بقایا', 'Collected with the customer\'s next order. Call or WhatsApp to remind them.', given, 'amt-owed') +
     section('Due at pickup — clothes still in the shop', 'وصولی پر', 'Paid when the customer collects these clothes.', inShop, '');
+}
+
+// ---------- CLOSING BILL AT DISPATCH ----------
+// Printed by itself as soon as an order is handed over (online or saved
+// offline), from the order as it was in Open Orders. Print Bill reprints it.
+async function autoPrintDispatchBill(o, receiverName, receiverPhone, changeGiven){
+  if(!o) return;
+  try{
+    const adv = Number(o.advance_paid || 0);
+    const disc = o.discount != null ? Number(o.discount) : null;
+    const sub = o.subtotal != null ? Number(o.subtotal) : (disc != null ? Number(o.total) + disc : null);
+    await printFinalBill(o.id, o.code || '', o.customer_phone || '', o.customer_name || '', encArg(o.items || []), Number(o.total) || 0,
+      adv, Number(o.total) - adv, Number(changeGiven) || 0, new Date().toISOString(), sub, disc, o.created_at || '',
+      receiverName || '', receiverPhone || '', !!o.is_urgent);
+  }catch(e){ console.error('Closing bill did not print:', e); }
 }
 
 // ---------- OLDER ORDERS (search) ----------
@@ -6417,7 +6436,7 @@ async function renderOpenOrdersRows(list){
     return `<tr class="${rowClass}${urgentRowClass}${openReturn ? ' row-returned' : ''}${idx % 2 === 1 ? ' zebra-b' : ''}">
       <td class="serial-code-cell">${serialCodeCell(o.serial_no, o.code)}${isTerminal && balanceDue > 0 ? `<span class="baqaya-tag" title="Clothes given; Rs ${moneyText(balanceDue)} still owed">📒 <span lang="ur">بقایا</span> Rs ${moneyText(balanceDue)}</span>` : baqayaRecoveredTag(o.id)}</td>
       <td>${escHtml(o.customer_phone)}</td>
-      <td>${isVip ? `<div class="vip-badge" tabindex="0" role="button" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : ''}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
+      <td>${isVip ? `<div class="vip-badge" tabindex="0" role="button" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', true)" title="Click to remove VIP status">★ VIP</div>` : `<button type="button" class="vip-make-btn" onclick="toggleOpenOrderVip('${jsArg(o.customer_phone)}', false)" title="Make this customer VIP">☆ VIP</button>`}<span class="oo-avatar ${avatarColorClass(o.customer_name || o.customer_phone)}">${escHtml(initialsFor(o.customer_name))}</span>${escHtml(o.customer_name || '')}</td>
       <td class="oo-items-cell">${buildItemsCellHtml(o.items)}</td>
       <td class="money-cell"><span class="rs-label">Rs</span>${moneyText(o.total)}</td>
       <td class="money-cell"><span class="rs-label">Rs</span>${moneyText(advancePaid)}</td>
@@ -9095,6 +9114,8 @@ async function closeOrder(orderId, phone, code, receiverName, receiverPhone, pre
     } else if(balanceDue > 0 && payMethod.p_method === 'online'){
       await logActivity('payment_online', `Order ${code || orderId}: Rs ${moneyText(balanceDue)} received online [oid:${orderId}]`);
     }
+    await autoPrintDispatchBill(cachedOrder, receiverName, receiverPhone,
+      opts.carryForward ? (opts.carryChange || 0) : (change > 0 ? change : (opts.changeIfNoBalance > 0 ? opts.changeIfNoBalance : 0)));
     if(phone){
       if(opts.carryForward) dispatchBaqayaNote = Math.max(0, balanceDue - collected) + (opts.prevLeft || 0);
       notifyCustomer(phone, code, 'dispatched', receiverName, receiverPhone);
@@ -9143,11 +9164,12 @@ async function offlineDispatchFallback(cachedOrder, orderId, code, phone, receiv
   const change = collected - balanceDue;
 
   await queueOfflineDispatch(cachedOrder, orderId, code, phone, receiverName, receiverPhone, collected, change, balanceDue);
+  await autoPrintDispatchBill(cachedOrder, receiverName, receiverPhone, change > 0 ? change : 0);
 
   if(change > 0){
     showDispatchChangeModal(code, orderId, change);
   } else {
-    alert('Order dispatch saved offline. It will sync automatically once the connection is back — the closing bill can be printed any time from the "Dispatched — Pending Sync" section below.');
+    alert('Order dispatch saved offline. It will sync automatically once the connection is back. The closing bill was printed; it can be printed again from the "Dispatched — Pending Sync" section below.');
   }
 }
 
@@ -13374,7 +13396,7 @@ function buildDailyRegister(orders, payments, readyLog, expenseRows){
   const row = (day, branchId) => {
     const k = day + '|' + branchId;
     if(!rows.has(k)) rows.set(k, { day, branch_id: branchId, orders_booked: 0, orders_ready: 0, orders_dispatched: 0,
-      value_booked: 0, advance_collected: 0, balance_collected: 0, total_cash_in: 0, expenses_today: 0, pending_from_bookings: 0 });
+      value_booked: 0, advance_collected: 0, balance_collected: 0, total_cash_in: 0, online_collected: 0, expenses_today: 0, pending_from_bookings: 0 });
     return rows.get(k);
   };
   const readyStamps = orders.map(o => o.ready_at).filter(Boolean).sort();
@@ -13399,6 +13421,7 @@ function buildDailyRegister(orders, payments, readyLog, expenseRows){
     const amt = Number(pm.amount) || 0;
     if(pm.type === 'advance') r.advance_collected += amt; else r.balance_collected += amt;
     r.total_cash_in += amt;
+    if(pm.method === 'online') r.online_collected += amt;
   });
   expenseRows.forEach(e => {
     const day = e.date || shopDay(e.created_at);
@@ -13425,7 +13448,7 @@ async function loadAdminDashboard(){
   try{
     const [orders, payments, readyLog] = await Promise.all([
       fetchAllRows(() => sb.from('orders').select('id,branch_id,created_at,ready_at,dispatched_at,total,balance_due').order('id')),
-      fetchAllRows(() => sb.from('payments').select('id,branch_id,amount,type,created_at').order('id')),
+      fetchAllRows(() => sb.from('payments').select('id,branch_id,amount,type,method,created_at').order('id')),
       fetchAllRows(() => sb.from('activity_log').select('id,branch_id,created_at').eq('action_type', 'order_ready').order('id'))
     ]);
     dashDailyAll = buildDailyRegister(orders, payments, readyLog, expenseRows || []);
@@ -13502,7 +13525,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
   const dailyRows = bDaily.map(r => `
     <tr class="audit-row" tabindex="0" role="button" onclick="openDailyAudit('${jsArg(r.day)}', ${Number(bId)}, '${jsArg(branch.name)}')">
       <td>${formatAppDate(r.day)}</td><td>${r.orders_booked}</td><td>${r.orders_ready ?? '—'}</td><td>${r.orders_dispatched ?? '—'}</td><td>Rs ${fmtMoney(r.value_booked)}</td>
-      <td>Rs ${fmtMoney(r.advance_collected)}</td><td>Rs ${fmtMoney(r.balance_collected)}</td><td>Rs ${fmtMoney(r.total_cash_in)}</td>
+      <td>Rs ${fmtMoney(r.advance_collected)}</td><td>Rs ${fmtMoney(r.balance_collected)}</td><td>Rs ${fmtMoney(r.total_cash_in)}${Number(r.online_collected) > 0 ? `<span class="online-note">online Rs ${moneyText(r.online_collected)} · cash Rs ${moneyText(r.total_cash_in - r.online_collected)}</span>` : ''}</td>
       <td>Rs ${fmtMoney(r.expenses_today)}</td><td>Rs ${fmtMoney(r.pending_from_bookings)}</td>
     </tr>`).join('') || '<tr><td colspan="10" class="small">No activity yet.</td></tr>';
   const dSum = bDaily.reduce((s,r) => ({
@@ -13543,7 +13566,7 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
     <div class="panel">
       <label>Daily Cash Register — ${monthLabel} — ${escHtml(branch.name)}</label>
       <table>
-        <thead><tr><th>Date</th><th data-ur="بک ہوئے">Orders Booked</th><th data-ur="تیار ہوئے">Marked Ready</th><th data-ur="دے دیے">Dispatched</th><th>Value Booked</th><th>Advance Collected</th><th>Balance Recovered</th><th>Total Cash In</th><th>Expenses</th><th>Cash to be Received</th></tr></thead>
+        <thead><tr><th>Date</th><th data-ur="بک ہوئے">Orders Booked</th><th data-ur="تیار ہوئے">Marked Ready</th><th data-ur="دے دیے">Dispatched</th><th>Value Booked</th><th>Advance Collected</th><th>Balance Recovered</th><th>Total In <span class="small">(cash + online)</span></th><th>Expenses</th><th>Cash to be Received</th></tr></thead>
         <tbody>${dailyRows}</tbody>
         <tfoot><tr style="font-weight:bold;"><td>MONTHLY TOTAL (${monthLabel})</td><td>${dSum.orders}</td><td>${dSum.ready}</td><td>${dSum.dispatched}</td><td>Rs ${fmtMoney(dSum.value)}</td>
           <td>Rs ${fmtMoney(dSum.advance)}</td><td>Rs ${fmtMoney(dSum.balance)}</td><td>Rs ${fmtMoney(dSum.cash)}</td>
@@ -13649,7 +13672,7 @@ async function loadMonthlyRegister(){
       <td>Rs ${moneyText(r.value_booked)}</td>
       <td>Rs ${moneyText(r.advance_collected)}</td>
       <td>Rs ${moneyText(r.balance_collected)}</td>
-      <td>Rs ${moneyText(r.total_cash_collected)}</td>
+      <td>Rs ${moneyText(r.total_cash_collected)}${Number(r.online_collected) > 0 ? `<span class="online-note">online Rs ${moneyText(r.online_collected)}</span>` : ''}</td>
       <td>Rs ${moneyText(r.total_expenses)}</td>
       <td>Rs ${moneyText(r.total_salaries)}</td>
       <td>Rs ${moneyText(Math.round(r.net_cash))}</td>
@@ -14881,13 +14904,15 @@ async function openDailyAudit(date, branchId, branchLabel){
   const totalCollected = advanceToday + balanceRecoveredToday;
   const totalOutstanding = orders.reduce((s,o) => s + Number(o.balance_due || 0), 0);
   const totalExpenses = expenses.reduce((s,e) => s + Number(e.amount), 0);
-  const netCash = totalCollected - totalExpenses;
+  const onlineToday = payments.filter(p => p.method === 'online').reduce((s,p) => s + Number(p.amount), 0);
+  // Online money went to an account, not the drawer.
+  const netCash = totalCollected - onlineToday - totalExpenses;
 
   document.getElementById('auditGross').textContent = 'Rs ' + moneyText(grossValue);
   document.getElementById('auditDiscounts').textContent = 'Rs ' + moneyText(totalDiscounts);
   document.getElementById('auditAdvanceToday').textContent = 'Rs ' + moneyText(advanceToday);
   document.getElementById('auditBalanceRecoveredToday').textContent = 'Rs ' + moneyText(balanceRecoveredToday);
-  document.getElementById('auditCollected').textContent = 'Rs ' + moneyText(totalCollected);
+  document.getElementById('auditCollected').textContent = 'Rs ' + moneyText(totalCollected) + (onlineToday > 0 ? ` (online Rs ${moneyText(onlineToday)})` : '');
   document.getElementById('auditOutstanding').textContent = 'Rs ' + moneyText(totalOutstanding);
   document.getElementById('auditExpenseTotal').textContent = 'Rs ' + moneyText(totalExpenses);
   document.getElementById('auditNet').textContent = 'Rs ' + moneyText(netCash);
