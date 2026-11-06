@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Bump on every release: open tills compare it with the live page and offer a refresh. -->
-<meta name="app-build" content="2026-11-03-5">
+<meta name="app-build" content="2026-11-06-1">
 <title>Laundry POS</title>
 <!-- SECURITY: Content-Security-Policy. The app still relies on inline
      onclick handlers, so 'unsafe-inline' can't be dropped yet — but this
@@ -513,6 +513,22 @@
   .baqaya-box .bq-collect input{width:26px;height:26px;flex:none;}
   #dispatchCashModal .btn-secondary, #dispatchCashModal .btn-main{min-height:44px;}
   .oo-more-row td{text-align:center;padding:12px;}
+  .oo-older-note td{font-size:13px;color:var(--muted);padding:8px 12px;}
+  .oo-older-note .kk-ur{margin-right:8px;}
+  .tile-sub-alert{color:var(--accent-2) !important;font-weight:700;}
+  .cash-count-btn{font-weight:700;min-height:40px;}
+  .cc-done{background:var(--ready-soft,#e3f5ea);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:14px;}
+  .cc-sum{border:1px solid var(--line-strong);border-radius:12px;padding:10px 14px;}
+  .cc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;font-size:15px;}
+  .cc-row.is-big{font-size:19px;border-top:1px dashed var(--line-strong);margin-top:4px;padding-top:10px;}
+  .cc-notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:10px;}
+  .cc-note{display:flex;flex-direction:column;gap:4px;font-weight:700;}
+  .cc-row b, .cc-note > span:first-child{white-space:nowrap;}
+  .cc-note input{width:100%;min-height:44px;font-size:18px;}
+  .cc-diff{font-size:20px;font-weight:700;padding:10px 12px;border-radius:10px;margin:8px 0 12px;text-align:center;}
+  .cc-diff.is-ok{background:#e3f5ea;color:#0B5130;}
+  .cc-diff.is-short{background:#fde5dc;color:#9E3418;}
+  .cc-diff.is-over{background:#e6ecfb;color:#26357F;}
   .oo-more-btn{min-height:48px;padding:10px 22px;font-weight:700;}
   #dcNotesRow[hidden], #dcConfirmBtn[hidden]{display:none !important;}
   .dc-warn-line{display:block;margin-top:4px;}
@@ -1090,7 +1106,7 @@
   .modal-close-btn{
     background:var(--panel);color:var(--ink);border:1px solid var(--ink);padding:7px 15px;
     font-family:var(--font-mono);font-weight:700;cursor:pointer;border-radius:6px;font-size:12.5px;
-    transition:background .12s ease;
+    transition:background .12s ease;min-width:44px;min-height:44px;
   }
   .modal-close-btn:hover{background:var(--hover);}
 
@@ -2692,6 +2708,7 @@
         <span class="storage-pill-bar"><span id="storagePillFill"></span></span>
         <b id="storagePillPct"></b>
       </span>
+      <button type="button" class="btn-secondary cash-count-btn" id="cashCountBtn" onclick="openCashCount()" title="Count the cash in the drawer and close the day">🧮 <span class="kk-ur">حساب</span> Day close</button>
       <span class="badge" id="userBadge"></span>
       <select id="branchSelect" style="display:none;"></select>
       <span class="badge" id="branchNameFixed"></span>
@@ -3191,6 +3208,16 @@
         <span class="dash-tile-label" data-ur="میسج کی شرائط">Message terms</span>
         <span class="dash-tile-sub">Terms &amp; conditions in customer messages</span>
       </button>
+      <button type="button" class="dash-tile" data-section="backup" id="liveBackupTile" onclick="showAdminSection('backup')">
+        <span class="dash-tile-icon">💾</span>
+        <span class="dash-tile-label" data-ur="بیک اپ">Backup</span>
+        <span class="dash-tile-sub" id="backupTileSub">Save all shop records to your computer</span>
+      </button>
+      <button type="button" class="dash-tile" data-section="deverrors" onclick="showAdminSection('deverrors')">
+        <span class="dash-tile-icon">🩺</span>
+        <span class="dash-tile-label" data-ur="مسائل">Problems on devices</span>
+        <span class="dash-tile-sub" id="devErrorsTileSub">Errors shop screens ran into</span>
+      </button>
     </div>
 
     <!-- CASH REGISTER SECTION -->
@@ -3254,6 +3281,13 @@
     <!-- PAYMENT ACCOUNTS SECTION — accounts that receive online payments -->
     <div class="dash-section" id="dashSection-payaccounts">
       <div id="payAccountsBody"><div class="kk-empty">Loading…</div></div>
+    </div>
+
+    <div class="dash-section" id="dashSection-backup">
+      <div id="backupBody"><div class="kk-empty">Loading…</div></div>
+    </div>
+    <div class="dash-section" id="dashSection-deverrors">
+      <div id="devErrorsBody"><div class="kk-empty">Loading…</div></div>
     </div>
 
     <!-- MESSAGE TERMS SECTION — terms & conditions at the end of customer messages -->
@@ -4812,6 +4846,8 @@ function showAdminSection(name){
   if(name === 'msgterms') renderMessageTerms();
   if(name === 'baqaya') renderBaqayaAdmin();
   if(name === 'payaccounts') renderPayAccountsAdmin();
+  if(name === 'backup') renderBackupAdmin();
+  if(name === 'deverrors') renderClientErrors();
 }
 
 // ---------- BAQAYA (admin) ----------
@@ -4907,6 +4943,257 @@ async function openDuesModal(branchId){
   document.getElementById('duesBody').innerHTML =
     section('Baqaya — clothes already given', 'بقایا', 'Collected with the customer\'s next order. Call or WhatsApp to remind them.', given, 'amt-owed') +
     section('Due at pickup — clothes still in the shop', 'وصولی پر', 'Paid when the customer collects these clothes.', inShop, '');
+}
+
+// ---------- OLDER ORDERS (search) ----------
+let olderSearchDone = new Set();
+async function mergeOlderOrders(phone, code){
+  const key = phone + '|' + code;
+  if(olderSearchDone.has(key) || !isReallyOnline()) return;
+  olderSearchDone.add(key);
+  try{
+    const { data, error } = await sb.rpc('search_orders', { p_branch_id: currentBranchId, p_phone: phone || null, p_code: code || null });
+    if(error || !data) return;
+    const have = new Set(allOpenOrders.map(o => o.id));
+    data.forEach(o => { if(!have.has(o.id)) allOpenOrders.push(Object.assign({ _older: true }, o)); });
+  }catch(e){ /* offline: search what is on this device */ }
+}
+
+// ---------- PROBLEMS ON DEVICES (script errors sent to the owner) ----------
+// Every unexpected script error on a signed-in screen is sent once per page
+// load (at most 10) to log_client_error; the server counts repeats and keeps
+// 30 days. Network drops are not errors.
+const clientErrSeen = new Set();
+let clientErrCount = 0;
+function reportClientError(message, source){
+  try{
+    if(!profile || clientErrCount >= 10) return;
+    const msg = String(message || '').slice(0, 500);
+    if(!msg || clientErrSeen.has(msg) || /ResizeObserver loop|^Script error\.?$|Failed to fetch|NetworkError|Load failed|network request failed|AbortError/i.test(msg)) return;
+    clientErrSeen.add(msg); clientErrCount++;
+    const build = (document.querySelector('meta[name="app-build"]') || {}).content || '';
+    const tab = document.querySelector('nav .tabbtn.active');
+    sb.rpc('log_client_error', { p_message: msg, p_source: String(source || '').slice(0, 300), p_build: build, p_page: tab ? tab.dataset.tab : '' })
+      .then(() => {}, () => {});
+  }catch(e){ /* never let error reporting cause an error */ }
+}
+window.addEventListener('error', e => {
+  const stack = e.error && e.error.stack ? String(e.error.stack).split('\n').slice(1, 3).join(' ') : '';
+  reportClientError(e.message || (e.error && e.error.message), `${String(e.filename || '').split('/').pop()}:${e.lineno || 0}:${e.colno || 0} ${stack}`);
+});
+window.addEventListener('unhandledrejection', e => {
+  const r = e.reason;
+  reportClientError('Unhandled: ' + (r && r.message ? r.message : String(r)), r && r.stack ? String(r.stack).split('\n').slice(1, 3).join(' ') : '');
+});
+async function renderClientErrors(){
+  const body = document.getElementById('devErrorsBody');
+  body.innerHTML = '<div class="kk-empty">Loading…</div>';
+  const { data, error } = await sb.from('client_errors').select('*').order('last_at', { ascending: false }).limit(200);
+  if(error){ body.innerHTML = `<div class="kk-empty is-error">${escHtml(error.message)}${/client_errors/.test(error.message || '') ? ' — run supabase/production_grade.sql first.' : ''}</div>`; return; }
+  const { data: people } = await sb.from('profiles').select('id, name');
+  const nameOf = {}; (people || []).forEach(p => { nameOf[p.id] = p.name; });
+  const branchName = id => (branches.find(b => b.id === id) || {}).name || '—';
+  body.innerHTML = `<div class="panel"><label><span class="kk-ur">مسائل</span> Problems on shop devices (last 30 days)</label>
+    <p class="small" style="margin-top:0;">When a screen runs into an error, it is recorded here automatically, so problems are not missed. The same error from the same person is counted, not repeated.</p>
+    ${(data || []).length ? `<div class="table-scroll"><table><thead><tr><th>Last seen</th><th>Times</th><th>Who</th><th>Screen</th><th>Version</th><th>Error</th></tr></thead><tbody>
+      ${data.map(r => `<tr><td>${formatAppDateTime(r.last_at)}</td><td><b>${Number(r.times)}</b></td><td>${escHtml(nameOf[r.user_id] || '—')}<br><span class="small">${escHtml(branchName(r.branch_id))}</span></td>
+        <td>${escHtml(r.page || '—')}</td><td class="small">${escHtml(r.build || '')}</td><td><b>${escHtml(r.message)}</b>${r.source ? `<div class="small" style="word-break:break-all;">${escHtml(r.source)}</div>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="row" style="margin-top:12px;"><button type="button" class="btn-secondary" onclick="clearClientErrors()">Clear the list (after fixing)</button></div>`
+    : '<div class="kk-empty">✓ No problems recorded in the last 30 days.</div>'}</div>`;
+  updateDevErrorsTile(data);
+}
+async function clearClientErrors(){
+  if(!await appConfirm({ tone: 'warn', title: 'Clear the problem list?', message: 'Only clear it after the problems are fixed.', okText: 'Clear' })) return;
+  const { error } = await sb.from('client_errors').delete().gt('id', 0);
+  if(error){ alert('Failed: ' + error.message); return; }
+  renderClientErrors();
+}
+async function updateDevErrorsTile(rows){
+  const sub = document.getElementById('devErrorsTileSub');
+  if(!sub || !profile || profile.role !== 'admin') return;
+  if(!rows){
+    const { data, error } = await sb.from('client_errors').select('id, last_at').gte('last_at', new Date(Date.now() - 7 * 864e5).toISOString()).limit(100);
+    if(error) return;
+    rows = data || [];
+  }
+  const recent = rows.filter(r => new Date(r.last_at).getTime() > Date.now() - 7 * 864e5).length;
+  sub.textContent = recent ? `⚠ ${recent} problem(s) in the last 7 days` : 'No problems in the last 7 days ✓';
+  sub.classList.toggle('tile-sub-alert', recent > 0);
+}
+
+// ---------- BACKUP (owner downloads every table to their computer) ----------
+// export_backup() (owner only) returns every table as JSON. The file is
+// gzipped and, with a password, encrypted (PBKDF2-SHA256 + AES-GCM) in the
+// browser; nothing is stored in Supabase. LAUNDRY POS OFFLINE\tools\open-live-backup.js
+// opens it. The offline edition makes its own backups, so the tile is hidden there.
+const BACKUP_KDF_ITER = 200000;
+async function gzipBytes(bytes){
+  if(typeof CompressionStream !== 'function') return { bytes, gzip: false };
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+  return { bytes: new Uint8Array(await new Response(stream).arrayBuffer()), gzip: true };
+}
+const b64 = u8 => btoa(String.fromCharCode(...u8));
+async function encryptBackup(bytes, password){
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: BACKUP_KDF_ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes));
+  const head = new TextEncoder().encode('LPOS-BACKUP-ENC v1\n' + JSON.stringify({ kdf: 'PBKDF2-SHA256', iter: BACKUP_KDF_ITER, salt: b64(salt), iv: b64(iv) }) + '\n');
+  const out = new Uint8Array(head.length + ct.length);
+  out.set(head); out.set(ct, head.length);
+  return out;
+}
+// Builds the backup file from export_backup() data (used by the download button and the tests).
+async function buildBackupFile(data, password){
+  const z = await gzipBytes(new TextEncoder().encode(JSON.stringify(data)));
+  if(password) return { bytes: await encryptBackup(z.bytes, password), ext: z.gzip ? 'json.gz.lposbak' : 'json.lposbak' };
+  return { bytes: z.bytes, ext: z.gzip ? 'json.gz' : 'json' };
+}
+async function lastBackupAt(){
+  const { data } = await sb.from('activity_log').select('created_at').eq('action_type', 'backup_downloaded').order('created_at', { ascending: false }).limit(1);
+  return data && data[0] ? data[0].created_at : null;
+}
+async function updateBackupTile(){
+  const tile = document.getElementById('liveBackupTile');
+  if(!tile) return;
+  if(SUPABASE_KEY === 'offline'){ tile.remove(); return; }
+  if(!profile || profile.role !== 'admin') return;
+  const at = await lastBackupAt();
+  const days = at ? Math.floor((Date.now() - new Date(at).getTime()) / 864e5) : null;
+  const sub = document.getElementById('backupTileSub');
+  sub.textContent = at == null ? '⚠ No backup yet — download one' : days >= 7 ? `⚠ Last backup ${days} days ago` : `Last backup ${days === 0 ? 'today' : days + ' day(s) ago'} ✓`;
+  sub.classList.toggle('tile-sub-alert', at == null || days >= 7);
+}
+async function renderBackupAdmin(){
+  const body = document.getElementById('backupBody');
+  const at = await lastBackupAt();
+  body.innerHTML = `<div class="panel"><label><span class="kk-ur">بیک اپ</span> Backup — all shop records</label>
+    <p class="small" style="margin-top:0;" dir="rtl" lang="ur"><span class="kk-ur">ہر ہفتے بیک اپ ڈاؤن لوڈ کریں اور Google Drive یا USB میں رکھیں۔ اگر انٹرنیٹ سروس کا ڈیٹا ختم ہو جائے تو اسی فائل سے ریکارڈ واپس آ سکتا ہے۔</span></p>
+    <p class="small">Download a backup every week and keep it in Google Drive or on a USB. If the online database is ever lost, the shop's records can be brought back from this file. Last backup: <b>${at ? formatAppDateTime(at) : 'never'}</b>.</p>
+    <div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="field"><label for="backupPw">Password (recommended, 8+ letters)</label><input type="password" id="backupPw" autocomplete="new-password" style="width:220px;"></div>
+      <div class="field"><label for="backupPw2">Type it again</label><input type="password" id="backupPw2" autocomplete="new-password" style="width:220px;"></div>
+      <button type="button" class="btn-main" style="min-height:48px;" onclick="runBusy(this, downloadBackup)">💾 <span class="kk-ur">بیک اپ ڈاؤن لوڈ</span> Download backup</button>
+    </div>
+    <p class="small">The file holds customer names and phone numbers. With a password, nobody can open it without the password — write the password down; it cannot be recovered.</p>
+    <div id="backupResult"></div></div>`;
+}
+async function downloadBackup(){
+  const pw = document.getElementById('backupPw').value, pw2 = document.getElementById('backupPw2').value;
+  if(pw !== pw2){ alert('The two passwords are different. Type the same password twice.'); return; }
+  if(pw && pw.length < 8){ alert('Use a password of at least 8 letters, or leave both boxes empty.'); return; }
+  if(!pw && !await appConfirm({ tone: 'warn', title: 'Save without a password?', message: 'Anyone who gets this file can read customer names and phone numbers.', okText: 'Save without password' })) return;
+  const { data, error } = await sb.rpc('export_backup');
+  if(error){ alert('Backup failed: ' + error.message + (/export_backup/.test(error.message || '') ? ' — run supabase/production_grade.sql first.' : '')); return; }
+  const file = await buildBackupFile(data, pw);
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([file.bytes], { type: 'application/octet-stream' }));
+  a.download = `laundry-pos-backup-${stamp}.${file.ext}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  const tables = data.tables || {};
+  const orders = (tables.orders || []).length;
+  await logActivity('backup_downloaded', `Backup downloaded: ${orders} orders, ${Object.keys(tables).length} tables, ${Math.ceil(file.bytes.length / 1024)} KB${pw ? ', password protected' : ''}`, null);
+  document.getElementById('backupResult').innerHTML = `<div class="kk-empty" style="color:var(--good);">✓ Saved <b>${escHtml(a.download)}</b> (${orders} orders, ${Math.ceil(file.bytes.length / 1024)} KB). Now copy it to Google Drive or a USB.</div>`;
+  updateBackupTile();
+}
+
+// ---------- DAY CLOSE (cash count) ----------
+// Expected in the drawer = what was left at the last count + cash paid today
+// − expenses today (server: get_cash_status). The worker counts the notes,
+// the server saves the difference (close_cash_day).
+const CASH_NOTES = [5000, 1000, 500, 100, 50, 20, 10];
+let cashStatus = null;
+async function openCashCount(){
+  if(!isReallyOnline()){ alert('Day close needs the internet. Try again when connected.'); return; }
+  let ov = document.getElementById('cashCountModal');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'cashCountModal';
+    ov.className = 'modal-overlay';
+    ov.onclick = e => { if(e.target === ov) ov.classList.remove('open'); };
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div class="modal-box" style="max-width:560px;"><div class="modal-header"><h2><span class="kk-ur">دن کا حساب</span> Day close — count the cash</h2>
+    <button type="button" class="modal-close-btn" aria-label="Close" onclick="document.getElementById('cashCountModal').classList.remove('open')">×</button></div>
+    <div class="modal-body" id="cashCountBody"><div class="kk-empty">Loading…</div></div></div>`;
+  ov.classList.add('open');
+  const { data, error } = await sb.rpc('get_cash_status', { p_branch_id: currentBranchId });
+  const body = document.getElementById('cashCountBody');
+  if(error){ body.innerHTML = `<div class="kk-empty is-error">${escHtml(error.message)}${/get_cash_status/.test(error.message || '') ? ' — the owner needs to run supabase/production_grade.sql.' : ''}</div>`; return; }
+  cashStatus = data;
+  const last = data.last_count;
+  const row = (ur, en, amt, sign, big) => `<div class="cc-row${big ? ' is-big' : ''}"><span><span class="kk-ur">${ur}</span> ${en}</span><b>${sign || ''}Rs ${moneyText(amt)}</b></div>`;
+  body.innerHTML = `
+    ${last ? `<div class="cc-done">✓ <span class="kk-ur">آج حساب ہو چکا</span> Already counted today at ${formatAppDateTime(last.created_at)}: counted Rs ${moneyText(last.counted)}, ${Number(last.difference) === 0 ? 'matched' : (Number(last.difference) < 0 ? 'short Rs ' + moneyText(-last.difference) : 'over Rs ' + moneyText(last.difference))}. You can count again.</div>` : ''}
+    <div class="cc-sum">
+      ${row('پچھلی بار دراز میں چھوڑے', 'Left in drawer last time', data.opening)}
+      ${row('آج نقد وصول', 'Cash received today', data.cash_in, '+ ')}
+      ${row('آج کے خرچے', 'Expenses today', data.expenses, '− ')}
+      ${row('دراز میں ہونے چاہییں', 'Should be in the drawer', data.expected, '= ', true)}
+      <div class="small">Online today (not in the drawer): Rs ${moneyText(data.online_in)}</div>
+    </div>
+    <div class="small" style="margin:12px 0 6px;"><span class="kk-ur">ہر نوٹ کتنے ہیں؟</span> How many of each note?</div>
+    <div class="cc-notes">${CASH_NOTES.map(n => `<label class="cc-note"><span>Rs ${moneyText(n)} ×</span><input type="number" min="0" step="1" inputmode="numeric" data-note="${n}" oninput="updateCashCount()"></label>`).join('')}
+      <label class="cc-note"><span><span class="kk-ur">سکے / باقی</span> Coins / other Rs</span><input type="number" min="0" inputmode="numeric" id="ccOther" oninput="updateCashCount()"></label></div>
+    <div class="cc-row is-big"><span><span class="kk-ur">گنے ہوئے کل</span> Counted</span><b id="ccCounted">Rs 0</b></div>
+    <div id="ccDiff" class="cc-diff"></div>
+    <div class="field"><label for="ccLeft"><span class="kk-ur">کل کے لیے دراز میں چھوڑیں</span> Leave in the drawer for tomorrow (Rs)</label>
+      <input type="number" min="0" inputmode="numeric" id="ccLeft" value="${Number(data.opening) || 0}" oninput="updateCashCount()" style="width:100%;font-size:18px;"></div>
+    <div class="field"><label for="ccNote"><span class="kk-ur">فرق کی وجہ</span> Reason for any difference</label>
+      <input type="text" id="ccNote" maxlength="200" style="width:100%;"></div>
+    <p id="ccWarn" class="small" style="color:var(--warn);"></p>
+    <div class="row" style="justify-content:flex-end;gap:8px;"><button type="button" class="btn-secondary" onclick="document.getElementById('cashCountModal').classList.remove('open')">Cancel</button>
+      <button type="button" class="btn-main" id="ccSaveBtn" style="min-height:48px;" onclick="runBusy(this, saveCashCount)">✓ <span class="kk-ur">حساب محفوظ کریں</span> Save count</button></div>`;
+  updateCashCount();
+}
+function cashCounted(){
+  let t = 0;
+  document.querySelectorAll('#cashCountBody [data-note]').forEach(i => { t += Math.max(0, Math.floor(Number(i.value) || 0)) * Number(i.dataset.note); });
+  return t + Math.max(0, Number(document.getElementById('ccOther').value) || 0);
+}
+function updateCashCount(){
+  if(!cashStatus) return;
+  const counted = cashCounted(), diff = counted - Number(cashStatus.expected);
+  const left = Number(document.getElementById('ccLeft').value) || 0;
+  document.getElementById('ccCounted').textContent = 'Rs ' + moneyText(counted);
+  const d = document.getElementById('ccDiff');
+  d.className = 'cc-diff ' + (diff === 0 ? 'is-ok' : diff < 0 ? 'is-short' : 'is-over');
+  d.innerHTML = diff === 0 ? '✓ <span class="kk-ur">پورا ہے</span> Matches'
+    : diff < 0 ? `<span class="kk-ur">کم ہے</span> Short by Rs ${moneyText(-diff)}` : `<span class="kk-ur">زیادہ ہے</span> Over by Rs ${moneyText(diff)}`;
+  let warn = '';
+  if(left < 0 || left > counted) warn = 'Cash left in the drawer must be between 0 and the cash counted.';
+  else if(diff !== 0 && !document.getElementById('ccNote').value.trim()) warn = 'Write the reason for the difference before saving.';
+  document.getElementById('ccWarn').textContent = warn;
+}
+async function saveCashCount(){
+  updateCashCount();
+  const counted = cashCounted(), left = Number(document.getElementById('ccLeft').value) || 0;
+  const note = document.getElementById('ccNote').value.trim();
+  const diff = counted - Number(cashStatus.expected);
+  if(left < 0 || left > counted){ alert('Cash left in the drawer must be between 0 and the cash counted.'); return; }
+  if(diff !== 0 && !note){ alert('Write the reason for the difference before saving.'); document.getElementById('ccNote').focus(); return; }
+  const { data, error } = await sb.rpc('close_cash_day', { p_branch_id: currentBranchId, p_counted: counted, p_left_in_drawer: left, p_note: note || null });
+  if(error){ alert('Could not save the count: ' + error.message); return; }
+  const r = data || {};
+  await logActivity('cash_count', `Day close: should be Rs ${moneyText(r.expected)}, counted Rs ${moneyText(r.counted)}, ${Number(r.difference) === 0 ? 'matched' : (Number(r.difference) < 0 ? 'SHORT Rs ' + moneyText(-r.difference) : 'over Rs ' + moneyText(r.difference))}, left in drawer Rs ${moneyText(r.left_in_drawer)}${note ? ' — ' + note : ''}`);
+  document.getElementById('cashCountModal').classList.remove('open');
+  appDialog({ tone: Number(r.difference) < 0 ? 'warn' : 'success', urTitle: 'حساب محفوظ', title: 'Count saved',
+    ur: Number(r.difference) === 0 ? 'حساب پورا ہے۔' : Number(r.difference) < 0 ? `Rs ${moneyText(-r.difference)} کم ہیں۔ مالک کو بتا دیا گیا۔` : `Rs ${moneyText(r.difference)} زیادہ ہیں۔`,
+    message: `Counted Rs ${moneyText(r.counted)} (should be Rs ${moneyText(r.expected)}). Hand over Rs ${moneyText(Number(r.counted) - Number(r.left_in_drawer))}; Rs ${moneyText(r.left_in_drawer)} stays in the drawer.` });
+}
+async function loadCashCounts(branchId){
+  const box = document.getElementById('cashCounts_' + branchId);
+  if(!box) return;
+  const { data, error } = await sb.from('cash_counts').select('*').eq('branch_id', branchId).order('id', { ascending: false }).limit(30);
+  if(error){ box.innerHTML = `<div class="small">${/cash_counts/.test(error.message || '') ? 'Run supabase/production_grade.sql to switch on day close.' : escHtml(error.message)}</div>`; return; }
+  if(!(data || []).length){ box.innerHTML = '<div class="small">No day close yet. Workers tap 🧮 Day close at the top of the screen at closing time.</div>'; return; }
+  box.innerHTML = `<div class="table-scroll"><table><thead><tr><th>Day</th><th>Should be</th><th>Counted</th><th>Difference</th><th>Left in drawer</th><th>By</th><th>Reason</th></tr></thead><tbody>
+    ${data.map(r => { const d = Number(r.difference); return `<tr><td>${formatAppDate(r.day)}<br><span class="small">${formatAppDateTime(r.created_at)}</span></td><td>Rs ${moneyText(r.expected)}</td><td>Rs ${moneyText(r.counted)}</td>
+      <td class="${d < 0 ? 'amt-owed' : 'amt-good'}"><b>${d === 0 ? '✓ 0' : (d < 0 ? '−Rs ' + moneyText(-d) : '+Rs ' + moneyText(d))}</b></td><td>Rs ${moneyText(r.left_in_drawer)}</td>
+      <td>${escHtml(r.counted_by_name || '—')}</td><td>${escHtml(r.note || '')}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 
 // ---------- PAYMENT ACCOUNTS (admin) ----------
@@ -5658,6 +5945,7 @@ async function loadOpenOrders(){
   }
   openOrdersLoadNotice = null;
   allOpenOrders = data || [];
+  olderSearchDone = new Set();
   rememberSerials(allOpenOrders);
   await attachVipStatus(allOpenOrders);
   await attachDispatchTimestamps(allOpenOrders);
@@ -5959,7 +6247,9 @@ async function renderOpenOrdersRows(list){
     : '';
   if(!list.length){
     body.innerHTML = noticeRow + pendingSection + dispatchConflictSection + dispatchPendingSection + partialConflictSection + partialPendingSection
-      + (pending.length || pendingDispatches.length || pendingPartialDispatches.length ? '' : '<tr><td colspan="13" class="small">No matching orders.</td></tr>');
+      + (pending.length || pendingDispatches.length || pendingPartialDispatches.length ? '' : '<tr><td colspan="13" class="small">No matching orders.</td></tr>')
+      + (activeStatusTab === 'dispatched' && !document.getElementById('searchPhoneInput').value.trim() && !document.getElementById('searchCodeInput').value.trim()
+        ? `<tr class="oo-older-note"><td colspan="13"><span class="kk-ur">پچھلے 30 دن کے آرڈر۔ پرانا آرڈر فون یا کوڈ سے ڈھونڈیں۔</span> Last 30 days shown. Search by phone or code to find older orders.</td></tr>` : '');
     return;
   }
   const branchNameKey = document.getElementById('branchNameFixed').textContent;
@@ -6180,7 +6470,9 @@ async function renderOpenOrdersRows(list){
     if(!orders.length) return '';
     const limit = ooShown[key] || OO_PAGE;
     const hidden = orders.length - limit;
+    const searching = !!(document.getElementById('searchPhoneInput').value.trim() || document.getElementById('searchCodeInput').value.trim());
     return `<tr class="section-heading-row sh-${key}"><td colspan="13">${label} (${orders.length})</td></tr>`
+      + (key === 'dispatched' && !searching ? `<tr class="oo-older-note"><td colspan="13"><span class="kk-ur">پچھلے 30 دن کے آرڈر۔ پرانا آرڈر فون یا کوڈ سے ڈھونڈیں۔</span> Last 30 days shown. Search by phone or code to find older orders.</td></tr>` : '')
       + orders.slice(0, limit).map((o, idx) => rowHtml(o, idx)).join('')
       + (hidden > 0 ? `<tr class="oo-more-row"><td colspan="13"><button type="button" class="btn-secondary oo-more-btn" onclick="ooShowMore('${key}')"><span class="kk-ur">مزید دکھائیں</span> Show ${Math.min(OO_PAGE, hidden)} more — ${hidden} older not shown</button></td></tr>` : '');
   }
@@ -6262,6 +6554,9 @@ async function filterOpenOrders(){
   // either box searches across all three categories at once (Open Orders'
   // own section headings still separate the results by status).
   const isSearching = !!(phoneQuery || codeQuery);
+  // The server only sends recent dispatched orders (supabase/production_grade.sql);
+  // a search also asks it for older ones and adds them to the list.
+  if(isSearching && (phoneQuery.length >= 4 || codeQuery.length >= 3)) await mergeOlderOrders(phoneQuery, codeQuery);
 
   // The box takes a customer code or a shop serial. Both are 4 digits, so
   // a partial match mixed them up (code 0427 also listed serial 0427). A
@@ -13180,6 +13475,9 @@ function renderDashboardPanels(){
   container.innerHTML = branches.map((b, idx) =>
     renderBranchDashboard(b, idx, daily, dashMonthlyAll, dashMonthlyExpAll, dashPendingAll, expenseRows, selectedDashMonth, monthLabel)
   ).join('');
+  branches.forEach(b => loadCashCounts(b.id));
+  updateBackupTile();
+  updateDevErrorsTile();
 }
 
 // Get Smart = dark blue, Brite Star = dark brown; any other/future branch
@@ -13252,6 +13550,11 @@ function renderBranchDashboard(branch, idx, daily, monthly, monthlyExp, pending,
           <td>Rs ${fmtMoney(dSum.exp)}</td><td>Rs ${fmtMoney(dSum.pendingBooked)}</td></tr></tfoot>
       </table>
       <div class="small" style="margin-top:8px;">Cash to be Received right now (orders in the shop + baqaya), ${escHtml(branch.name)}: <button type="button" class="dues-link ${bPending > 0 ? 'amt-owed' : ''}" onclick="openDuesModal(${Number(bId)})" title="Show every customer who owes, with phone numbers">Rs ${moneyText(bPending)} — see who owes ›</button></div>
+    </div>
+
+    <div class="panel">
+      <label><span class="kk-ur">دن کا حساب</span> Cash counts (day close) — ${escHtml(branch.name)}</label>
+      <div id="cashCounts_${bId}"><div class="small">Loading…</div></div>
     </div>
 
     <div class="panel">
